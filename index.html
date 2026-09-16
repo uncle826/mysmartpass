@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartPass Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="login-card">
+    <div class="logo">
+      <div class="logo-text">
+        <div class="logo-title-row">
+          <span class="logo-title">SmartPass</span>
+          <svg viewBox="0 0 52 40" class="logo-mark" aria-hidden="true">
+            <path d="M4,4 L22,20 L4,36" fill="none" stroke="#1ed17a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M22,4 L40,20 L22,36" fill="none" stroke="#1ed17a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="logo-subtitle">A <span class="raptor">RAPTOR</span> TECHNOLOGIES COMPANY</div>
+      </div>
+    </div>
+
+    <form id="login-form">
+      <label for="name" class="field-label">Enter Name</label>
+      <input type="text" id="name" name="name" placeholder="Name" autocomplete="name" required>
+      <button type="submit" class="next-btn">Next</button>
+    </form>
+
+    <div class="loading-view hidden" id="loading-view">
+      <div class="spinner"></div>
+      <p class="loading-text" id="loading-text">Setting things up&hellip;</p>
+    </div>
+
+    <div class="school-view hidden" id="school-view">
+      <p class="school-prompt">Select School</p>
+      <button type="button" class="school-btn" data-school="WLMS">WLMS</button>
+      <button type="button" class="school-btn" data-school="LHS">LHS</button>
+    </div>
+  </div>
+
+<script src="script.js"></script>
+</body>
+</html>
