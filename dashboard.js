@@ -3,6 +3,10 @@ requestAnimationFrame(() => document.body.classList.add("loaded"));
 const name = localStorage.getItem("smartpass_name") || "there";
 document.getElementById("user-name").textContent = name.toUpperCase();
 
+function userKey(base) {
+  return `${base}__${name.trim().toLowerCase()}`;
+}
+
 /* Avatar menu: profile color + sign out */
 
 const AVATAR_COLORS = ["#9aa2af", "#1ed17a", "#2599d6", "#7b68ee", "#fb6d4c", "#f2994a", "#b21cc4", "#14a3a1"];
@@ -21,7 +25,7 @@ function applyAvatarColor(color) {
 }
 
 function renderAvatarColors() {
-  const current = localStorage.getItem("smartpass_avatar_color") || AVATAR_COLORS[0];
+  const current = localStorage.getItem(userKey("smartpass_avatar_color")) || AVATAR_COLORS[0];
   avatarColorGrid.innerHTML = AVATAR_COLORS.map((c) => {
     const selected = c === current ? "selected" : "";
     const check = c === current
@@ -33,14 +37,14 @@ function renderAvatarColors() {
   avatarColorGrid.querySelectorAll(".avatar-color-swatch").forEach((btn) => {
     btn.addEventListener("click", () => {
       const color = btn.dataset.color;
-      localStorage.setItem("smartpass_avatar_color", color);
+      localStorage.setItem(userKey("smartpass_avatar_color"), color);
       applyAvatarColor(color);
       renderAvatarColors();
     });
   });
 }
 
-applyAvatarColor(localStorage.getItem("smartpass_avatar_color") || AVATAR_COLORS[0]);
+applyAvatarColor(localStorage.getItem(userKey("smartpass_avatar_color")) || AVATAR_COLORS[0]);
 renderAvatarColors();
 
 avatarBtn.addEventListener("click", (e) => {
@@ -55,9 +59,9 @@ document.addEventListener("click", (e) => {
 });
 
 document.getElementById("sign-out-btn").addEventListener("click", () => {
+  localStorage.removeItem(userKey("smartpass_active_pass"));
   localStorage.removeItem("smartpass_name");
   localStorage.removeItem("smartpass_school");
-  localStorage.removeItem("smartpass_active_pass");
   document.body.classList.add("fade-out");
   setTimeout(() => {
     window.location.href = "index.html";
@@ -442,7 +446,7 @@ function startActivePass(room, endTime, fromRoom, startTime) {
 
 function endActivePass() {
   clearInterval(timerInterval);
-  localStorage.removeItem("smartpass_active_pass");
+  localStorage.removeItem(userKey("smartpass_active_pass"));
   activePass.classList.add("hidden");
   goingSomewhere.classList.remove("hidden");
   createPassNavBtn.disabled = false;
@@ -469,7 +473,7 @@ document.getElementById("end-pass-btn").addEventListener("click", endActivePass)
 
 function getPassHistory() {
   try {
-    return JSON.parse(localStorage.getItem("smartpass_pass_history")) || [];
+    return JSON.parse(localStorage.getItem(userKey("smartpass_pass_history"))) || [];
   } catch {
     return [];
   }
@@ -490,7 +494,7 @@ function renderStats() {
 function recordPassCreated() {
   const history = getPassHistory();
   history.push(Date.now());
-  localStorage.setItem("smartpass_pass_history", JSON.stringify(history));
+  localStorage.setItem(userKey("smartpass_pass_history"), JSON.stringify(history));
   renderStats();
 }
 
@@ -500,7 +504,7 @@ renderStats();
 
 function getPassLog() {
   try {
-    return JSON.parse(localStorage.getItem("smartpass_pass_log")) || [];
+    return JSON.parse(localStorage.getItem(userKey("smartpass_pass_log"))) || [];
   } catch {
     return [];
   }
@@ -557,7 +561,7 @@ function renderNotifications() {
 function recordPassCompleted(entry) {
   const log = getPassLog();
   log.push(entry);
-  localStorage.setItem("smartpass_pass_log", JSON.stringify(log));
+  localStorage.setItem(userKey("smartpass_pass_log"), JSON.stringify(log));
   renderNotifications();
 }
 
@@ -569,7 +573,7 @@ startPassBtn.addEventListener("click", () => {
   const startTime = Date.now();
   const endTime = startTime + minutes * 60000;
   localStorage.setItem(
-    "smartpass_active_pass",
+    userKey("smartpass_active_pass"),
     JSON.stringify({ room: goingToRoom, from: comingFromRoom, startTime, endTime })
   );
   recordPassCreated();
@@ -578,7 +582,7 @@ startPassBtn.addEventListener("click", () => {
   closeModal();
 });
 
-const savedPass = localStorage.getItem("smartpass_active_pass");
+const savedPass = localStorage.getItem(userKey("smartpass_active_pass"));
 if (savedPass) {
   const { room, from, endTime, startTime } = JSON.parse(savedPass);
   startActivePass(room, endTime, from, startTime);
