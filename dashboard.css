@@ -15,6 +15,10 @@ body.loaded {
   opacity: 1;
 }
 
+body.fade-out {
+  opacity: 0;
+}
+
 /* Top bar */
 
 .topbar {
@@ -112,6 +116,10 @@ body.loaded {
   border-radius: 10px;
 }
 
+.avatar-wrap {
+  position: relative;
+}
+
 .avatar {
   position: relative;
   width: 38px;
@@ -123,6 +131,9 @@ body.loaded {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  border: none;
+  padding: 0;
+  cursor: pointer;
 }
 
 .avatar-icon {
@@ -147,6 +158,116 @@ body.loaded {
 .avatar-badge svg {
   width: 10px;
   height: 10px;
+}
+
+.avatar-lg {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+
+.avatar-lg .avatar-icon {
+  width: 38px;
+  height: 38px;
+}
+
+/* Avatar dropdown menu */
+
+.avatar-menu {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 260px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  border: 1px solid #e7eaee;
+  padding: 18px;
+  z-index: 150;
+}
+
+.avatar-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.avatar-menu-name {
+  font-family: "Baloo 2", "Segoe UI", Arial, sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: #2b2560;
+}
+
+.avatar-menu-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #8a94a3;
+  margin: 0 0 10px 0;
+}
+
+.avatar-color-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.avatar-color-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-color-swatch.selected {
+  border-color: #2b2560;
+}
+
+.avatar-color-swatch svg {
+  width: 14px;
+  height: 14px;
+}
+
+.avatar-menu-divider {
+  height: 1px;
+  background: #eef0f4;
+  margin: 4px 0 12px 0;
+}
+
+.avatar-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 8px;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.avatar-menu-item svg {
+  width: 18px;
+  height: 18px;
+}
+
+.avatar-signout {
+  color: #e2574c;
+}
+
+.avatar-signout:hover {
+  background: #fdf1f0;
 }
 
 /* Content layout */
