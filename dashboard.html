@@ -33,11 +33,32 @@
         <svg viewBox="0 0 24 24" class="btn-icon"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
         Create Pass
       </button>
-      <div class="avatar">
-        <svg viewBox="0 0 24 24" class="avatar-icon"><circle cx="12" cy="8" r="4" fill="currentColor"/><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6" fill="currentColor"/></svg>
-        <span class="avatar-badge">
-          <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </span>
+      <div class="avatar-wrap">
+        <button class="avatar" id="avatar-btn" aria-label="Account menu">
+          <svg viewBox="0 0 24 24" class="avatar-icon"><circle cx="12" cy="8" r="4" fill="currentColor"/><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6" fill="currentColor"/></svg>
+          <span class="avatar-badge">
+            <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </button>
+
+        <div class="avatar-menu hidden" id="avatar-menu">
+          <div class="avatar-menu-header">
+            <div class="avatar avatar-lg" id="avatar-preview">
+              <svg viewBox="0 0 24 24" class="avatar-icon"><circle cx="12" cy="8" r="4" fill="currentColor"/><path d="M4 20c0-4 3.5-6 8-6s8 2 8 6" fill="currentColor"/></svg>
+            </div>
+            <span class="avatar-menu-name" id="avatar-menu-name"></span>
+          </div>
+
+          <p class="avatar-menu-label">Change Profile Icon</p>
+          <div class="avatar-color-grid" id="avatar-color-grid"></div>
+
+          <div class="avatar-menu-divider"></div>
+
+          <button class="avatar-menu-item avatar-signout" id="sign-out-btn">
+            <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 17l5-5-5-5M21 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Sign Out
+          </button>
+        </div>
       </div>
     </div>
   </header>
