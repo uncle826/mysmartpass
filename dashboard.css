@@ -428,20 +428,22 @@ body.fade-out {
   justify-content: center;
   padding: 40px 24px;
   overflow-y: auto;
+  transition: background 0.4s ease;
 }
 
 .pass-card {
   width: 100%;
   max-width: 480px;
   color: #ffffff;
-  border-radius: 28px;
-  padding: 36px 36px 32px 36px;
+  border-radius: 16px;
+  padding: 32px 32px 28px 32px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  transition: background 0.4s ease;
 }
 
 .pass-card-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
@@ -451,8 +453,14 @@ body.fade-out {
   align-items: center;
   gap: 8px;
   font-family: "Baloo 2", "Segoe UI", Arial, sans-serif;
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 700;
+}
+
+.pass-card-subtitle {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+  margin: 2px 0 0 30px;
 }
 
 .pass-pin-icon {
@@ -497,17 +505,30 @@ body.fade-out {
   background: #ffffff;
 }
 
+.pass-overtime-pill {
+  display: block;
+  width: fit-content;
+  margin: 0 auto 18px auto;
+  padding: 5px 16px;
+  background: rgba(255, 255, 255, 0.85);
+  color: #b0203f;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 14px;
+}
+
 .pass-ring {
-  width: 200px;
-  height: 200px;
+  width: 190px;
+  height: 190px;
   border-radius: 50%;
-  border: 10px solid rgba(255, 255, 255, 0.9);
+  border: 6px solid rgba(255, 255, 255, 0.85);
   margin: 0 auto 34px auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 10px;
+  transition: border-color 0.4s ease;
 }
 
 .pass-ring-icon {

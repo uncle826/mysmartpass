@@ -80,9 +80,12 @@
       <div class="active-pass hidden" id="active-pass">
         <div class="pass-card" id="pass-card">
           <div class="pass-card-header">
-            <div class="pass-card-title">
-              <svg viewBox="0 0 24 24" class="pass-pin-icon"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" fill="#fff"/><circle cx="12" cy="9.5" r="2.6" fill="currentColor"/></svg>
-              <span id="active-pass-destination"></span>
+            <div>
+              <div class="pass-card-title">
+                <svg viewBox="0 0 24 24" class="pass-pin-icon"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" fill="#fff"/><circle cx="12" cy="9.5" r="2.6" fill="currentColor"/></svg>
+                <span id="active-pass-destination"></span>
+              </div>
+              <p class="pass-card-subtitle">Round-trip</p>
             </div>
             <div class="pass-from">
               from <span class="pass-from-badge" id="active-pass-from"></span>
@@ -90,6 +93,8 @@
           </div>
 
           <div class="pass-card-divider"><span class="pass-card-divider-dot"></span></div>
+
+          <span class="pass-overtime-pill hidden" id="pass-overtime-pill">Overtime</span>
 
           <div class="pass-ring">
             <img src="walking-icon.png" alt="" class="pass-ring-icon" id="active-pass-icon">

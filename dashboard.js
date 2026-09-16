@@ -334,11 +334,22 @@ const activePassDestination = document.getElementById("active-pass-destination")
 const activePassFrom = document.getElementById("active-pass-from");
 const activePassTimer = document.getElementById("active-pass-timer");
 const createPassNavBtn = document.getElementById("create-pass-nav-btn");
+const overtimePill = document.getElementById("pass-overtime-pill");
 
 let timerInterval = null;
 
+const OVERTIME_BG = "linear-gradient(160deg, #7a1f3d, #4a1226)";
+const OVERTIME_CARD = "linear-gradient(160deg, #e0466f, #c22a56)";
+
 function formatRemaining(endTime) {
   const totalSeconds = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function formatOvertime(endTime) {
+  const totalSeconds = Math.max(0, Math.floor((Date.now() - endTime) / 1000));
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
@@ -353,6 +364,23 @@ function shadeColor(hex, amount) {
   return `#${(0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1)}`;
 }
 
+function enterOvertime() {
+  activePass.classList.add("overtime");
+  overtimePill.classList.remove("hidden");
+  activePass.style.background = OVERTIME_BG;
+  passCard.style.background = OVERTIME_CARD;
+}
+
+function updateActivePassTimer(endTime) {
+  const remaining = endTime - Date.now();
+  if (remaining <= 0) {
+    if (!activePass.classList.contains("overtime")) enterOvertime();
+    activePassTimer.textContent = formatOvertime(endTime);
+  } else {
+    activePassTimer.textContent = formatRemaining(endTime);
+  }
+}
+
 function startActivePass(room, endTime, fromRoom) {
   goingSomewhere.classList.add("hidden");
   activePass.classList.remove("hidden");
@@ -360,18 +388,18 @@ function startActivePass(room, endTime, fromRoom) {
   createPassNavBtn.style.opacity = "0.5";
   createPassNavBtn.style.cursor = "not-allowed";
 
+  activePass.classList.remove("overtime");
+  overtimePill.classList.add("hidden");
+
   const category = categoryByKey(room.categoryKey);
   activePass.style.background = `linear-gradient(160deg, ${shadeColor(category.color, -110)}, ${shadeColor(category.color, -155)})`;
   passCard.style.background = `linear-gradient(160deg, ${shadeColor(category.color, 25)}, ${shadeColor(category.color, -20)})`;
   activePassDestination.textContent = room.name;
   activePassFrom.textContent = fromRoom ? fromRoom.name : "—";
 
-  activePassTimer.textContent = formatRemaining(endTime);
+  updateActivePassTimer(endTime);
   clearInterval(timerInterval);
-  timerInterval = setInterval(() => {
-    activePassTimer.textContent = formatRemaining(endTime);
-    if (endTime - Date.now() <= 0) clearInterval(timerInterval);
-  }, 1000);
+  timerInterval = setInterval(() => updateActivePassTimer(endTime), 1000);
 }
 
 function endActivePass() {
