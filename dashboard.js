@@ -3,6 +3,67 @@ requestAnimationFrame(() => document.body.classList.add("loaded"));
 const name = localStorage.getItem("smartpass_name") || "there";
 document.getElementById("user-name").textContent = name.toUpperCase();
 
+/* Avatar menu: profile color + sign out */
+
+const AVATAR_COLORS = ["#9aa2af", "#1ed17a", "#2599d6", "#7b68ee", "#fb6d4c", "#f2994a", "#b21cc4", "#14a3a1"];
+
+const avatarBtn = document.getElementById("avatar-btn");
+const avatarMenu = document.getElementById("avatar-menu");
+const avatarColorGrid = document.getElementById("avatar-color-grid");
+const navAvatars = document.querySelectorAll(".avatar");
+
+document.getElementById("avatar-menu-name").textContent = name.toUpperCase();
+
+function applyAvatarColor(color) {
+  navAvatars.forEach((el) => {
+    el.style.background = color;
+  });
+}
+
+function renderAvatarColors() {
+  const current = localStorage.getItem("smartpass_avatar_color") || AVATAR_COLORS[0];
+  avatarColorGrid.innerHTML = AVATAR_COLORS.map((c) => {
+    const selected = c === current ? "selected" : "";
+    const check = c === current
+      ? '<svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+      : "";
+    return `<button type="button" class="avatar-color-swatch ${selected}" style="background:${c}" data-color="${c}">${check}</button>`;
+  }).join("");
+
+  avatarColorGrid.querySelectorAll(".avatar-color-swatch").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const color = btn.dataset.color;
+      localStorage.setItem("smartpass_avatar_color", color);
+      applyAvatarColor(color);
+      renderAvatarColors();
+    });
+  });
+}
+
+applyAvatarColor(localStorage.getItem("smartpass_avatar_color") || AVATAR_COLORS[0]);
+renderAvatarColors();
+
+avatarBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  avatarMenu.classList.toggle("hidden");
+});
+
+document.addEventListener("click", (e) => {
+  if (!avatarMenu.classList.contains("hidden") && !avatarMenu.contains(e.target) && e.target !== avatarBtn) {
+    avatarMenu.classList.add("hidden");
+  }
+});
+
+document.getElementById("sign-out-btn").addEventListener("click", () => {
+  localStorage.removeItem("smartpass_name");
+  localStorage.removeItem("smartpass_school");
+  localStorage.removeItem("smartpass_active_pass");
+  document.body.classList.add("fade-out");
+  setTimeout(() => {
+    window.location.href = "index.html";
+  }, 400);
+});
+
 function updateDateTime() {
   const now = new Date();
   const weekday = now.toLocaleDateString("en-US", { weekday: "long" });
