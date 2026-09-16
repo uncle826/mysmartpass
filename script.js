@@ -15,7 +15,7 @@ loginForm.addEventListener("submit", function (e) {
 
   localStorage.setItem("smartpass_name", name);
 
-  loadingText.textContent = "Setting things up…";
+  loadingText.textContent = `Welcome, ${name}!`;
   showView(loadingView);
 
   const delay = 1000 + Math.random() * 4000;
@@ -24,16 +24,17 @@ loginForm.addEventListener("submit", function (e) {
 
 document.querySelectorAll(".school-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
-    localStorage.setItem("smartpass_school", btn.dataset.school);
+    const school = btn.dataset.school;
+    localStorage.setItem("smartpass_school", school);
 
-    loadingText.textContent = "Taking you to your dashboard…";
+    loadingText.textContent = "Taking you to your school…";
     showView(loadingView);
 
     const delay = 800 + Math.random() * 1700;
     setTimeout(() => {
       document.body.classList.add("fade-out");
       setTimeout(() => {
-        window.location.href = "dashboard.html";
+        window.location.href = school.toLowerCase() + ".html";
       }, 400);
     }, delay);
   });
