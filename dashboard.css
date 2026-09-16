@@ -358,13 +358,22 @@ body.fade-out {
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
   background: #eef0f4;
+  border: none;
   border-radius: 8px;
   padding: 14px 40px 14px 14px;
   position: relative;
   color: #6b7484;
   font-size: 14px;
   font-weight: 600;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.notice:hover {
+  background: #e7eaee;
 }
 
 .notice-icon {
@@ -380,7 +389,9 @@ body.fade-out {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: #ffffff;
   color: #9aa2af;
   font-size: 15px;
@@ -404,12 +415,104 @@ body.fade-out {
   color: #c3c9d2;
   font-size: 15px;
   font-weight: 600;
-  margin-top: 220px;
+  margin-top: 60px;
 }
 
 .check-icon {
   width: 16px;
   height: 16px;
+}
+
+/* Notifications: pass history */
+
+.notif-stats {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.notif-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #f4f6f9;
+  border-radius: 10px;
+  padding: 12px 10px;
+}
+
+.notif-stat-value {
+  font-family: "Baloo 2", "Segoe UI", Arial, sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #2b2560;
+}
+
+.notif-stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8a94a3;
+}
+
+.notif-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 14px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.notif-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px;
+  border-bottom: 1px solid #f4f6f9;
+}
+
+.notif-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notif-icon svg,
+.notif-icon img {
+  width: 18px;
+  height: 18px;
+}
+
+.notif-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.notif-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.notif-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #2b2560;
+}
+
+.notif-meta {
+  font-size: 12.5px;
+  color: #8a94a3;
+}
+
+.notif-overtime-tag {
+  color: #e2574c;
+  font-weight: 700;
 }
 
 .hidden {

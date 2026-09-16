@@ -82,8 +82,38 @@ function updateDateTime() {
 updateDateTime();
 setInterval(updateDateTime, 30000);
 
-document.getElementById("notice-close").addEventListener("click", () => {
-  document.getElementById("notice").classList.add("hidden");
+/* Browser notifications */
+
+const notice = document.getElementById("notice");
+
+function sendBrowserNotification(title, body) {
+  if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+  new Notification(title, { body, icon: "favicon.svg" });
+}
+
+function updateNoticeVisibility() {
+  if (typeof Notification === "undefined" || Notification.permission === "granted") {
+    notice.classList.add("hidden");
+  } else {
+    notice.classList.remove("hidden");
+  }
+}
+
+updateNoticeVisibility();
+
+notice.addEventListener("click", () => {
+  if (typeof Notification === "undefined") return;
+  Notification.requestPermission().then((permission) => {
+    updateNoticeVisibility();
+    if (permission === "granted") {
+      sendBrowserNotification("SmartPass", "Notifications are turned on.");
+    }
+  });
+});
+
+document.getElementById("notice-close").addEventListener("click", (e) => {
+  e.stopPropagation();
+  notice.classList.add("hidden");
 });
 
 /* Create Pass modal */
@@ -369,6 +399,10 @@ function enterOvertime() {
   overtimePill.classList.remove("hidden");
   activePass.style.background = OVERTIME_BG;
   passCard.style.background = OVERTIME_CARD;
+  sendBrowserNotification(
+    "You're overtime",
+    currentPass ? `Your pass to ${currentPass.room.name} has gone overtime.` : "Your pass has gone overtime."
+  );
 }
 
 function updateActivePassTimer(endTime) {
@@ -381,7 +415,9 @@ function updateActivePassTimer(endTime) {
   }
 }
 
-function startActivePass(room, endTime, fromRoom) {
+let currentPass = null;
+
+function startActivePass(room, endTime, fromRoom, startTime) {
   goingSomewhere.classList.add("hidden");
   activePass.classList.remove("hidden");
   createPassNavBtn.disabled = true;
@@ -390,6 +426,8 @@ function startActivePass(room, endTime, fromRoom) {
 
   activePass.classList.remove("overtime");
   overtimePill.classList.add("hidden");
+
+  currentPass = { room, endTime, startTime: startTime || Date.now() };
 
   const category = categoryByKey(room.categoryKey);
   activePass.style.background = `linear-gradient(160deg, ${shadeColor(category.color, -110)}, ${shadeColor(category.color, -155)})`;
@@ -410,6 +448,19 @@ function endActivePass() {
   createPassNavBtn.disabled = false;
   createPassNavBtn.style.opacity = "";
   createPassNavBtn.style.cursor = "";
+
+  if (currentPass) {
+    const finishedAt = Date.now();
+    recordPassCompleted({
+      name: currentPass.room.name,
+      categoryKey: currentPass.room.categoryKey,
+      startTime: currentPass.startTime,
+      endTime: finishedAt,
+      overtime: finishedAt > currentPass.endTime,
+    });
+    sendBrowserNotification("Pass ended", `You ended your pass to ${currentPass.room.name}.`);
+    currentPass = null;
+  }
 }
 
 document.getElementById("end-pass-btn").addEventListener("click", endActivePass);
@@ -445,21 +496,90 @@ function recordPassCreated() {
 
 renderStats();
 
+/* Notifications: completed pass log */
+
+function getPassLog() {
+  try {
+    return JSON.parse(localStorage.getItem("smartpass_pass_log")) || [];
+  } catch {
+    return [];
+  }
+}
+
+function formatDuration(ms) {
+  const totalSeconds = Math.max(0, Math.round(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes === 0) return `${seconds}s`;
+  return `${minutes}m ${seconds}s`;
+}
+
+function formatClockTime(ts) {
+  return new Date(ts).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+function renderNotifications() {
+  const log = getPassLog();
+  const overtimeCount = log.filter((p) => p.overtime).length;
+
+  document.getElementById("notif-overtime-count").textContent = overtimeCount;
+  document.getElementById("notif-total-count").textContent = log.length;
+
+  const list = document.getElementById("notif-list");
+  const empty = document.getElementById("notif-empty");
+
+  if (log.length === 0) {
+    list.innerHTML = "";
+    empty.classList.remove("hidden");
+    return;
+  }
+  empty.classList.add("hidden");
+
+  list.innerHTML = log
+    .slice()
+    .reverse()
+    .map((p) => {
+      const category = categoryByKey(p.categoryKey);
+      const duration = formatDuration(p.endTime - p.startTime);
+      const overtimeTag = p.overtime ? ' · <span class="notif-overtime-tag">Overtime</span>' : "";
+      return `
+        <div class="notif-item">
+          <span class="notif-icon" style="background:${category.color}">${categoryIconMarkup(category)}</span>
+          <div class="notif-info">
+            <span class="notif-name">${p.name}</span>
+            <span class="notif-meta">${formatClockTime(p.startTime)} · ${duration}${overtimeTag}</span>
+          </div>
+        </div>`;
+    })
+    .join("");
+}
+
+function recordPassCompleted(entry) {
+  const log = getPassLog();
+  log.push(entry);
+  localStorage.setItem("smartpass_pass_log", JSON.stringify(log));
+  renderNotifications();
+}
+
+renderNotifications();
+
 startPassBtn.addEventListener("click", () => {
   if (!goingToRoom) return;
   const minutes = parseInt(durationSlider.value, 10);
-  const endTime = Date.now() + minutes * 60000;
+  const startTime = Date.now();
+  const endTime = startTime + minutes * 60000;
   localStorage.setItem(
     "smartpass_active_pass",
-    JSON.stringify({ room: goingToRoom, from: comingFromRoom, endTime })
+    JSON.stringify({ room: goingToRoom, from: comingFromRoom, startTime, endTime })
   );
   recordPassCreated();
-  startActivePass(goingToRoom, endTime, comingFromRoom);
+  sendBrowserNotification("Pass created", `Heading to ${goingToRoom.name}.`);
+  startActivePass(goingToRoom, endTime, comingFromRoom, startTime);
   closeModal();
 });
 
 const savedPass = localStorage.getItem("smartpass_active_pass");
 if (savedPass) {
-  const { room, from, endTime } = JSON.parse(savedPass);
-  startActivePass(room, endTime, from);
+  const { room, from, endTime, startTime } = JSON.parse(savedPass);
+  startActivePass(room, endTime, from, startTime);
 }
