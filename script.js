@@ -15,7 +15,19 @@ loginForm.addEventListener("submit", function (e) {
   if (!name) return;
 
   localStorage.setItem("smartpass_name", name);
-  localStorage.setItem("smartpass_role", document.body.dataset.role || "student");
+  const role = document.body.dataset.role || "student";
+  localStorage.setItem("smartpass_role", role);
+
+  if (role === "student") {
+    let roster = {};
+    try {
+      roster = JSON.parse(localStorage.getItem("smartpass_roster")) || {};
+    } catch {
+      roster = {};
+    }
+    roster[name.toLowerCase()] = { name, lastSeen: Date.now() };
+    localStorage.setItem("smartpass_roster", JSON.stringify(roster));
+  }
 
   loadingText.textContent = `Welcome, ${name}!`;
   showView(loadingView);

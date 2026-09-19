@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartPass Teacher Dashboard</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ffffff">
+<script src="pwa.js" defer></script>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="dashboard.css">
+<link rel="stylesheet" href="teacher.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar-side">
+      <span class="role-chip">Teacher</span>
+    </div>
+
+    <nav class="main-nav">
+      <a href="/teacher-dashboard" class="nav-item active">
+        <svg viewBox="0 0 24 24" class="nav-icon"><circle cx="9" cy="8" r="3.4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M2.8 19.5c0-3.4 2.8-5.5 6.2-5.5s6.2 2.1 6.2 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="17" cy="9" r="2.6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M17.5 14.2c2.4 0 4.2 1.6 4.2 4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>Students</span>
+      </a>
+    </nav>
+
+    <div class="topbar-side right">
+      <div class="avatar-wrap">
+        <button class="avatar" id="avatar-btn" aria-label="Account menu">
+          <svg viewBox="0 0 24 24" class="avatar-icon"><circle cx="12" cy="9" r="4.6" fill="currentColor"/><path d="M2 24c0-5.6 4.4-8.6 10-8.6s10 3 10 8.6z" fill="currentColor"/></svg>
+          <span class="avatar-badge">
+            <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="#4b5261" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </button>
+
+        <div class="avatar-menu hidden" id="avatar-menu">
+          <div class="avatar-menu-header">
+            <div class="avatar avatar-lg">
+              <svg viewBox="0 0 24 24" class="avatar-icon"><circle cx="12" cy="9" r="4.6" fill="currentColor"/><path d="M2 24c0-5.6 4.4-8.6 10-8.6s10 3 10 8.6z" fill="currentColor"/></svg>
+            </div>
+            <span class="avatar-menu-name" id="teacher-name"></span>
+          </div>
+
+          <div class="avatar-menu-divider"></div>
+
+          <button class="avatar-menu-item avatar-signout" id="sign-out-btn">
+            <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 17l5-5-5-5M21 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Sign Out
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="t-content">
+    <aside class="t-students">
+      <div class="t-students-head">
+        <h2>Students</h2>
+        <span class="t-count" id="t-count">0</span>
+      </div>
+      <input type="text" class="t-search" id="t-search" placeholder="Search students" autocomplete="off">
+      <div class="t-student-list" id="t-student-list"></div>
+      <p class="t-empty hidden" id="t-empty">No students yet. Students show up here after they sign in on this device.</p>
+    </aside>
+
+    <section class="t-detail" id="t-detail"></section>
+  </main>
+
+  <div class="confirm-overlay hidden" id="t-modal-overlay">
+    <div class="confirm-box t-modal" role="dialog" aria-modal="true" aria-labelledby="t-modal-title">
+      <h3 id="t-modal-title">Create pass</h3>
+      <p class="t-modal-sub" id="t-modal-sub"></p>
+
+      <input type="text" class="t-search" id="t-room-search" placeholder="Where are they going?" autocomplete="off">
+      <div class="t-room-list" id="t-room-list"></div>
+
+      <div class="t-duration">
+        <label for="t-duration-slider">Time</label>
+        <input type="range" id="t-duration-slider" min="1" max="15" step="1" value="5">
+        <span class="t-duration-value" id="t-duration-value">5 min</span>
+      </div>
+
+      <div class="confirm-actions">
+        <button type="button" class="confirm-btn confirm-cancel" id="t-modal-cancel">Cancel</button>
+        <button type="button" class="confirm-btn confirm-primary" id="t-modal-create" disabled>Create pass</button>
+      </div>
+    </div>
+  </div>
+
+<script src="rooms.js"></script>
+<script src="teacher-dashboard.js"></script>
+</body>
+</html>

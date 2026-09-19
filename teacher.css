@@ -1,0 +1,390 @@
+.role-chip {
+  padding: 6px 14px;
+  border-radius: 16px;
+  background: #e7f8f1;
+  color: #0e9f6e;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.t-content {
+  display: flex;
+  gap: 24px;
+  max-width: 1400px;
+  height: calc(100vh - 72px);
+  margin: 0 auto;
+  padding: 28px 40px;
+}
+
+.t-students,
+.t-detail {
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  min-height: 0;
+}
+
+/* Student list */
+
+.t-students {
+  width: 340px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 22px;
+  animation: slideInRight 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.t-students-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.t-students-head h2 {
+  font-family: "Baloo 2", "Segoe UI", Arial, sans-serif;
+  font-size: 19px;
+  font-weight: 700;
+  color: #2b2560;
+  margin: 0;
+}
+
+.t-count {
+  min-width: 24px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #f0f2f6;
+  color: #6b7484;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.t-search {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #eceef3;
+  border-radius: 10px;
+  background: #f3f4f7;
+  color: #2b2560;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.t-search::placeholder {
+  color: #b3bbd0;
+}
+
+.t-search:focus {
+  background: #ffffff;
+  border-color: #4b55c9;
+  box-shadow: 0 0 0 4px rgba(99, 112, 235, 0.2);
+}
+
+.t-student-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 12px -8px 0 -8px;
+}
+
+.t-student {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 8px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.t-student:hover {
+  background: #f4f6f9;
+}
+
+.t-student.selected {
+  background: #eef0fb;
+}
+
+.t-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.t-student-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.t-student-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #2b2560;
+}
+
+.t-student-sub {
+  font-size: 12.5px;
+  color: #8a94a3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.t-student-sub.on-pass {
+  color: #0e9f6e;
+  font-weight: 600;
+}
+
+.t-student-sub.overtime {
+  color: #e2574c;
+  font-weight: 700;
+}
+
+.t-empty {
+  margin: 30px 0 0 0;
+  text-align: center;
+  color: #b3bbd0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* Detail panel */
+
+.t-detail {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 28px;
+  animation: riseIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.1s both;
+}
+
+.t-placeholder {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #b3bbd0;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.t-placeholder svg {
+  width: 46px;
+  height: 46px;
+}
+
+.t-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.t-detail-head .t-avatar {
+  width: 56px;
+  height: 56px;
+  font-size: 22px;
+}
+
+.t-detail-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.t-detail-title h2 {
+  font-family: "Baloo 2", "Segoe UI", Arial, sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: #2b2560;
+  margin: 0;
+  line-height: 1.15;
+}
+
+.t-status {
+  font-size: 14px;
+  color: #8a94a3;
+}
+
+.t-status.on-pass {
+  color: #0e9f6e;
+  font-weight: 600;
+}
+
+.t-status.overtime {
+  color: #e2574c;
+  font-weight: 700;
+}
+
+.t-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-danger-outline {
+  background: #ffffff;
+  border: 1px solid #f0c4c0;
+  color: #e2574c;
+}
+
+.btn-danger-outline:hover {
+  background: #fdf1f0;
+}
+
+.t-detail .notif-stats {
+  margin-top: 0;
+  margin-bottom: 22px;
+}
+
+.t-active {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: 10px;
+  color: #ffffff;
+  margin-bottom: 24px;
+}
+
+.t-active-icon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.t-active-icon img,
+.t-active-icon svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.t-active-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.t-active-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.t-active-name {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.t-active-time {
+  font-size: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.t-active-time small {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.t-history-title {
+  font-family: "Baloo 2", "Segoe UI", Arial, sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: #2b2560;
+  margin: 0 0 8px 0;
+}
+
+.t-day {
+  margin: 14px 0 4px 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #8a94a3;
+}
+
+.t-no-history {
+  color: #b3bbd0;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 14px 0 0 0;
+}
+
+/* Create pass dialog */
+
+.confirm-primary {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.confirm-primary:hover:not(:disabled) {
+  background: #0e9f6e;
+}
+
+.confirm-primary:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.confirm-box.t-modal {
+  max-width: 460px;
+}
+
+.t-modal-sub {
+  margin-bottom: 14px !important;
+}
+
+.t-room-list {
+  max-height: 250px;
+  overflow-y: auto;
+  margin: 10px -8px 14px -8px;
+}
+
+.t-duration {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 22px;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #4a5568;
+}
+
+.t-duration input[type="range"] {
+  flex: 1;
+  accent-color: #10b981;
+}
+
+.t-duration-value {
+  min-width: 56px;
+  text-align: right;
+  font-weight: 700;
+  color: #2b2560;
+}

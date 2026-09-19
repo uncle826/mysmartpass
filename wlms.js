@@ -13,6 +13,6 @@ setTimeout(() => {
   clearInterval(messageInterval);
   document.body.classList.add("fade-out");
   setTimeout(() => {
-    window.location.href = "dashboard.html";
+    window.location.href = localStorage.getItem("smartpass_role") === "teacher" ? "teacher-dashboard.html" : "dashboard.html";
   }, 400);
 }, delay);

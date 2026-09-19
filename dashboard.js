@@ -506,14 +506,18 @@ function startActivePass(room, endTime, fromRoom, startTime) {
   timerInterval = setInterval(() => updateActivePassTimer(endTime), 1000);
 }
 
-function endActivePass() {
+function resetActivePassUI() {
   clearInterval(timerInterval);
-  localStorage.removeItem(userKey("smartpass_active_pass"));
   activePass.classList.add("hidden");
   goingSomewhere.classList.remove("hidden");
   createPassNavBtn.disabled = false;
   createPassNavBtn.style.opacity = "";
   createPassNavBtn.style.cursor = "";
+}
+
+function endActivePass() {
+  localStorage.removeItem(userKey("smartpass_active_pass"));
+  resetActivePassUI();
 
   if (currentPass) {
     const finishedAt = Date.now();
@@ -675,3 +679,19 @@ if (savedPass) {
   const { room, from, endTime, startTime } = JSON.parse(savedPass);
   startActivePass(room, endTime, from, startTime);
 }
+
+window.addEventListener("storage", (e) => {
+  if (e.key === userKey("smartpass_active_pass")) {
+    if (e.newValue) {
+      const { room, from, endTime, startTime } = JSON.parse(e.newValue);
+      if (!overlay.classList.contains("hidden")) closeModal();
+      startActivePass(room, endTime, from, startTime);
+      sendBrowserNotification("Pass created", `A pass to ${room.name} was created for you.`);
+    } else if (currentPass) {
+      resetActivePassUI();
+      currentPass = null;
+    }
+  } else if (e.key === userKey("smartpass_pass_log")) {
+    renderNotifications();
+  }
+});
