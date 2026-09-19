@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LHS - SmartPass</title>
+<title>SmartPass Student Sign In</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#ffffff">
@@ -13,7 +13,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-role="student">
   <div class="login-card">
     <div class="logo">
       <div class="logo-text">
@@ -28,17 +28,31 @@
       </div>
     </div>
 
-    <div class="dev-view">
-      <svg viewBox="0 0 24 24" class="dev-icon"><path d="M14.7 6.3a4 4 0 0 1-5.1 5.1L5 16l3 3 4.6-4.6a4 4 0 0 1 5.1-5.1L20 7l-3-3-2.3 2.3z" fill="none" stroke="#8a8f98" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <p class="dev-title">LHS</p>
-      <p class="dev-text">This school is under development.<br>Check back soon!</p>
-      <a href="/student-signin" id="back-link" class="next-btn dev-back-btn">Go Back</a>
+    <form id="login-form">
+      <label for="name" class="field-label">Enter Name</label>
+      <input type="text" id="name" name="name" placeholder="Name" autocomplete="name" required>
+      <button type="submit" class="next-btn">Next</button>
+      <a href="/teacher-signin" class="switch-link">Are you a teacher? Sign in here</a>
+    </form>
+
+    <div class="loading-view hidden" id="loading-view">
+      <div class="spinner"></div>
+      <p class="loading-text" id="loading-text">Setting things up&hellip;</p>
+    </div>
+
+    <div class="school-view hidden" id="school-view">
+      <p class="school-prompt">Select School</p>
+      <button type="button" class="school-btn" data-school="WLMS">
+        <img src="wlms-logo.png" alt="" class="school-logo">
+        WLMS
+      </button>
+      <button type="button" class="school-btn" data-school="LHS">
+        <img src="lhs-logo.png" alt="" class="school-logo">
+        LHS
+      </button>
     </div>
   </div>
-<script>
-  if (localStorage.getItem("smartpass_role") === "teacher") {
-    document.getElementById("back-link").href = "/teacher-signin";
-  }
-</script>
+
+<script src="script.js"></script>
 </body>
 </html>

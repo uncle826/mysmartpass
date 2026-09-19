@@ -82,7 +82,8 @@ body.fade-out {
   margin-bottom: 10px;
 }
 
-#name {
+#name,
+.text-input {
   width: 100%;
   padding: 16px 16px;
   font-size: 17px;
@@ -92,7 +93,8 @@ body.fade-out {
   outline: none;
 }
 
-#name:focus {
+#name:focus,
+.text-input:focus {
   border-color: #1d4e77;
 }
 
@@ -292,4 +294,56 @@ body.fade-out {
     animation-delay: 0s !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Teacher sign-in extras */
+
+.text-input {
+  margin-bottom: 16px;
+}
+
+#login-form > :nth-child(n + 4) {
+  animation-delay: 0.5s;
+}
+
+.auth-links {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.auth-link {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1d4e77;
+  text-decoration: none;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+}
+
+.auth-note {
+  margin: 14px 0 0 0;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: #f4f6f9;
+  color: #6b7484;
+  font-size: 13.5px;
+  text-align: center;
+}
+
+.switch-link {
+  display: block;
+  margin-top: 22px;
+  text-align: center;
+  font-size: 14px;
+  color: #8a8f98;
+  text-decoration: none;
+}
+
+.switch-link:hover {
+  color: #1d4e77;
+  text-decoration: underline;
 }

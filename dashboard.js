@@ -59,12 +59,14 @@ document.addEventListener("click", (e) => {
 });
 
 document.getElementById("sign-out-btn").addEventListener("click", () => {
+  const signInPage = localStorage.getItem("smartpass_role") === "teacher" ? "/teacher-signin" : "/student-signin";
+  localStorage.removeItem("smartpass_role");
   localStorage.removeItem(userKey("smartpass_active_pass"));
   localStorage.removeItem("smartpass_name");
   localStorage.removeItem("smartpass_school");
   document.body.classList.add("fade-out");
   setTimeout(() => {
-    window.location.href = "index.html";
+    window.location.href = signInPage;
   }, 400);
 });
 

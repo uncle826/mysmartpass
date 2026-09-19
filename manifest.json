@@ -3,7 +3,7 @@
   "name": "SmartPass",
   "short_name": "SmartPass",
   "description": "SmartPass digital hall pass",
-  "start_url": "./",
+  "start_url": "/student-signin",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f4f6f9",

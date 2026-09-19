@@ -1,4 +1,5 @@
 const loginForm = document.getElementById("login-form");
+const nameInput = document.getElementById("name") || document.getElementById("username");
 const loadingView = document.getElementById("loading-view");
 const loadingText = document.getElementById("loading-text");
 const schoolView = document.getElementById("school-view");
@@ -10,10 +11,11 @@ function showView(view) {
 
 loginForm.addEventListener("submit", function (e) {
   e.preventDefault();
-  const name = document.getElementById("name").value.trim();
+  const name = nameInput.value.trim();
   if (!name) return;
 
   localStorage.setItem("smartpass_name", name);
+  localStorage.setItem("smartpass_role", document.body.dataset.role || "student");
 
   loadingText.textContent = `Welcome, ${name}!`;
   showView(loadingView);
@@ -37,5 +39,14 @@ document.querySelectorAll(".school-btn").forEach((btn) => {
         window.location.href = school.toLowerCase() + ".html";
       }, 400);
     }, delay);
+  });
+});
+
+document.querySelectorAll("[data-soon]").forEach((link) => {
+  link.addEventListener("click", (e) => {
+    e.preventDefault();
+    const note = document.getElementById("auth-note");
+    note.textContent = link.dataset.soon;
+    note.classList.remove("hidden");
   });
 });
