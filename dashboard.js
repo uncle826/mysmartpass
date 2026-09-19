@@ -531,6 +531,63 @@ document.getElementById("end-pass-btn").addEventListener("click", endActivePass)
 
 /* Notifications: completed pass log */
 
+const EYE_ICON = '<svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
+const EYE_OFF_ICON = '<svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 4l16 16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
+
+const notifPanel = document.querySelector(".requests-panel");
+const notifToggle = document.getElementById("notif-toggle");
+const notifClear = document.getElementById("notif-clear");
+const notifHiddenMsg = document.getElementById("notif-hidden-msg");
+const confirmOverlay = document.getElementById("confirm-overlay");
+let confirmTimer = null;
+
+function applyNotifHidden(hidden) {
+  notifPanel.classList.toggle("notif-hidden", hidden);
+  notifHiddenMsg.classList.toggle("hidden", !hidden);
+  notifToggle.innerHTML = hidden ? EYE_ICON : EYE_OFF_ICON;
+  const label = hidden ? "Show notifications" : "Hide notifications";
+  notifToggle.setAttribute("aria-label", label);
+  notifToggle.title = label;
+}
+
+applyNotifHidden(localStorage.getItem(userKey("smartpass_notif_hidden")) === "1");
+
+notifToggle.addEventListener("click", () => {
+  const hidden = !notifPanel.classList.contains("notif-hidden");
+  localStorage.setItem(userKey("smartpass_notif_hidden"), hidden ? "1" : "0");
+  applyNotifHidden(hidden);
+});
+
+function openConfirm() {
+  clearTimeout(confirmTimer);
+  confirmOverlay.classList.remove("closing");
+  confirmOverlay.classList.remove("hidden");
+  document.getElementById("confirm-cancel").focus();
+}
+
+function closeConfirm() {
+  confirmOverlay.classList.add("closing");
+  clearTimeout(confirmTimer);
+  confirmTimer = setTimeout(() => {
+    confirmOverlay.classList.add("hidden");
+    confirmOverlay.classList.remove("closing");
+  }, 180);
+}
+
+notifClear.addEventListener("click", openConfirm);
+document.getElementById("confirm-cancel").addEventListener("click", closeConfirm);
+confirmOverlay.addEventListener("click", (e) => {
+  if (e.target === confirmOverlay) closeConfirm();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !confirmOverlay.classList.contains("hidden")) closeConfirm();
+});
+document.getElementById("confirm-delete").addEventListener("click", () => {
+  localStorage.removeItem(userKey("smartpass_pass_log"));
+  renderNotifications();
+  closeConfirm();
+});
+
 function getPassLog() {
   try {
     return JSON.parse(localStorage.getItem(userKey("smartpass_pass_log"))) || [];
@@ -555,6 +612,7 @@ function renderNotifications() {
   const log = getPassLog();
   const overtimeCount = log.filter((p) => p.overtime).length;
 
+  notifClear.disabled = log.length === 0;
   document.getElementById("notif-overtime-count").textContent = overtimeCount;
   document.getElementById("notif-total-count").textContent = log.length;
 

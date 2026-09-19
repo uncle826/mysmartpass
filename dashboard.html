@@ -120,6 +120,12 @@
       <div class="requests-header">
         <svg viewBox="0 0 24 24" class="requests-icon"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10.5 3.17 10.5 4v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="currentColor"/></svg>
         <h2>Notifications</h2>
+        <div class="notif-actions">
+          <button type="button" class="notif-icon-btn" id="notif-toggle" aria-label="Hide notifications" title="Hide notifications"></button>
+          <button type="button" class="notif-icon-btn" id="notif-clear" aria-label="Delete all notifications" title="Delete all notifications">
+            <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
       </div>
 
       <button type="button" class="notice" id="notice">
@@ -128,6 +134,7 @@
         <span class="notice-close" id="notice-close" aria-label="Dismiss">&times;</span>
       </button>
 
+      <div class="notif-body" id="notif-body">
       <div class="notif-stats">
         <div class="notif-stat">
           <span class="notif-stat-value" id="notif-overtime-count">0</span>
@@ -145,6 +152,9 @@
         <svg viewBox="0 0 24 24" class="check-icon"><path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <span>You're all caught up!</span>
       </div>
+      </div>
+
+      <p class="notif-hidden-msg hidden" id="notif-hidden-msg">Notifications are hidden</p>
     </aside>
   </main>
 
@@ -207,6 +217,17 @@
           Start Pass
           <svg viewBox="0 0 24 24" class="btn-icon"><path d="M9 6l6 6-6 6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="confirm-overlay hidden" id="confirm-overlay">
+    <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+      <h3 id="confirm-title">Delete all notifications?</h3>
+      <p>This clears your pass history and resets your counters. You can't undo this.</p>
+      <div class="confirm-actions">
+        <button type="button" class="confirm-btn confirm-cancel" id="confirm-cancel">Cancel</button>
+        <button type="button" class="confirm-btn confirm-delete" id="confirm-delete">Delete all</button>
       </div>
     </div>
   </div>
