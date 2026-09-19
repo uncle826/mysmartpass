@@ -1,4 +1,19 @@
-if (localStorage.getItem("smartpass_role") !== "teacher") {
+const teacherToken = localStorage.getItem("smartpass_teacher_token");
+if (localStorage.getItem("smartpass_role") !== "teacher" || !teacherToken) {
+  localStorage.removeItem("smartpass_role");
+  localStorage.removeItem("smartpass_teacher_token");
+  location.replace("/teacher-signin");
+}
+
+function teacherApi(path, body) {
+  return apiFetch(path, { body, token: teacherToken, method: body ? "POST" : "GET" });
+}
+
+function kickToSignIn() {
+  localStorage.removeItem("smartpass_role");
+  localStorage.removeItem("smartpass_name");
+  localStorage.removeItem("smartpass_school");
+  localStorage.removeItem("smartpass_teacher_token");
   location.replace("/teacher-signin");
 }
 
@@ -7,8 +22,6 @@ requestAnimationFrame(() => document.body.classList.add("loaded"));
 const teacherName = localStorage.getItem("smartpass_name") || "Teacher";
 document.getElementById("teacher-name").textContent = teacherName.toUpperCase();
 
-const LOG_PREFIX = "smartpass_pass_log__";
-const ACTIVE_PREFIX = "smartpass_active_pass__";
 const AVATAR_PALETTE = ["#2599d6", "#7b68ee", "#fb6d4c", "#f2994a", "#b21cc4", "#14a3a1", "#1ed17a", "#e2574c"];
 
 const listEl = document.getElementById("t-student-list");
@@ -22,15 +35,6 @@ let studentMap = new Map();
 let selectedKey = null;
 
 /* ---------- helpers ---------- */
-
-function readJSON(key, fallback) {
-  try {
-    const value = JSON.parse(localStorage.getItem(key));
-    return value === null || value === undefined ? fallback : value;
-  } catch {
-    return fallback;
-  }
-}
 
 function categoryByKey(key) {
   return CATEGORIES.find((c) => c.key === key);
@@ -81,28 +85,6 @@ function dayLabel(ts) {
 
 /* ---------- data ---------- */
 
-function getStudents() {
-  const roster = readJSON("smartpass_roster", {});
-  const keys = new Set(Object.keys(roster));
-
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k.startsWith(LOG_PREFIX)) keys.add(k.slice(LOG_PREFIX.length));
-    else if (k.startsWith(ACTIVE_PREFIX)) keys.add(k.slice(ACTIVE_PREFIX.length));
-  }
-  keys.delete(teacherName.trim().toLowerCase());
-
-  return [...keys]
-    .filter(Boolean)
-    .map((key) => ({
-      key,
-      name: (roster[key] && roster[key].name) || titleCase(key),
-      log: readJSON(LOG_PREFIX + key, []),
-      active: readJSON(ACTIVE_PREFIX + key, null),
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
-}
-
 function statusInfo(s, now) {
   if (!s.active) {
     const n = s.log.length;
@@ -120,7 +102,7 @@ function statusInfo(s, now) {
 function renderList() {
   const term = searchEl.value.trim().toLowerCase();
   const shown = students.filter((s) => !term || s.name.toLowerCase().includes(term));
-  const now = Date.now();
+  const now = serverTime();
 
   countEl.textContent = students.length;
   emptyEl.classList.toggle("hidden", students.length > 0);
@@ -130,10 +112,10 @@ function renderList() {
       const st = statusInfo(s, now);
       return `
         <button type="button" class="t-student ${s.key === selectedKey ? "selected" : ""}" data-key="${s.key}">
-          <span class="t-avatar" style="background:${avatarColor(s.name)}">${s.name.charAt(0).toUpperCase()}</span>
+          <span class="t-avatar" style="background:${avatarColor(s.name)}">${escapeHtml(s.name.charAt(0).toUpperCase())}</span>
           <span class="t-student-info">
-            <span class="t-student-name">${s.name}</span>
-            <span class="t-student-sub js-status ${st.cls}" data-key="${s.key}">${st.text}</span>
+            <span class="t-student-name">${escapeHtml(s.name)}</span>
+            <span class="t-student-sub js-status ${st.cls}" data-key="${s.key}">${escapeHtml(st.text)}</span>
           </span>
         </button>`;
     })
@@ -168,13 +150,13 @@ function renderDetail() {
 
   let activeBlock = "";
   if (s.active) {
-    const cat = categoryByKey(s.active.room.categoryKey);
+    const cat = categoryByKey(s.active.room.categoryKey) || CATEGORIES[0];
     activeBlock = `
       <div class="t-active" style="background:linear-gradient(135deg, ${cat.color}, ${shade(cat.color, -45)})">
         <span class="t-active-icon">${categoryIconMarkup(cat)}</span>
         <div class="t-active-info">
           <div class="t-active-label" id="t-active-label">On a pass to</div>
-          <div class="t-active-name">${s.active.room.name}</div>
+          <div class="t-active-name">${escapeHtml(s.active.room.name)}</div>
         </div>
         <div class="t-active-time" id="t-active-time"></div>
       </div>`;
@@ -183,7 +165,7 @@ function renderDetail() {
   const entries = s.log.slice().reverse();
   let historyHtml = "";
   if (entries.length === 0) {
-    historyHtml = `<p class="t-no-history">${s.name} hasn't been anywhere yet.</p>`;
+    historyHtml = `<p class="t-no-history">${escapeHtml(s.name)} hasn't been anywhere yet.</p>`;
   } else {
     let lastDay = "";
     historyHtml = entries
@@ -191,13 +173,13 @@ function renderDetail() {
         const day = dayLabel(p.startTime);
         const heading = day !== lastDay ? `<div class="t-day">${day}</div>` : "";
         lastDay = day;
-        const cat = categoryByKey(p.categoryKey);
+        const cat = categoryByKey(p.categoryKey) || CATEGORIES[0];
         const tag = p.overtime ? ' · <span class="notif-overtime-tag">Overtime</span>' : "";
         return `${heading}
           <div class="notif-item" style="--i:${Math.min(i, 12)}">
             <span class="notif-icon" style="background:${cat.color}">${categoryIconMarkup(cat)}</span>
             <div class="notif-info">
-              <span class="notif-name">${p.name}</span>
+              <span class="notif-name">${escapeHtml(p.name)}</span>
               <span class="notif-meta">${timeOfDay(p.startTime)} · ${formatDuration(p.endTime - p.startTime)}${tag}</span>
             </div>
           </div>`;
@@ -214,9 +196,9 @@ function renderDetail() {
 
   detailEl.innerHTML = `
     <div class="t-detail-head">
-      <span class="t-avatar" style="background:${avatarColor(s.name)}">${s.name.charAt(0).toUpperCase()}</span>
+      <span class="t-avatar" style="background:${avatarColor(s.name)}">${escapeHtml(s.name.charAt(0).toUpperCase())}</span>
       <div class="t-detail-title">
-        <h2>${s.name}</h2>
+        <h2>${escapeHtml(s.name)}</h2>
         <div class="t-status" id="t-status"></div>
       </div>
       <div class="t-actions">${actions}</div>
@@ -230,7 +212,7 @@ function renderDetail() {
 
     ${activeBlock}
 
-    <h3 class="t-history-title">Where ${s.name} has been</h3>
+    <h3 class="t-history-title">Where ${escapeHtml(s.name)} has been</h3>
     ${historyHtml}`;
 
   const createBtn = document.getElementById("t-create-btn");
@@ -242,7 +224,7 @@ function renderDetail() {
 }
 
 function tick() {
-  const now = Date.now();
+  const now = serverTime();
 
   document.querySelectorAll(".js-status").forEach((el) => {
     const s = studentMap.get(el.dataset.key);
@@ -277,29 +259,38 @@ function tick() {
 
 /* ---------- actions ---------- */
 
-function refresh() {
-  students = getStudents();
+let lastSignature = "";
+let loadingList = false;
+
+async function refresh(force) {
+  if (loadingList) return;
+  loadingList = true;
+  const res = await teacherApi("/api/teacher/students");
+  loadingList = false;
+
+  if (res.status === 401) return kickToSignIn();
+  if (!res.ok) return;
+
+  const list = res.data.students || [];
+  const signature = JSON.stringify(list);
+  if (!force && signature === lastSignature) return;
+  lastSignature = signature;
+
+  students = list
+    .map((s) => ({ ...s, log: s.log || [] }))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
   studentMap = new Map(students.map((s) => [s.key, s]));
+  if (!selectedKey && students.length > 0) selectedKey = students[0].key;
   if (selectedKey && !studentMap.has(selectedKey)) selectedKey = null;
   renderList();
   renderDetail();
 }
 
-function endStudentPass(s) {
-  const a = s.active;
-  if (!a) return;
-  const finishedAt = Date.now();
-  const log = readJSON(LOG_PREFIX + s.key, []);
-  log.push({
-    name: a.room.name,
-    categoryKey: a.room.categoryKey,
-    startTime: a.startTime,
-    endTime: finishedAt,
-    overtime: finishedAt > a.endTime,
-  });
-  localStorage.setItem(LOG_PREFIX + s.key, JSON.stringify(log));
-  localStorage.removeItem(ACTIVE_PREFIX + s.key);
-  refresh();
+async function endStudentPass(s) {
+  if (!s.active) return;
+  const res = await teacherApi("/api/teacher/pass/end", { key: s.key });
+  if (res.status === 401) return kickToSignIn();
+  refresh(true);
 }
 
 /* ---------- create pass dialog ---------- */
@@ -329,10 +320,10 @@ function renderRooms() {
       const cat = categoryByKey(r.categoryKey);
       const selected = modalRoom && modalRoom.name === r.name ? "selected" : "";
       return `
-        <button type="button" class="room-row ${selected}" data-name="${r.name}">
+        <button type="button" class="room-row ${selected}" data-name="${escapeHtml(r.name)}">
           <span class="room-icon" style="background:${cat.color}">${categoryIconMarkup(cat)}</span>
-          <span class="room-name">${r.name}</span>
-          <span class="room-code">${r.room || "—"}</span>
+          <span class="room-name">${escapeHtml(r.name)}</span>
+          <span class="room-code">${escapeHtml(r.room || "—")}</span>
         </button>`;
     })
     .join("");
@@ -353,7 +344,7 @@ function updateDuration() {
 function openCreate(s) {
   modalStudent = s;
   modalRoom = null;
-  modalSub.textContent = `Create a pass for ${s.name}.`;
+  modalSub.textContent = `Create a pass for ${s.name}.`; // textContent: safe
   roomSearch.value = "";
   slider.value = 5;
   updateDuration();
@@ -384,22 +375,17 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && !modalOverlay.classList.contains("hidden")) closeCreate();
 });
 
-createBtnModal.addEventListener("click", () => {
+createBtnModal.addEventListener("click", async () => {
   if (!modalStudent || !modalRoom) return;
-  const startTime = Date.now();
-  const endTime = startTime + parseInt(slider.value, 10) * 60000;
-  localStorage.setItem(
-    ACTIVE_PREFIX + modalStudent.key,
-    JSON.stringify({
-      room: { name: modalRoom.name, room: modalRoom.room, categoryKey: modalRoom.categoryKey },
-      from: null,
-      startTime,
-      endTime,
-      createdBy: teacherName,
-    })
-  );
+  createBtnModal.disabled = true;
+  const res = await teacherApi("/api/teacher/pass", {
+    key: modalStudent.key,
+    dest: { name: modalRoom.name, room: modalRoom.room, categoryKey: modalRoom.categoryKey },
+    minutes: parseInt(slider.value, 10),
+  });
+  if (res.status === 401) return kickToSignIn();
   closeCreate();
-  refresh();
+  refresh(true);
 });
 
 /* ---------- account menu ---------- */
@@ -419,9 +405,11 @@ document.addEventListener("click", (e) => {
 });
 
 document.getElementById("sign-out-btn").addEventListener("click", () => {
+  teacherApi("/api/teacher/logout", {});
   localStorage.removeItem("smartpass_role");
   localStorage.removeItem("smartpass_name");
   localStorage.removeItem("smartpass_school");
+  localStorage.removeItem("smartpass_teacher_token");
   document.body.classList.add("fade-out");
   setTimeout(() => {
     window.location.href = "/teacher-signin";
@@ -431,13 +419,8 @@ document.getElementById("sign-out-btn").addEventListener("click", () => {
 /* ---------- start ---------- */
 
 searchEl.addEventListener("input", renderList);
-window.addEventListener("storage", refresh);
-window.addEventListener("focus", refresh);
+window.addEventListener("focus", () => refresh());
 
-refresh();
-if (!selectedKey && students.length > 0) {
-  selectedKey = students[0].key;
-  renderList();
-  renderDetail();
-}
+refresh(true);
+setInterval(() => refresh(), 3000);
 setInterval(tick, 1000);

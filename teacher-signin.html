@@ -35,15 +35,38 @@
       <label for="password" class="field-label">Password</label>
       <input type="password" id="password" name="password" class="text-input" placeholder="Password" autocomplete="current-password" required>
 
+      <p class="auth-error hidden" role="alert"></p>
       <button type="submit" class="next-btn">Sign In</button>
 
       <div class="auth-links">
         <a href="#" class="auth-link" data-soon="Password reset is coming soon.">Forgot password?</a>
-        <a href="#" class="auth-link" data-soon="Creating accounts is coming soon.">Create account</a>
+        <a href="#" class="auth-link" id="create-account-link">Create account</a>
       </div>
       <p class="auth-note hidden" id="auth-note" role="status"></p>
 
       <a href="/student-signin" class="switch-link">Are you a student? Sign in here</a>
+    </form>
+
+
+    <form id="code-form" class="hidden">
+      <p class="code-msg">Please have your admin enter the access code.</p>
+      <label for="access-code" class="field-label">Access Code</label>
+      <input type="password" id="access-code" class="text-input" placeholder="Access code" autocomplete="off" required>
+      <p class="auth-error hidden" role="alert"></p>
+      <button type="submit" class="next-btn">Continue</button>
+      <a href="#" class="switch-link" data-back>Back to sign in</a>
+    </form>
+
+    <form id="signup-form" class="hidden">
+      <label for="new-username" class="field-label">Choose a Username</label>
+      <input type="text" id="new-username" class="text-input" placeholder="Username" autocomplete="username" required>
+      <label for="new-password" class="field-label">Password</label>
+      <input type="password" id="new-password" class="text-input" placeholder="At least 6 characters" autocomplete="new-password" required>
+      <label for="new-password2" class="field-label">Confirm Password</label>
+      <input type="password" id="new-password2" class="text-input" placeholder="Confirm password" autocomplete="new-password" required>
+      <p class="auth-error hidden" role="alert"></p>
+      <button type="submit" class="next-btn">Create Account</button>
+      <a href="#" class="switch-link" data-back>Back to sign in</a>
     </form>
 
     <div class="loading-view hidden" id="loading-view">
@@ -64,6 +87,7 @@
     </div>
   </div>
 
+<script src="api.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

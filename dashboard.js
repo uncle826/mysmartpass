@@ -1,6 +1,8 @@
 requestAnimationFrame(() => document.body.classList.add("loaded"));
 
-const name = localStorage.getItem("smartpass_name") || "there";
+let name = localStorage.getItem("smartpass_name");
+if (!name) location.replace("/student-signin");
+name = name || "there";
 document.getElementById("user-name").textContent = name.toUpperCase();
 
 function userKey(base) {
@@ -10,6 +12,7 @@ function userKey(base) {
 /* Avatar menu: profile color + sign out */
 
 const AVATAR_COLORS = ["#d3d7de", "#1ed17a", "#2599d6", "#7b68ee", "#fb6d4c", "#f2994a", "#b21cc4", "#14a3a1"];
+let avatarColor = AVATAR_COLORS[0];
 
 const avatarBtn = document.getElementById("avatar-btn");
 const avatarMenu = document.getElementById("avatar-menu");
@@ -25,7 +28,7 @@ function applyAvatarColor(color) {
 }
 
 function renderAvatarColors() {
-  const current = localStorage.getItem(userKey("smartpass_avatar_color")) || AVATAR_COLORS[0];
+  const current = avatarColor;
   avatarColorGrid.innerHTML = AVATAR_COLORS.map((c) => {
     const selected = c === current ? "selected" : "";
     const check = c === current
@@ -37,14 +40,15 @@ function renderAvatarColors() {
   avatarColorGrid.querySelectorAll(".avatar-color-swatch").forEach((btn) => {
     btn.addEventListener("click", () => {
       const color = btn.dataset.color;
-      localStorage.setItem(userKey("smartpass_avatar_color"), color);
+      avatarColor = color;
       applyAvatarColor(color);
       renderAvatarColors();
+      apiFetch("/api/student/avatar", { body: { name, color } });
     });
   });
 }
 
-applyAvatarColor(localStorage.getItem(userKey("smartpass_avatar_color")) || AVATAR_COLORS[0]);
+applyAvatarColor(avatarColor);
 renderAvatarColors();
 
 avatarBtn.addEventListener("click", (e) => {
@@ -61,7 +65,6 @@ document.addEventListener("click", (e) => {
 document.getElementById("sign-out-btn").addEventListener("click", () => {
   const signInPage = localStorage.getItem("smartpass_role") === "teacher" ? "/teacher-signin" : "/student-signin";
   localStorage.removeItem("smartpass_role");
-  localStorage.removeItem(userKey("smartpass_active_pass"));
   localStorage.removeItem("smartpass_name");
   localStorage.removeItem("smartpass_school");
   document.body.classList.add("fade-out");
@@ -423,14 +426,14 @@ const OVERTIME_BG = "linear-gradient(160deg, #7a1f3d, #4a1226)";
 const OVERTIME_CARD = "linear-gradient(160deg, #e0466f, #c22a56)";
 
 function formatRemaining(endTime) {
-  const totalSeconds = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+  const totalSeconds = Math.max(0, Math.ceil((endTime - serverTime()) / 1000));
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 function formatOvertime(endTime) {
-  const totalSeconds = Math.max(0, Math.floor((Date.now() - endTime) / 1000));
+  const totalSeconds = Math.max(0, Math.floor((serverTime() - endTime) / 1000));
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
@@ -462,14 +465,14 @@ ringProgress.style.strokeDasharray = RING_CIRCUMFERENCE;
 
 function updateRing() {
   const total = currentPass.endTime - currentPass.startTime;
-  const fraction = total > 0 ? Math.max(0, Math.min(1, (currentPass.endTime - Date.now()) / total)) : 0;
+  const fraction = total > 0 ? Math.max(0, Math.min(1, (currentPass.endTime - serverTime()) / total)) : 0;
   ringProgress.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - fraction);
   ringProgress.style.opacity = fraction > 0 ? 1 : 0;
 }
 
 function updateActivePassTimer(endTime) {
   updateRing();
-  const remaining = endTime - Date.now();
+  const remaining = endTime - serverTime();
   if (remaining <= 0) {
     if (!activePass.classList.contains("overtime")) enterOvertime();
     activePassTimer.textContent = formatOvertime(endTime);
@@ -490,7 +493,7 @@ function startActivePass(room, endTime, fromRoom, startTime) {
   activePass.classList.remove("overtime");
   overtimePill.classList.add("hidden");
 
-  currentPass = { room, endTime, startTime: startTime || Date.now() };
+  currentPass = { room, endTime, startTime: startTime || serverTime() };
 
   const category = categoryByKey(room.categoryKey);
   activePass.style.background = `linear-gradient(160deg, ${shadeColor(category.color, -110)}, ${shadeColor(category.color, -155)})`;
@@ -515,22 +518,20 @@ function resetActivePassUI() {
   createPassNavBtn.style.cursor = "";
 }
 
-function endActivePass() {
-  localStorage.removeItem(userKey("smartpass_active_pass"));
-  resetActivePassUI();
+let busy = false;
+let logCache = [];
+let firstSync = true;
 
-  if (currentPass) {
-    const finishedAt = Date.now();
-    recordPassCompleted({
-      name: currentPass.room.name,
-      categoryKey: currentPass.room.categoryKey,
-      startTime: currentPass.startTime,
-      endTime: finishedAt,
-      overtime: finishedAt > currentPass.endTime,
-    });
-    sendBrowserNotification("Pass ended", `You ended your pass to ${currentPass.room.name}.`);
-    currentPass = null;
-  }
+async function endActivePass() {
+  const ended = currentPass;
+  busy = true;
+  resetActivePassUI();
+  currentPass = null;
+  if (ended) sendBrowserNotification("Pass ended", `You ended your pass to ${ended.room.name}.`);
+
+  const res = await apiFetch("/api/student/pass/end", { body: { name } });
+  busy = false;
+  if (res.ok) applyServerState(res.data);
 }
 
 document.getElementById("end-pass-btn").addEventListener("click", endActivePass);
@@ -588,18 +589,14 @@ confirmOverlay.addEventListener("click", (e) => {
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && !confirmOverlay.classList.contains("hidden")) closeConfirm();
 });
-document.getElementById("confirm-delete").addEventListener("click", () => {
-  localStorage.removeItem(userKey("smartpass_pass_log"));
-  renderNotifications();
+document.getElementById("confirm-delete").addEventListener("click", async () => {
   closeConfirm();
+  const res = await apiFetch("/api/student/log/clear", { body: { name } });
+  if (res.ok) applyServerState(res.data);
 });
 
 function getPassLog() {
-  try {
-    return JSON.parse(localStorage.getItem(userKey("smartpass_pass_log"))) || [];
-  } catch {
-    return [];
-  }
+  return logCache;
 }
 
 function formatDuration(ms) {
@@ -643,7 +640,7 @@ function renderNotifications() {
         <div class="notif-item" style="--i:${idx}">
           <span class="notif-icon" style="background:${category.color}">${categoryIconMarkup(category)}</span>
           <div class="notif-info">
-            <span class="notif-name">${p.name}</span>
+            <span class="notif-name">${escapeHtml(p.name)}</span>
             <span class="notif-meta">${formatClockTime(p.startTime)} · ${duration}${overtimeTag}</span>
           </div>
         </div>`;
@@ -651,47 +648,81 @@ function renderNotifications() {
     .join("");
 }
 
-function recordPassCompleted(entry) {
-  const log = getPassLog();
-  log.push(entry);
-  localStorage.setItem(userKey("smartpass_pass_log"), JSON.stringify(log));
-  renderNotifications();
-}
-
 renderNotifications();
 
-startPassBtn.addEventListener("click", () => {
-  if (!goingToRoom) return;
-  const minutes = parseInt(durationSlider.value, 10);
-  const startTime = Date.now();
-  const endTime = startTime + minutes * 60000;
-  localStorage.setItem(
-    userKey("smartpass_active_pass"),
-    JSON.stringify({ room: goingToRoom, from: comingFromRoom, startTime, endTime })
-  );
-  sendBrowserNotification("Pass created", `Heading to ${goingToRoom.name}.`);
-  startActivePass(goingToRoom, endTime, comingFromRoom, startTime);
-  closeModal();
-});
-
-const savedPass = localStorage.getItem(userKey("smartpass_active_pass"));
-if (savedPass) {
-  const { room, from, endTime, startTime } = JSON.parse(savedPass);
-  startActivePass(room, endTime, from, startTime);
+function showDurationError(message) {
+  const el = document.getElementById("duration-error");
+  el.textContent = message;
+  el.classList.remove("hidden");
 }
 
-window.addEventListener("storage", (e) => {
-  if (e.key === userKey("smartpass_active_pass")) {
-    if (e.newValue) {
-      const { room, from, endTime, startTime } = JSON.parse(e.newValue);
-      if (!overlay.classList.contains("hidden")) closeModal();
-      startActivePass(room, endTime, from, startTime);
-      sendBrowserNotification("Pass created", `A pass to ${room.name} was created for you.`);
-    } else if (currentPass) {
-      resetActivePassUI();
-      currentPass = null;
-    }
-  } else if (e.key === userKey("smartpass_pass_log")) {
-    renderNotifications();
+startPassBtn.addEventListener("click", async () => {
+  if (!goingToRoom || busy) return;
+  busy = true;
+  startPassBtn.disabled = true;
+  document.getElementById("duration-error").classList.add("hidden");
+
+  const res = await apiFetch("/api/student/pass", {
+    body: {
+      name,
+      dest: goingToRoom,
+      from: comingFromRoom,
+      minutes: parseInt(durationSlider.value, 10),
+    },
+  });
+
+  busy = false;
+  startPassBtn.disabled = false;
+
+  if (res.ok) {
+    applyServerState(res.data);
+    sendBrowserNotification("Pass created", `Heading to ${goingToRoom.name}.`);
+    closeModal();
+    return;
   }
+  if (res.status === 409) {
+    await loadState();
+    closeModal();
+    return;
+  }
+  showDurationError(res.data.error || "Couldn't create the pass. Please try again.");
+});
+
+/* Server sync: same account on any computer */
+
+function applyServerState(state) {
+  avatarColor = state.avatarColor || AVATAR_COLORS[0];
+  applyAvatarColor(avatarColor);
+  renderAvatarColors();
+
+  logCache = state.log || [];
+  renderNotifications();
+
+  const a = state.active;
+  if (a) {
+    if (!currentPass || currentPass.startTime !== a.startTime) {
+      if (!overlay.classList.contains("hidden")) closeModal();
+      startActivePass(a.room, a.endTime, a.from, a.startTime);
+      if (a.createdBy && !firstSync) {
+        sendBrowserNotification("Pass created", `A pass to ${a.room.name} was created for you.`);
+      }
+    }
+  } else if (currentPass) {
+    resetActivePassUI();
+    currentPass = null;
+  }
+  firstSync = false;
+}
+
+async function loadState() {
+  if (busy) return;
+  let res = await apiFetch(`/api/student/state?name=${encodeURIComponent(name)}`);
+  if (res.status === 404) res = await apiFetch("/api/student/login", { body: { name } });
+  if (res.ok && !busy) applyServerState(res.data);
+}
+
+loadState();
+setInterval(loadState, 3000);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) loadState();
 });

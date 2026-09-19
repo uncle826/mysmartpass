@@ -31,6 +31,7 @@
     <form id="login-form">
       <label for="name" class="field-label">Enter Name</label>
       <input type="text" id="name" name="name" placeholder="Name" autocomplete="name" required>
+      <p class="auth-error hidden" role="alert"></p>
       <button type="submit" class="next-btn">Next</button>
       <a href="/teacher-signin" class="switch-link">Are you a teacher? Sign in here</a>
     </form>
@@ -53,6 +54,7 @@
     </div>
   </div>
 
+<script src="api.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
