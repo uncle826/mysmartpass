@@ -1172,3 +1172,133 @@ body.fade-out {
   justify-content: center;
   margin-top: 18px;
 }
+
+/* Animations */
+
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(28px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.92); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes menuIn {
+  from { opacity: 0; transform: translateY(-10px) scale(0.92); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes menuOut {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(-10px) scale(0.92); }
+}
+
+@keyframes viewSlideIn {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes viewFadeIn {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes passCardIn {
+  from { opacity: 0; transform: translateY(30px) scale(0.9); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.topbar {
+  position: relative;
+  z-index: 50;
+  animation: dropIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.datetime,
+.welcome-title {
+  animation: riseIn 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.welcome-title { animation-delay: 0.08s; }
+
+.going-somewhere {
+  animation: riseIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.18s both;
+}
+
+.walk-icon {
+  animation: floaty 3.2s ease-in-out 0.8s infinite;
+}
+
+.requests-panel {
+  animation: slideInRight 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s both;
+}
+
+.notif-item {
+  animation: riseIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+.avatar-menu {
+  transform-origin: top right;
+  animation: menuIn 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.modal {
+  transform-origin: 88% 0;
+  animation: menuIn 0.26s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.modal-overlay.closing .modal {
+  animation: menuOut 0.16s ease-in both;
+}
+
+#duration-view {
+  animation: viewSlideIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+#picker-view {
+  animation: viewFadeIn 0.25s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.category-tile {
+  animation: popIn 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 35ms);
+}
+
+.active-pass {
+  animation: fadeIn 0.4s ease both;
+}
+
+.active-pass .pass-card {
+  animation: passCardIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.05s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+  }
+}

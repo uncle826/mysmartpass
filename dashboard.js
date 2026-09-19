@@ -166,12 +166,12 @@ function renderCategoryGrid(categories) {
   }
 
   roomList.innerHTML = `<div class="category-grid">${categories
-    .map((c) => {
+    .map((c, idx) => {
       const chevron = c.leaf
         ? ""
         : '<svg class="category-tile-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       return `
-        <button type="button" class="category-tile" style="background:${c.color}" data-key="${c.key}">
+        <button type="button" class="category-tile" style="background:${c.color}; --i:${idx}" data-key="${c.key}">
           <span class="category-tile-icon">${categoryIconMarkup(c)}</span>
           <span class="category-tile-footer">
             <span class="category-tile-label">${c.label}</span>
@@ -319,12 +319,21 @@ function openModal() {
   showPickerView();
   setActiveField("comingFrom");
   renderPicker("");
+  clearTimeout(closeTimer);
+  overlay.classList.remove("closing");
   overlay.classList.remove("hidden");
   comingFromInput.focus();
 }
 
+let closeTimer = null;
+
 function closeModal() {
-  overlay.classList.add("hidden");
+  overlay.classList.add("closing");
+  clearTimeout(closeTimer);
+  closeTimer = setTimeout(() => {
+    overlay.classList.add("hidden");
+    overlay.classList.remove("closing");
+  }, 160);
 }
 
 document.getElementById("create-pass-nav-btn").addEventListener("click", openModal);
@@ -523,12 +532,12 @@ function renderNotifications() {
   list.innerHTML = log
     .slice()
     .reverse()
-    .map((p) => {
+    .map((p, idx) => {
       const category = categoryByKey(p.categoryKey);
       const duration = formatDuration(p.endTime - p.startTime);
       const overtimeTag = p.overtime ? ' · <span class="notif-overtime-tag">Overtime</span>' : "";
       return `
-        <div class="notif-item">
+        <div class="notif-item" style="--i:${idx}">
           <span class="notif-icon" style="background:${category.color}">${categoryIconMarkup(category)}</span>
           <div class="notif-info">
             <span class="notif-name">${p.name}</span>
