@@ -409,6 +409,8 @@ const activePass = document.getElementById("active-pass");
 const passCard = document.getElementById("pass-card");
 const activePassDestination = document.getElementById("active-pass-destination");
 const activePassFrom = document.getElementById("active-pass-from");
+const activePassFromIcon = document.getElementById("active-pass-from-icon");
+const activePassDestIcon = document.getElementById("active-pass-dest-icon");
 const activePassTimer = document.getElementById("active-pass-timer");
 const createPassNavBtn = document.getElementById("create-pass-nav-btn");
 const overtimePill = document.getElementById("pass-overtime-pill");
@@ -493,6 +495,9 @@ function startActivePass(room, endTime, fromRoom, startTime) {
   passCard.style.background = `linear-gradient(160deg, ${shadeColor(category.color, 25)}, ${shadeColor(category.color, -20)})`;
   activePassDestination.textContent = room.name;
   activePassFrom.textContent = fromRoom ? fromRoom.name : "—";
+  activePassDestIcon.innerHTML = categoryIconMarkup(category);
+  const fromCategory = fromRoom ? categoryByKey(fromRoom.categoryKey) : null;
+  activePassFromIcon.innerHTML = fromCategory ? categoryIconMarkup(fromCategory) : "";
 
   updateActivePassTimer(endTime);
   clearInterval(timerInterval);

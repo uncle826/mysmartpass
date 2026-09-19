@@ -545,66 +545,82 @@ body.fade-out {
 
 .pass-card-header {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  align-items: center;
+  gap: 14px;
+}
+
+.pass-dest-icon {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pass-dest-icon img,
+.pass-dest-icon svg,
+.pass-from-icon img,
+.pass-from-icon svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .pass-card-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: "Baloo 2", "Segoe UI", Arial, sans-serif;
-  font-size: 24px;
+  font-size: 32px;
   font-weight: 700;
+  line-height: 1.15;
 }
 
 .pass-card-subtitle {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.75);
-  margin: 2px 0 0 30px;
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 2px 0 0 0;
 }
 
-.pass-pin-icon {
-  width: 22px;
-  height: 22px;
-  color: rgba(255, 255, 255, 0.6);
-  flex-shrink: 0;
+.pass-from-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 32px 0;
+}
+
+.pass-from-line {
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.55);
 }
 
 .pass-from {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.85);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.9);
   white-space: nowrap;
 }
 
 .pass-from-badge {
-  background: rgba(255, 255, 255, 0.28);
-  padding: 3px 12px;
-  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.25);
+  padding: 5px 12px;
+  border-radius: 16px;
   font-weight: 700;
   color: #ffffff;
 }
 
-.pass-card-divider {
-  position: relative;
-  height: 2px;
-  background: rgba(255, 255, 255, 0.3);
-  margin: 22px 0 34px 0;
+.pass-from-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: flex;
 }
 
-.pass-card-divider-dot {
-  position: absolute;
-  left: 8%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 11px;
-  height: 11px;
-  border-radius: 50%;
-  background: #ffffff;
+.pass-from-icon:empty {
+  display: none;
 }
 
 .pass-overtime-pill {
@@ -1314,19 +1330,11 @@ body.fade-out {
 
 /* Recommended restroom */
 
-.room-row.recommended {
-  background: #eefaf4;
-  border: 1px solid #cdeede;
-}
-
-.room-row.recommended:hover {
-  background: #e3f6ec;
-}
-
 .rec-block {
   margin-bottom: 4px;
 }
 
 .rec-sub {
   margin: 16px 0 10px 0;
+  padding-left: 8px;
 }
