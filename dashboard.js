@@ -174,25 +174,33 @@ function roomRowMarkup(r, extraClass) {
         </button>`;
 }
 
-function recommendedRestroom(from) {
-  if (!from) return null;
+function recommendedRooms(from) {
+  if (!from) return [];
   const firstDigit = /^[123]/.exec(from.room || "");
-  let target = null;
-  if (firstDigit) target = `${firstDigit[0]}00's Restroom`;
-  else if (from.categoryKey === "mainOffice" || from.categoryKey === "admins") target = "Office Restroom";
-  if (!target) return null;
-  const match = categoryByKey("restrooms").rooms.find((r) => r.name === target);
-  return match ? { name: match.name, room: match.room, categoryKey: "restrooms" } : null;
+  let prefix = null;
+  if (firstDigit) prefix = `${firstDigit[0]}00's`;
+  else if (from.categoryKey === "mainOffice" || from.categoryKey === "admins") prefix = "Office";
+  if (!prefix) return [];
+
+  return [
+    ["restrooms", "Restroom"],
+    ["waterFountain", "Fountain"],
+  ]
+    .map(([key, word]) => {
+      const match = categoryByKey(key).rooms.find((room) => room.name === `${prefix} ${word}`);
+      return match ? { name: match.name, room: match.room, categoryKey: key } : null;
+    })
+    .filter(Boolean);
 }
 
-function renderCategoryGrid(categories, recommended) {
+function renderCategoryGrid(categories, recommended = []) {
   if (categories.length === 0) {
     roomList.innerHTML = `<div class="no-results">No matches</div>`;
     return;
   }
 
-  const recMarkup = recommended
-    ? `<div class="rec-block">${roomRowMarkup(recommended, "recommended")}</div><h3 class="modal-list-title rec-sub">All Rooms</h3>`
+  const recMarkup = recommended.length
+    ? `<div class="rec-block">${recommended.map((r) => roomRowMarkup(r, "recommended")).join("")}</div><h3 class="modal-list-title rec-sub">All Rooms</h3>`
     : "";
 
   roomList.innerHTML = `${recMarkup}<div class="category-grid">${categories
@@ -211,9 +219,9 @@ function renderCategoryGrid(categories, recommended) {
     })
     .join("")}</div>`;
 
-  if (recommended) {
-    roomList.querySelector(".room-row.recommended").addEventListener("click", () => selectRoom(recommended));
-  }
+  roomList.querySelectorAll(".room-row.recommended").forEach((row) => {
+    row.addEventListener("click", () => selectRoom(recommended.find((r) => r.name === row.dataset.name)));
+  });
 
   roomList.querySelectorAll(".category-tile").forEach((tile) => {
     tile.addEventListener("click", () => {
@@ -277,8 +285,8 @@ function renderPicker(filterText) {
     renderFlatList(rooms);
   } else {
     modalBack.classList.add("hidden");
-    const recommended = recommendedRestroom(comingFromRoom);
-    listTitle.textContent = recommended ? "Recommended" : "All Rooms";
+    const recommended = recommendedRooms(comingFromRoom);
+    listTitle.textContent = recommended.length ? "Recommended" : "All Rooms";
     renderCategoryGrid(CATEGORIES, recommended);
   }
 }

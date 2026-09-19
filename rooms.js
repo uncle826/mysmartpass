@@ -22,8 +22,13 @@ const CATEGORIES = [
     key: "waterFountain",
     label: "Water Fountain",
     color: "#1c3f6e",
-    icon: "svg:waterFountain",
-    rooms: [],
+    icon: "img:https://storage.googleapis.com/sp-img-cdn/icons8-ios/drinking-fountain/FFFFFF.png",
+    rooms: [
+      { name: "100's Fountain", room: "undefined" },
+      { name: "200's Fountain", room: "undefined" },
+      { name: "300's Fountain", room: "undefined" },
+      { name: "Office Fountain", room: "undefined" },
+    ],
   },
   {
     key: "mediaCenter",
@@ -140,7 +145,6 @@ const CATEGORIES = [
 
 const TILE_ICONS = {
   locker: '<svg viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="1.5" fill="none" stroke="#fff" stroke-width="1.7"/><circle cx="14" cy="12" r="1" fill="#fff"/></svg>',
-  waterFountain: '<svg viewBox="0 0 24 24"><path d="M4 14.5h16v1.5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-1.5z" fill="#fff"/><rect x="10" y="16.5" width="4" height="5.5" rx="1" fill="#fff"/><path d="M8.7 14.3c0-2 1.4-3.6 3.3-3.6s3.3 1.6 3.3 3.6" fill="none" stroke="#fff" stroke-width="1.5"/><circle cx="12" cy="7.3" r="1.3" fill="#fff"/></svg>',
   status: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 };
 
