@@ -252,13 +252,21 @@ function renderFlatList(rooms) {
   });
 }
 
+const DESTINATION_ONLY = ["restrooms", "waterFountain"];
+
+function searchableRooms() {
+  return activeField === "comingFrom"
+    ? FLAT_ROOMS.filter((r) => !DESTINATION_ONLY.includes(r.categoryKey))
+    : FLAT_ROOMS;
+}
+
 function renderPicker(filterText) {
   const term = filterText.trim().toLowerCase();
 
   if (term) {
     modalBack.classList.add("hidden");
     listTitle.textContent = "Results";
-    const matches = FLAT_ROOMS.filter((r) => r.name.toLowerCase().includes(term));
+    const matches = searchableRooms().filter((r) => r.name.toLowerCase().includes(term));
     renderFlatList(matches);
     return;
   }
@@ -266,7 +274,7 @@ function renderPicker(filterText) {
   if (activeField === "comingFrom") {
     modalBack.classList.add("hidden");
     listTitle.textContent = "All Rooms";
-    renderFlatList(FLAT_ROOMS);
+    renderFlatList(searchableRooms());
     return;
   }
 
