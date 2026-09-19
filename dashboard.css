@@ -79,7 +79,7 @@ body.fade-out {
   align-items: center;
   gap: 8px;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 600;
   border-radius: 5px;
   padding: 11px 18px;
   cursor: pointer;
@@ -102,12 +102,12 @@ body.fade-out {
 }
 
 .btn-primary {
-  background: #16c784;
+  background: #10b981;
   color: #ffffff;
 }
 
 .btn-primary:hover {
-  background: #12ac71;
+  background: #0e9f6e;
 }
 
 .btn-large {
@@ -126,38 +126,40 @@ body.fade-out {
   height: 42px;
   border-radius: 50%;
   background: #e7eaee;
-  color: #b8c0cc;
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow: visible;
   border: none;
   padding: 0;
   cursor: pointer;
 }
 
 .avatar-icon {
-  width: 33px;
-  height: 33px;
+  width: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  height: 100%;
 }
 
 .avatar-badge {
   position: absolute;
-  bottom: -3px;
-  right: -3px;
-  width: 16px;
-  height: 16px;
+  bottom: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  background: #8a94a3;
-  border: 2px solid #ffffff;
+  background: #ffffff;
+  border: 1.5px solid #c4c9d2;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .avatar-badge svg {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
 }
 
 .avatar-lg {
@@ -167,8 +169,8 @@ body.fade-out {
 }
 
 .avatar-lg .avatar-icon {
-  width: 38px;
-  height: 38px;
+  width: 100%;
+  height: 100%;
 }
 
 /* Avatar dropdown menu */

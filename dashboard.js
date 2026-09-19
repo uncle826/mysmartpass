@@ -9,7 +9,7 @@ function userKey(base) {
 
 /* Avatar menu: profile color + sign out */
 
-const AVATAR_COLORS = ["#9aa2af", "#1ed17a", "#2599d6", "#7b68ee", "#fb6d4c", "#f2994a", "#b21cc4", "#14a3a1"];
+const AVATAR_COLORS = ["#d3d7de", "#1ed17a", "#2599d6", "#7b68ee", "#fb6d4c", "#f2994a", "#b21cc4", "#14a3a1"];
 
 const avatarBtn = document.getElementById("avatar-btn");
 const avatarMenu = document.getElementById("avatar-menu");
