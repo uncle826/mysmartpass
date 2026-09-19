@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartPass Teacher Sign In</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ffffff">
+<script src="pwa.js" defer></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-role="teacher">
+  <div class="login-card">
+    <div class="logo">
+      <div class="logo-text">
+        <div class="logo-title-row">
+          <span class="logo-title">SmartPass</span>
+          <svg viewBox="0 0 52 40" class="logo-mark" aria-hidden="true">
+            <path d="M4,4 L22,20 L4,36" fill="none" stroke="#1ed17a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M22,4 L40,20 L22,36" fill="none" stroke="#1ed17a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="logo-subtitle">A <span class="raptor">RAPTOR</span> TECHNOLOGIES COMPANY</div>
+      </div>
+    </div>
+
+    <form id="login-form">
+      <label for="username" class="field-label">Username</label>
+      <input type="text" id="username" name="username" class="text-input" placeholder="Username" autocomplete="username" required>
+
+      <label for="password" class="field-label">Password</label>
+      <input type="password" id="password" name="password" class="text-input" placeholder="Password" autocomplete="current-password" required>
+
+      <p class="auth-error hidden" role="alert"></p>
+      <button type="submit" class="next-btn">Sign In</button>
+
+      <div class="auth-links">
+        <a href="#" class="auth-link" data-soon="Password reset is coming soon.">Forgot password?</a>
+        <a href="#" class="auth-link" id="create-account-link">Create account</a>
+      </div>
+      <p class="auth-note hidden" id="auth-note" role="status"></p>
+
+      <a href="/student-signin" class="switch-link">Are you a student? Sign in here</a>
+    </form>
+
+
+    <form id="code-form" class="hidden">
+      <p class="code-msg">Please have your admin enter the access code.</p>
+      <label for="access-code" class="field-label">Access Code</label>
+      <input type="password" id="access-code" class="text-input" placeholder="Access code" autocomplete="off" required>
+      <p class="auth-error hidden" role="alert"></p>
+      <button type="submit" class="next-btn">Continue</button>
+      <a href="#" class="switch-link" data-back>Back to sign in</a>
+    </form>
+
+    <form id="signup-form" class="hidden">
+      <label for="new-username" class="field-label">Choose a Username</label>
+      <input type="text" id="new-username" class="text-input" placeholder="Username" autocomplete="username" required>
+      <label for="new-password" class="field-label">Password</label>
+      <input type="password" id="new-password" class="text-input" placeholder="At least 6 characters" autocomplete="new-password" required>
+      <label for="new-password2" class="field-label">Confirm Password</label>
+      <input type="password" id="new-password2" class="text-input" placeholder="Confirm password" autocomplete="new-password" required>
+      <p class="auth-error hidden" role="alert"></p>
+      <button type="submit" class="next-btn">Create Account</button>
+      <a href="#" class="switch-link" data-back>Back to sign in</a>
+    </form>
+
+    <div class="loading-view hidden" id="loading-view">
+      <div class="spinner"></div>
+      <p class="loading-text" id="loading-text">Setting things up&hellip;</p>
+    </div>
+
+    <div class="school-view hidden" id="school-view">
+      <p class="school-prompt">Select School</p>
+      <button type="button" class="school-btn" data-school="WLMS">
+        <img src="wlms-logo.png" alt="" class="school-logo">
+        WLMS
+      </button>
+      <button type="button" class="school-btn" data-school="LHS">
+        <img src="lhs-logo.png" alt="" class="school-logo">
+        LHS
+      </button>
+    </div>
+  </div>
+
+<script src="api.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

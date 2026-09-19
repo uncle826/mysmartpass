@@ -1,0 +1,375 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f4f6f9;
+  font-family: "Segoe UI", Arial, sans-serif;
+  opacity: 1;
+  transition: opacity 0.4s ease;
+}
+
+body.fade-out {
+  opacity: 0;
+}
+
+.login-card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  width: 460px;
+  min-height: 375px;
+  padding: 48px 44px;
+  display: flex;
+  flex-direction: column;
+}
+
+.logo {
+  margin-bottom: 40px;
+  display: flex;
+  justify-content: center;
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.logo-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.logo-mark {
+  width: 58px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.logo-title {
+  font-family: "Baloo 2", "Segoe UI", Arial, sans-serif;
+  font-size: 52px;
+  font-weight: 800;
+  color: #1ed17a;
+  line-height: 1;
+}
+
+.logo-subtitle {
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  color: #8a8f98;
+  margin-top: 8px;
+}
+
+.raptor {
+  color: #f5a623;
+  font-weight: 700;
+}
+
+.field-label {
+  display: block;
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 10px;
+}
+
+#name,
+.text-input {
+  width: 100%;
+  padding: 16px 16px;
+  font-size: 17px;
+  border: 1px solid #b9c0c9;
+  border-radius: 6px;
+  margin-bottom: 24px;
+  outline: none;
+}
+
+#name:focus,
+.text-input:focus {
+  border-color: #1d4e77;
+}
+
+.next-btn {
+  width: 100%;
+  padding: 12px;
+  background: #1d4e77;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  border-radius: 24px;
+  cursor: pointer;
+}
+
+.next-btn:hover {
+  background: #163c5c;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* Loading view */
+
+.loading-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+.spinner {
+  width: 56px;
+  height: 56px;
+  border: 6px solid #d9f7e7;
+  border-top-color: #1ed17a;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: #8a8f98;
+  margin: 0;
+}
+
+/* School selection view */
+
+.school-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 16px;
+}
+
+.school-prompt {
+  font-family: "Baloo 2", "Segoe UI", Arial, sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: #2c3e50;
+  text-align: center;
+  margin: 0 0 8px 0;
+}
+
+.school-btn {
+  width: 100%;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-family: "Baloo 2", "Segoe UI", Arial, sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #2599d6, #1a6fb0);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.school-btn:hover {
+  filter: brightness(1.05);
+}
+
+.school-logo {
+  height: 36px;
+  width: auto;
+  flex-shrink: 0;
+}
+
+/* Under development view */
+
+.dev-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 6px;
+}
+
+.dev-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 10px;
+}
+
+.dev-title {
+  font-family: "Baloo 2", "Segoe UI", Arial, sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.dev-text {
+  font-size: 15px;
+  color: #8a8f98;
+  line-height: 1.5;
+  margin: 0 0 20px 0;
+}
+
+.dev-back-btn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+/* Entrance animations */
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes chevronSlide {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: none; }
+}
+
+.login-card {
+  animation: cardIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.logo-mark {
+  animation: chevronSlide 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.35s both;
+}
+
+#login-form > * {
+  animation: riseIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+#login-form > :nth-child(1) { animation-delay: 0.3s; }
+#login-form > :nth-child(2) { animation-delay: 0.38s; }
+#login-form > :nth-child(3) { animation-delay: 0.46s; }
+
+.loading-view,
+.school-view,
+.dev-view {
+  animation: riseIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.school-prompt,
+.school-btn,
+.dev-back-btn {
+  animation: riseIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.school-btn:nth-of-type(1) { animation-delay: 0.1s; }
+.school-btn:nth-of-type(2) { animation-delay: 0.18s; }
+.dev-back-btn { animation-delay: 0.15s; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Teacher sign-in extras */
+
+.text-input {
+  margin-bottom: 16px;
+}
+
+#login-form > :nth-child(n + 4) {
+  animation-delay: 0.5s;
+}
+
+.auth-links {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.auth-link {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1d4e77;
+  text-decoration: none;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+}
+
+.auth-note {
+  margin: 14px 0 0 0;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: #f4f6f9;
+  color: #6b7484;
+  font-size: 13.5px;
+  text-align: center;
+}
+
+.switch-link {
+  display: block;
+  margin-top: 22px;
+  text-align: center;
+  font-size: 14px;
+  color: #8a8f98;
+  text-decoration: none;
+}
+
+.switch-link:hover {
+  color: #1d4e77;
+  text-decoration: underline;
+}
+
+.auth-error {
+  margin: 14px 0 0 0;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: #fdf1f0;
+  color: #cf463b;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.code-msg {
+  margin: 0 0 6px 0;
+  text-align: center;
+  color: #4a5262;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+#code-form > *,
+#signup-form > * {
+  opacity: 1;
+  animation: none;
+}
