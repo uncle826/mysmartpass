@@ -97,26 +97,17 @@
           <span class="pass-overtime-pill hidden" id="pass-overtime-pill">Overtime</span>
 
           <div class="pass-ring">
-            <img src="walking-icon.png" alt="" class="pass-ring-icon" id="active-pass-icon">
-            <div class="pass-ring-timer" id="active-pass-timer">00:00</div>
+            <svg class="pass-ring-svg" viewBox="0 0 210 210" aria-hidden="true">
+              <circle class="pass-ring-track" cx="105" cy="105" r="96"/>
+              <circle class="pass-ring-progress" id="pass-ring-progress" cx="105" cy="105" r="96"/>
+            </svg>
+            <div class="pass-ring-content">
+              <img src="walking-icon.png" alt="" class="pass-ring-icon" id="active-pass-icon">
+              <div class="pass-ring-timer" id="active-pass-timer">00:00</div>
+            </div>
           </div>
 
           <button class="pass-end-btn" id="end-pass-btn">End Pass</button>
-        </div>
-
-        <div class="pass-stats">
-          <div class="pass-stat">
-            <span class="pass-stat-value" id="stat-today">0</span>
-            <span class="pass-stat-label">today</span>
-          </div>
-          <div class="pass-stat">
-            <span class="pass-stat-value" id="stat-week">0</span>
-            <span class="pass-stat-label">this week</span>
-          </div>
-          <div class="pass-stat">
-            <span class="pass-stat-value" id="stat-month">0</span>
-            <span class="pass-stat-label">this month</span>
-          </div>
         </div>
       </div>
     </section>

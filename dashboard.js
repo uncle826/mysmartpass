@@ -409,7 +409,19 @@ function enterOvertime() {
   );
 }
 
+const ringProgress = document.getElementById("pass-ring-progress");
+const RING_CIRCUMFERENCE = 2 * Math.PI * 96;
+ringProgress.style.strokeDasharray = RING_CIRCUMFERENCE;
+
+function updateRing() {
+  const total = currentPass.endTime - currentPass.startTime;
+  const fraction = total > 0 ? Math.max(0, Math.min(1, (currentPass.endTime - Date.now()) / total)) : 0;
+  ringProgress.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - fraction);
+  ringProgress.style.opacity = fraction > 0 ? 1 : 0;
+}
+
 function updateActivePassTimer(endTime) {
+  updateRing();
   const remaining = endTime - Date.now();
   if (remaining <= 0) {
     if (!activePass.classList.contains("overtime")) enterOvertime();
@@ -468,37 +480,6 @@ function endActivePass() {
 }
 
 document.getElementById("end-pass-btn").addEventListener("click", endActivePass);
-
-/* Pass stats (today / this week / this month) */
-
-function getPassHistory() {
-  try {
-    return JSON.parse(localStorage.getItem(userKey("smartpass_pass_history"))) || [];
-  } catch {
-    return [];
-  }
-}
-
-function renderStats() {
-  const history = getPassHistory();
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const startOfWeek = startOfToday - now.getDay() * 86400000;
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-
-  document.getElementById("stat-today").textContent = history.filter((t) => t >= startOfToday).length;
-  document.getElementById("stat-week").textContent = history.filter((t) => t >= startOfWeek).length;
-  document.getElementById("stat-month").textContent = history.filter((t) => t >= startOfMonth).length;
-}
-
-function recordPassCreated() {
-  const history = getPassHistory();
-  history.push(Date.now());
-  localStorage.setItem(userKey("smartpass_pass_history"), JSON.stringify(history));
-  renderStats();
-}
-
-renderStats();
 
 /* Notifications: completed pass log */
 
@@ -576,7 +557,6 @@ startPassBtn.addEventListener("click", () => {
     userKey("smartpass_active_pass"),
     JSON.stringify({ room: goingToRoom, from: comingFromRoom, startTime, endTime })
   );
-  recordPassCreated();
   sendBrowserNotification("Pass created", `Heading to ${goingToRoom.name}.`);
   startActivePass(goingToRoom, endTime, comingFromRoom, startTime);
   closeModal();

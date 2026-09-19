@@ -22,13 +22,13 @@ body.fade-out {
 /* Top bar */
 
 .topbar {
-  height: 64px;
+  height: 84px;
   background: #ffffff;
   border-bottom: 1px solid #e7eaee;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 32px;
 }
 
 .topbar-side {
@@ -39,12 +39,12 @@ body.fade-out {
 
 .topbar-side.right {
   justify-content: flex-end;
-  gap: 12px;
+  gap: 16px;
 }
 
 .main-nav {
   display: flex;
-  gap: 40px;
+  gap: 48px;
   height: 100%;
 }
 
@@ -53,13 +53,13 @@ body.fade-out {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 4px;
   height: 100%;
-  padding: 0 6px;
+  padding: 0 10px;
   text-decoration: none;
   color: #8a94a3;
-  font-size: 13px;
-  border-bottom: 3px solid transparent;
+  font-size: 15px;
+  border-bottom: 4px solid transparent;
 }
 
 .nav-item.active {
@@ -68,8 +68,8 @@ body.fade-out {
 }
 
 .nav-icon {
-  width: 22px;
-  height: 22px;
+  width: 30px;
+  height: 30px;
 }
 
 /* Buttons */
@@ -77,18 +77,18 @@ body.fade-out {
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  gap: 10px;
+  font-size: 16px;
   font-weight: 700;
-  border-radius: 8px;
-  padding: 10px 16px;
+  border-radius: 5px;
+  padding: 14px 22px;
   cursor: pointer;
   border: none;
 }
 
 .btn-icon {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
 }
 
 .btn-outline {
@@ -111,9 +111,9 @@ body.fade-out {
 }
 
 .btn-large {
-  padding: 14px 28px;
-  font-size: 15px;
-  border-radius: 10px;
+  padding: 16px 32px;
+  font-size: 17px;
+  border-radius: 6px;
 }
 
 .avatar-wrap {
@@ -122,8 +122,8 @@ body.fade-out {
 
 .avatar {
   position: relative;
-  width: 38px;
-  height: 38px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: #e7eaee;
   color: #b8c0cc;
@@ -137,8 +137,8 @@ body.fade-out {
 }
 
 .avatar-icon {
-  width: 30px;
-  height: 30px;
+  width: 38px;
+  height: 38px;
 }
 
 .avatar-badge {
@@ -538,7 +538,7 @@ body.fade-out {
   width: 100%;
   max-width: 480px;
   color: #ffffff;
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 32px 32px 28px 32px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
   transition: background 0.4s ease;
@@ -621,17 +621,44 @@ body.fade-out {
 }
 
 .pass-ring {
-  width: 190px;
-  height: 190px;
-  border-radius: 50%;
-  border: 6px solid rgba(255, 255, 255, 0.85);
+  position: relative;
+  width: 210px;
+  height: 210px;
   margin: 0 auto 34px auto;
+}
+
+.pass-ring-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.pass-ring-track,
+.pass-ring-progress {
+  fill: none;
+  stroke-width: 14;
+}
+
+.pass-ring-track {
+  stroke: rgba(0, 0, 0, 0.22);
+}
+
+.pass-ring-progress {
+  stroke: #ffffff;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear, opacity 0.3s ease;
+}
+
+.pass-ring-content {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  transition: border-color 0.4s ease;
 }
 
 .pass-ring-icon {
@@ -651,9 +678,9 @@ body.fade-out {
 .pass-end-btn {
   display: block;
   width: 100%;
-  padding: 17px;
+  padding: 20px;
   border: none;
-  border-radius: 28px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.25);
   color: #ffffff;
   font-size: 17px;
@@ -665,42 +692,6 @@ body.fade-out {
   background: rgba(255, 255, 255, 0.35);
 }
 
-.pass-stats {
-  display: flex;
-  width: 100%;
-  max-width: 480px;
-  background: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
-  margin-top: 28px;
-  overflow: hidden;
-}
-
-.pass-stat {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 18px 8px;
-  gap: 3px;
-}
-
-.pass-stat + .pass-stat {
-  border-left: 1px solid #eef0f4;
-}
-
-.pass-stat-value {
-  font-family: "Baloo 2", "Segoe UI", Arial, sans-serif;
-  font-size: 24px;
-  font-weight: 700;
-  color: #2b2560;
-}
-
-.pass-stat-label {
-  font-size: 12px;
-  color: #8a94a3;
-}
-
 /* Create Pass modal */
 
 .modal-overlay {
@@ -710,14 +701,14 @@ body.fade-out {
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;
-  padding: 76px 24px 24px 24px;
+  padding: 96px 32px 24px 32px;
   z-index: 100;
 }
 
 .modal {
   position: relative;
   width: 440px;
-  max-height: calc(100vh - 116px);
+  max-height: calc(100vh - 136px);
   background: #ffffff;
   border-radius: 14px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.22);
@@ -918,7 +909,7 @@ body.fade-out {
   width: 100%;
   padding: 16px;
   border: none;
-  border-radius: 16px;
+  border-radius: 8px;
   margin-top: 20px;
   background: linear-gradient(135deg, #29b6f6, #0288d1);
   color: #ffffff;
@@ -945,7 +936,7 @@ body.fade-out {
   align-items: center;
   gap: 12px;
   border: 1px solid #d7dce3;
-  border-radius: 8px;
+  border-radius: 5px;
   padding: 12px 14px;
   cursor: text;
 }
