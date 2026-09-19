@@ -146,19 +146,21 @@
 
   <div class="modal-overlay hidden" id="pass-modal-overlay">
     <div class="modal">
-      <button class="modal-close" id="modal-close" aria-label="Close">&times;</button>
-
       <div id="picker-view">
-        <div class="modal-field" id="coming-from-field">
-          <span class="modal-field-icon dot-icon"></span>
-          <input type="text" class="modal-input" id="coming-from" placeholder="Coming from?" autocomplete="off">
-        </div>
-        <div class="modal-field-divider">
-          <span class="dots">&#8942;</span>
-        </div>
-        <div class="modal-field" id="going-to-field">
-          <svg viewBox="0 0 24 24" class="modal-field-icon"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" fill="none" stroke="#4a5568" stroke-width="1.8"/><circle cx="12" cy="9.5" r="2.3" fill="none" stroke="#4a5568" stroke-width="1.8"/></svg>
-          <input type="text" class="modal-input" id="going-to" placeholder="Going to?" autocomplete="off">
+        <div class="route">
+          <div class="route-icons" aria-hidden="true">
+            <span class="route-circle"></span>
+            <span class="route-dots"><span></span><span></span><span></span></span>
+            <svg viewBox="0 0 24 24" class="route-pin"><path d="M12 22s-7-6.4-7-12a7 7 0 0 1 14 0c0 5.6-7 12-7 12z" fill="currentColor"/><circle cx="12" cy="10" r="2.6" fill="#f3f4f7"/></svg>
+          </div>
+          <div class="route-fields">
+            <div class="modal-field" id="coming-from-field">
+              <input type="text" class="modal-input" id="coming-from" placeholder="Coming from?" autocomplete="off">
+            </div>
+            <div class="modal-field" id="going-to-field">
+              <input type="text" class="modal-input" id="going-to" placeholder="Going to?" autocomplete="off">
+            </div>
+          </div>
         </div>
 
         <div class="modal-list-header">

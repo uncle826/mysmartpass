@@ -338,7 +338,6 @@ function closeModal() {
 
 document.getElementById("create-pass-nav-btn").addEventListener("click", openModal);
 document.getElementById("create-pass-hero-btn").addEventListener("click", openModal);
-document.getElementById("modal-close").addEventListener("click", closeModal);
 overlay.addEventListener("click", (e) => {
   if (e.target === overlay) closeModal();
 });
