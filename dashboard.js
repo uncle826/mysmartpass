@@ -159,13 +159,43 @@ function currentSelection() {
   return activeField === "comingFrom" ? comingFromRoom : goingToRoom;
 }
 
-function renderCategoryGrid(categories) {
+function roomRowMarkup(r, extraClass) {
+  const category = categoryByKey(r.categoryKey);
+  const selected = currentSelection();
+  const isSelected = selected && selected.name === r.name ? "selected" : "";
+  return `
+        <button type="button" class="room-row ${isSelected} ${extraClass || ""}" data-name="${r.name}">
+          <span class="room-icon" style="background:${category.color}">${categoryIconMarkup(category)}</span>
+          <span class="room-name">${r.name}</span>
+          <span class="room-code">
+            <svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            ${r.room || "—"}
+          </span>
+        </button>`;
+}
+
+function recommendedRestroom(from) {
+  if (!from) return null;
+  const firstDigit = /^[123]/.exec(from.room || "");
+  let target = null;
+  if (firstDigit) target = `${firstDigit[0]}00's Restroom`;
+  else if (from.categoryKey === "mainOffice" || from.categoryKey === "admins") target = "Office Restroom";
+  if (!target) return null;
+  const match = categoryByKey("restrooms").rooms.find((r) => r.name === target);
+  return match ? { name: match.name, room: match.room, categoryKey: "restrooms" } : null;
+}
+
+function renderCategoryGrid(categories, recommended) {
   if (categories.length === 0) {
     roomList.innerHTML = `<div class="no-results">No matches</div>`;
     return;
   }
 
-  roomList.innerHTML = `<div class="category-grid">${categories
+  const recMarkup = recommended
+    ? `<div class="rec-block">${roomRowMarkup(recommended, "recommended")}</div><h3 class="modal-list-title rec-sub">All Rooms</h3>`
+    : "";
+
+  roomList.innerHTML = `${recMarkup}<div class="category-grid">${categories
     .map((c, idx) => {
       const chevron = c.leaf
         ? ""
@@ -180,6 +210,10 @@ function renderCategoryGrid(categories) {
         </button>`;
     })
     .join("")}</div>`;
+
+  if (recommended) {
+    roomList.querySelector(".room-row.recommended").addEventListener("click", () => selectRoom(recommended));
+  }
 
   roomList.querySelectorAll(".category-tile").forEach((tile) => {
     tile.addEventListener("click", () => {
@@ -200,23 +234,7 @@ function renderFlatList(rooms) {
     return;
   }
 
-  const selected = currentSelection();
-
-  roomList.innerHTML = rooms
-    .map((r) => {
-      const category = categoryByKey(r.categoryKey);
-      const isSelected = selected && selected.name === r.name ? "selected" : "";
-      return `
-        <button type="button" class="room-row ${isSelected}" data-name="${r.name}">
-          <span class="room-icon" style="background:${category.color}">${categoryIconMarkup(category)}</span>
-          <span class="room-name">${r.name}</span>
-          <span class="room-code">
-            <svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-            ${r.room || "—"}
-          </span>
-        </button>`;
-    })
-    .join("");
+  roomList.innerHTML = rooms.map((r) => roomRowMarkup(r)).join("");
 
   roomList.querySelectorAll(".room-row").forEach((row) => {
     row.addEventListener("click", () => {
@@ -259,8 +277,9 @@ function renderPicker(filterText) {
     renderFlatList(rooms);
   } else {
     modalBack.classList.add("hidden");
-    listTitle.textContent = "All Rooms";
-    renderCategoryGrid(CATEGORIES);
+    const recommended = recommendedRestroom(comingFromRoom);
+    listTitle.textContent = recommended ? "Recommended" : "All Rooms";
+    renderCategoryGrid(CATEGORIES, recommended);
   }
 }
 

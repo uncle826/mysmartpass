@@ -1311,3 +1311,22 @@ body.fade-out {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Recommended restroom */
+
+.room-row.recommended {
+  background: #eefaf4;
+  border: 1px solid #cdeede;
+}
+
+.room-row.recommended:hover {
+  background: #e3f6ec;
+}
+
+.rec-block {
+  margin-bottom: 4px;
+}
+
+.rec-sub {
+  margin: 16px 0 10px 0;
+}
