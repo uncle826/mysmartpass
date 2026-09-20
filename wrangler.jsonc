@@ -1,7 +1,19 @@
-"d1_databases": [
-  {
-    "binding": "DB",
-    "database_name": "smartpass",
-    "database_id": "84c97462-a3b3-4b37-a0ea-d4a02c135284"
+{
+  "name": "mysmartpass",
+  "main": "worker.js",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "smartpass",
+      "database_id": "84c97462-a3b3-4b37-a0ea-d4a02c135284"
+    }
+  ],
+  "vars": {
+    "ACCESS_CODE": "Uncle!"
   }
-],
+}
