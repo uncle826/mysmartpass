@@ -13,6 +13,8 @@ function userKey(base) {
 
 const AVATAR_COLORS = ["#d3d7de", "#1ed17a", "#2599d6", "#7b68ee", "#fb6d4c", "#f2994a", "#b21cc4", "#14a3a1"];
 let avatarColor = AVATAR_COLORS[0];
+let rules = { requestOnly: false, dailyLimit: null, usedToday: 0, request: null };
+let lastDecisionId = null;
 
 const avatarBtn = document.getElementById("avatar-btn");
 const avatarMenu = document.getElementById("avatar-menu");
@@ -23,7 +25,7 @@ document.getElementById("avatar-menu-name").textContent = name.toUpperCase();
 
 function applyAvatarColor(color) {
   navAvatars.forEach((el) => {
-    el.style.background = color;
+    el.style.backgroundColor = color;
   });
 }
 
@@ -337,6 +339,7 @@ function showDurationView(room) {
   durationDestIcon.innerHTML = categoryIconMarkup(category);
   durationDestName.textContent = room.name;
   durationFrom.textContent = comingFromRoom ? comingFromRoom.name : "—";
+  document.getElementById("start-pass-label").textContent = rules.requestOnly ? "Send Request" : "Start Pass";
   durationSlider.value = 5;
   updateDurationValueText();
 }
@@ -376,8 +379,20 @@ function closeModal() {
   }, 160);
 }
 
-document.getElementById("create-pass-nav-btn").addEventListener("click", openModal);
-document.getElementById("create-pass-hero-btn").addEventListener("click", openModal);
+function passBlockedMessage() {
+  if (rules.dailyLimit === null) return null;
+  if (rules.dailyLimit === 0) return "Passes are turned off for you right now.";
+  return rules.usedToday >= rules.dailyLimit ? `You've used all ${rules.dailyLimit} of your passes for today.` : null;
+}
+
+function tryOpenModal() {
+  const blocked = passBlockedMessage();
+  if (blocked) return showToast(blocked, "warn");
+  openModal();
+}
+
+document.getElementById("create-pass-nav-btn").addEventListener("click", tryOpenModal);
+document.getElementById("create-pass-hero-btn").addEventListener("click", tryOpenModal);
 overlay.addEventListener("click", (e) => {
   if (e.target === overlay) closeModal();
 });
@@ -662,7 +677,8 @@ startPassBtn.addEventListener("click", async () => {
   startPassBtn.disabled = true;
   document.getElementById("duration-error").classList.add("hidden");
 
-  const res = await apiFetch("/api/student/pass", {
+  const asRequest = rules.requestOnly;
+  const res = await apiFetch(asRequest ? "/api/student/request" : "/api/student/pass", {
     body: {
       name,
       dest: goingToRoom,
@@ -676,7 +692,8 @@ startPassBtn.addEventListener("click", async () => {
 
   if (res.ok) {
     applyServerState(res.data);
-    sendBrowserNotification("Pass created", `Heading to ${goingToRoom.name}.`);
+    if (asRequest) showToast("Request sent to your teacher.", "success");
+    else sendBrowserNotification("Pass created", `Heading to ${goingToRoom.name}.`);
     closeModal();
     return;
   }
@@ -690,10 +707,70 @@ startPassBtn.addEventListener("click", async () => {
 
 /* Server sync: same account on any computer */
 
+const requestCard = document.getElementById("request-card");
+const passRulesEl = document.getElementById("pass-rules");
+
+function updateRulesUI() {
+  const blocked = passBlockedMessage();
+  const parts = [];
+  if (rules.requestOnly) parts.push("Your teacher approves your passes");
+  if (rules.dailyLimit === 0) parts.push("Passes are off right now");
+  else if (rules.dailyLimit !== null) parts.push(`${rules.usedToday} of ${rules.dailyLimit} passes used today`);
+
+  passRulesEl.textContent = parts.join(" · ");
+  passRulesEl.classList.toggle("hidden", parts.length === 0);
+  passRulesEl.classList.toggle("blocked", !!blocked);
+
+  if (currentPass) {
+    requestCard.classList.add("hidden");
+    return;
+  }
+
+  const pending = rules.request;
+  goingSomewhere.classList.toggle("hidden", !!pending);
+  requestCard.classList.toggle("hidden", !pending);
+  if (pending) {
+    document.getElementById("request-sub").textContent = `Going to ${pending.dest.name} · ${pending.minutes} min`;
+  }
+
+  [createPassNavBtn, document.getElementById("create-pass-hero-btn")].forEach((btn) => {
+    btn.disabled = !!blocked;
+    btn.style.opacity = blocked ? "0.5" : "";
+    btn.style.cursor = blocked ? "not-allowed" : "";
+  });
+}
+
+document.getElementById("request-cancel").addEventListener("click", async () => {
+  const res = await apiFetch("/api/student/request/cancel", { body: { name } });
+  if (res.ok) applyServerState(res.data);
+});
+
+function handleDecision(state) {
+  const decision = state.decision;
+  if (!decision || decision.id === lastDecisionId) return;
+  lastDecisionId = decision.id;
+  if (firstSync) return;
+  if (decision.status === "approved") {
+    showToast(`Approved! Your pass to ${decision.destName} has started.`, "success");
+    sendBrowserNotification("Pass approved", `Your pass to ${decision.destName} was approved.`);
+  } else {
+    showToast(`Your request to go to ${decision.destName} was denied.`, "warn");
+    sendBrowserNotification("Request denied", `Your request to go to ${decision.destName} was denied.`);
+  }
+}
+
 function applyServerState(state) {
   avatarColor = state.avatarColor || AVATAR_COLORS[0];
   applyAvatarColor(avatarColor);
+  navAvatars.forEach((el) => applyPhoto(el, state.photo));
   renderAvatarColors();
+
+  rules = {
+    requestOnly: !!state.requestOnly,
+    dailyLimit: state.dailyLimit === undefined ? null : state.dailyLimit,
+    usedToday: state.usedToday || 0,
+    request: state.request || null,
+  };
 
   logCache = state.log || [];
   renderNotifications();
@@ -711,13 +788,15 @@ function applyServerState(state) {
     resetActivePassUI();
     currentPass = null;
   }
+  updateRulesUI();
+  handleDecision(state);
   firstSync = false;
 }
 
 async function loadState() {
   if (busy) return;
-  let res = await apiFetch(`/api/student/state?name=${encodeURIComponent(name)}`);
-  if (res.status === 404) res = await apiFetch("/api/student/login", { body: { name } });
+  let res = await apiFetch(`/api/student/state?name=${encodeURIComponent(name)}&tz=${tzOffset()}`);
+  if (res.status === 404) res = await apiFetch("/api/student/login", { body: { name, tz: tzOffset() } });
   if (res.ok && !busy) applyServerState(res.data);
 }
 

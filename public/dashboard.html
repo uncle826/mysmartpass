@@ -78,6 +78,14 @@
           <svg viewBox="0 0 24 24" class="btn-icon"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
           Create Pass
         </button>
+        <p class="pass-rules hidden" id="pass-rules"></p>
+      </div>
+
+      <div class="request-card hidden" id="request-card">
+        <div class="request-spinner" aria-hidden="true"></div>
+        <p class="request-title">Waiting for your teacher</p>
+        <p class="request-sub" id="request-sub"></p>
+        <button type="button" class="btn btn-outline" id="request-cancel">Cancel request</button>
       </div>
 
       <div class="active-pass hidden" id="active-pass">
@@ -219,7 +227,7 @@
         <p class="duration-error hidden" id="duration-error" role="alert"></p>
 
         <button class="duration-start-btn" id="start-pass-btn">
-          Start Pass
+          <span id="start-pass-label">Start Pass</span>
           <svg viewBox="0 0 24 24" class="btn-icon"><path d="M9 6l6 6-6 6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
       </div>

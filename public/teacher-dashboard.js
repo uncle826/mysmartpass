@@ -23,31 +23,48 @@ const teacherName = localStorage.getItem("smartpass_name") || "Teacher";
 document.getElementById("teacher-name").textContent = teacherName.toUpperCase();
 
 const AVATAR_PALETTE = ["#2599d6", "#7b68ee", "#fb6d4c", "#f2994a", "#b21cc4", "#14a3a1", "#1ed17a", "#e2574c"];
+const LIMIT_OPTIONS = [
+  { value: null, label: "Off" },
+  { value: 3, label: "3" },
+  { value: 2, label: "2" },
+  { value: 1, label: "1" },
+  { value: 0, label: "None" },
+];
 
 const listEl = document.getElementById("t-student-list");
 const emptyEl = document.getElementById("t-empty");
 const countEl = document.getElementById("t-count");
 const searchEl = document.getElementById("t-search");
 const detailEl = document.getElementById("t-detail");
+const studentsView = document.getElementById("students-view");
+const hallView = document.getElementById("hall-view");
 
 let students = [];
 let studentMap = new Map();
 let selectedKey = null;
+let currentView = "students";
+let teacherPhoto = null;
+let listAnimated = false;
+let hallShown = new Set();
+let knownRequestIds = null;
 
 /* ---------- helpers ---------- */
 
 function categoryByKey(key) {
-  return CATEGORIES.find((c) => c.key === key);
-}
-
-function titleCase(text) {
-  return text.replace(/\b\w/g, (c) => c.toUpperCase());
+  return CATEGORIES.find((c) => c.key === key) || CATEGORIES[0];
 }
 
 function avatarColor(name) {
   let hash = 0;
   for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
   return AVATAR_PALETTE[hash % AVATAR_PALETTE.length];
+}
+
+function avatarHtml(s, extraClass = "") {
+  const color = s.avatarColor || avatarColor(s.name);
+  const photo = s.photo ? `;background-image:url('${s.photo}')` : "";
+  const initial = s.photo ? "" : escapeHtml(s.name.charAt(0).toUpperCase());
+  return `<span class="t-avatar ${s.photo ? "has-photo" : ""} ${extraClass}" style="background-color:${color}${photo}">${initial}</span>`;
 }
 
 function shade(hex, amount) {
@@ -83,10 +100,9 @@ function dayLabel(ts) {
   return new Date(ts).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
 }
 
-/* ---------- data ---------- */
-
 function statusInfo(s, now) {
   if (!s.active) {
+    if (s.request) return { cls: "requesting", text: `Asking to go to ${s.request.dest.name}` };
     const n = s.log.length;
     return { cls: "", text: `In class · ${n} pass${n === 1 ? "" : "es"}` };
   }
@@ -97,6 +113,43 @@ function statusInfo(s, now) {
   return { cls: "overtime", text: `Overtime · ${s.active.room.name} · +${clock(-remaining, false)}` };
 }
 
+function limitSummary(s) {
+  if (s.dailyLimit === null) return `No daily limit · ${s.usedToday} today`;
+  if (s.dailyLimit === 0) return "Passes are turned off";
+  return `${s.usedToday} of ${s.dailyLimit} used today`;
+}
+
+function popElement(el) {
+  el.classList.remove("pop");
+  void el.offsetWidth;
+  el.classList.add("pop");
+}
+
+/* ---------- views ---------- */
+
+function setView(view) {
+  currentView = view === "hall" ? "hall" : "students";
+  document.querySelectorAll(".main-nav .nav-item").forEach((a) => {
+    a.classList.toggle("active", a.dataset.view === currentView);
+  });
+  const show = currentView === "hall" ? hallView : studentsView;
+  const hide = currentView === "hall" ? studentsView : hallView;
+  hide.classList.add("hidden");
+  show.classList.remove("hidden");
+  show.classList.remove("view-enter");
+  void show.offsetWidth;
+  show.classList.add("view-enter");
+  if (location.hash !== `#${currentView}`) history.replaceState(null, "", `#${currentView}`);
+  tick();
+}
+
+document.querySelectorAll(".main-nav .nav-item").forEach((a) => {
+  a.addEventListener("click", (e) => {
+    e.preventDefault();
+    setView(a.dataset.view);
+  });
+});
+
 /* ---------- student list ---------- */
 
 function renderList() {
@@ -104,35 +157,75 @@ function renderList() {
   const shown = students.filter((s) => !term || s.name.toLowerCase().includes(term));
   const now = serverTime();
 
-  countEl.textContent = students.length;
+  if (countEl.textContent !== String(students.length)) {
+    countEl.textContent = students.length;
+    popElement(countEl);
+  }
   emptyEl.classList.toggle("hidden", students.length > 0);
 
+  const stagger = !listAnimated && shown.length > 0;
+  if (stagger) listAnimated = true;
+
   listEl.innerHTML = shown
-    .map((s) => {
+    .map((s, i) => {
       const st = statusInfo(s, now);
+      const chip = s.request ? '<span class="t-chip amber">Request</span>' : s.requestOnly ? '<span class="t-chip">Approval</span>' : "";
       return `
-        <button type="button" class="t-student ${s.key === selectedKey ? "selected" : ""}" data-key="${s.key}">
-          <span class="t-avatar" style="background:${avatarColor(s.name)}">${escapeHtml(s.name.charAt(0).toUpperCase())}</span>
+        <button type="button" class="t-student ${s.key === selectedKey ? "selected" : ""} ${stagger ? "stagger" : ""}" style="--i:${Math.min(i, 14)}" data-key="${s.key}">
+          ${avatarHtml(s)}
           <span class="t-student-info">
             <span class="t-student-name">${escapeHtml(s.name)}</span>
             <span class="t-student-sub js-status ${st.cls}" data-key="${s.key}">${escapeHtml(st.text)}</span>
           </span>
+          ${chip}
         </button>`;
     })
     .join("");
 
   listEl.querySelectorAll(".t-student").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      selectedKey = btn.dataset.key;
-      renderList();
-      renderDetail();
-    });
+    btn.addEventListener("click", () => selectStudent(btn.dataset.key));
   });
+}
+
+function selectStudent(key) {
+  const changed = key !== selectedKey;
+  selectedKey = key;
+  listEl.querySelectorAll(".t-student").forEach((b) => b.classList.toggle("selected", b.dataset.key === key));
+  renderDetail(changed);
 }
 
 /* ---------- student detail ---------- */
 
-function renderDetail() {
+function renderRules(s) {
+  const options = LIMIT_OPTIONS.map((o) => {
+    const active = o.value === s.dailyLimit ? "active" : "";
+    return `<button type="button" class="seg-btn ${active}" data-limit="${o.value === null ? "off" : o.value}">${o.label}</button>`;
+  }).join("");
+
+  return `
+    <div class="t-rules">
+      <div class="t-rule">
+        <div class="t-rule-text">
+          <div class="t-rule-title">Request only</div>
+          <div class="t-rule-sub">${s.requestOnly ? "They must ask you before going anywhere" : "They can create passes on their own"}</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="t-request-only" ${s.requestOnly ? "checked" : ""}>
+          <span class="switch-track"></span>
+        </label>
+      </div>
+      <div class="t-rule">
+        <div class="t-rule-text">
+          <div class="t-rule-title">Passes per day</div>
+          <div class="t-rule-sub" id="t-limit-sub">${escapeHtml(limitSummary(s))}</div>
+        </div>
+        <div class="segmented" id="t-limit">${options}</div>
+      </div>
+    </div>`;
+}
+
+function renderDetail(animate = true) {
+  detailEl.classList.toggle("no-anim", !animate);
   const s = studentMap.get(selectedKey);
 
   if (!s) {
@@ -150,7 +243,7 @@ function renderDetail() {
 
   let activeBlock = "";
   if (s.active) {
-    const cat = categoryByKey(s.active.room.categoryKey) || CATEGORIES[0];
+    const cat = categoryByKey(s.active.room.categoryKey);
     activeBlock = `
       <div class="t-active" style="background:linear-gradient(135deg, ${cat.color}, ${shade(cat.color, -45)})">
         <span class="t-active-icon">${categoryIconMarkup(cat)}</span>
@@ -159,6 +252,22 @@ function renderDetail() {
           <div class="t-active-name">${escapeHtml(s.active.room.name)}</div>
         </div>
         <div class="t-active-time" id="t-active-time"></div>
+      </div>`;
+  }
+
+  let requestBlock = "";
+  if (s.request) {
+    const from = s.request.from ? ` from ${escapeHtml(s.request.from.name)}` : "";
+    requestBlock = `
+      <div class="t-request">
+        <div class="t-request-info">
+          <div class="t-request-label">Pass request</div>
+          <div class="t-request-dest">${escapeHtml(s.name)} wants to go to <b>${escapeHtml(s.request.dest.name)}</b>${from} · ${s.request.minutes} min</div>
+        </div>
+        <div class="t-request-actions">
+          <button type="button" class="btn btn-danger-outline" data-decide="deny" data-id="${s.request.id}">Deny</button>
+          <button type="button" class="btn btn-primary" data-decide="approve" data-id="${s.request.id}">Approve</button>
+        </div>
       </div>`;
   }
 
@@ -173,7 +282,7 @@ function renderDetail() {
         const day = dayLabel(p.startTime);
         const heading = day !== lastDay ? `<div class="t-day">${day}</div>` : "";
         lastDay = day;
-        const cat = categoryByKey(p.categoryKey) || CATEGORIES[0];
+        const cat = categoryByKey(p.categoryKey);
         const tag = p.overtime ? ' · <span class="notif-overtime-tag">Overtime</span>' : "";
         return `${heading}
           <div class="notif-item" style="--i:${Math.min(i, 12)}">
@@ -196,7 +305,10 @@ function renderDetail() {
 
   detailEl.innerHTML = `
     <div class="t-detail-head">
-      <span class="t-avatar" style="background:${avatarColor(s.name)}">${escapeHtml(s.name.charAt(0).toUpperCase())}</span>
+      <button type="button" class="t-avatar-btn" id="t-photo-btn" title="Change photo" aria-label="Change photo">
+        ${avatarHtml(s)}
+        <span class="t-avatar-cam"><svg viewBox="0 0 24 24"><path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="2.2"/></svg></span>
+      </button>
       <div class="t-detail-title">
         <h2>${escapeHtml(s.name)}</h2>
         <div class="t-status" id="t-status"></div>
@@ -204,11 +316,15 @@ function renderDetail() {
       <div class="t-actions">${actions}</div>
     </div>
 
+    ${requestBlock}
+
     <div class="notif-stats">
       <div class="notif-stat"><span class="notif-stat-value">${total}</span><span class="notif-stat-label">Passes</span></div>
       <div class="notif-stat"><span class="notif-stat-value">${overtime}</span><span class="notif-stat-label">Overtime Passes</span></div>
       <div class="notif-stat"><span class="notif-stat-value">${total ? formatDuration(avg) : "—"}</span><span class="notif-stat-label">Average Time</span></div>
     </div>
+
+    ${renderRules(s)}
 
     ${activeBlock}
 
@@ -219,6 +335,21 @@ function renderDetail() {
   if (createBtn) createBtn.addEventListener("click", () => openCreate(s));
   const endBtn = document.getElementById("t-end-btn");
   if (endBtn) endBtn.addEventListener("click", () => endStudentPass(s));
+  document.getElementById("t-photo-btn").addEventListener("click", () => openPhotoDialog({ type: "student", key: s.key, name: s.name }));
+
+  detailEl.querySelectorAll("[data-decide]").forEach((btn) => {
+    btn.addEventListener("click", () => decideRequest(Number(btn.dataset.id), btn.dataset.decide === "approve", btn));
+  });
+
+  document.getElementById("t-request-only").addEventListener("change", (e) => {
+    saveSettings(s, { requestOnly: e.target.checked });
+  });
+  document.querySelectorAll("#t-limit .seg-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const v = btn.dataset.limit === "off" ? null : Number(btn.dataset.limit);
+      if (v !== s.dailyLimit) saveSettings(s, { dailyLimit: v });
+    });
+  });
 
   tick();
 }
@@ -235,26 +366,149 @@ function tick() {
   });
 
   const s = studentMap.get(selectedKey);
-  if (!s) return;
-
-  const statusEl = document.getElementById("t-status");
-  if (statusEl) {
-    const st = statusInfo(s, now);
-    statusEl.className = `t-status ${st.cls}`;
-    statusEl.textContent = st.text;
-  }
-
-  if (s.active) {
-    const remaining = s.active.endTime - now;
-    const timeEl = document.getElementById("t-active-time");
-    const labelEl = document.getElementById("t-active-label");
-    if (timeEl) {
-      timeEl.innerHTML = remaining > 0
-        ? `${clock(remaining, true)}<small>remaining</small>`
-        : `+${clock(-remaining, false)}<small>overtime</small>`;
+  if (s && currentView === "students") {
+    const statusEl = document.getElementById("t-status");
+    if (statusEl) {
+      const st = statusInfo(s, now);
+      statusEl.className = `t-status ${st.cls}`;
+      statusEl.textContent = st.text;
     }
-    if (labelEl) labelEl.textContent = remaining > 0 ? "On a pass to" : "Overtime on a pass to";
+
+    if (s.active) {
+      const remaining = s.active.endTime - now;
+      const timeEl = document.getElementById("t-active-time");
+      const labelEl = document.getElementById("t-active-label");
+      if (timeEl) {
+        timeEl.innerHTML = remaining > 0
+          ? `${clock(remaining, true)}<small>remaining</small>`
+          : `+${clock(-remaining, false)}<small>overtime</small>`;
+      }
+      if (labelEl) labelEl.textContent = remaining > 0 ? "On a pass to" : "Overtime on a pass to";
+    }
   }
+
+  tickHall(now);
+}
+
+/* ---------- hall monitor ---------- */
+
+function hallCardMarkup(s, enter) {
+  const cat = categoryByKey(s.active.room.categoryKey);
+  const from = s.active.from ? ` from ${escapeHtml(s.active.from.name)}` : "";
+  const by = s.active.createdBy ? ` · sent by ${escapeHtml(s.active.createdBy)}` : "";
+  return `
+    <div class="h-card ${enter ? "enter" : ""}" data-key="${s.key}" style="--accent:${cat.color}">
+      <button type="button" class="h-card-top" data-open="${s.key}">
+        ${avatarHtml(s)}
+        <span class="h-who">
+          <span class="h-name">${escapeHtml(s.name)}</span>
+          <span class="h-sub">Left at ${timeOfDay(s.active.startTime)}${from}${by}</span>
+        </span>
+        <span class="h-dest-icon" style="background:${cat.color}">${categoryIconMarkup(cat)}</span>
+      </button>
+      <div class="h-dest">Going to <b>${escapeHtml(s.active.room.name)}</b></div>
+      <div class="h-time js-h-time" data-key="${s.key}"></div>
+      <div class="h-bar"><div class="h-bar-fill js-h-bar" data-key="${s.key}"></div></div>
+      <button type="button" class="btn btn-danger-outline h-end" data-end="${s.key}">End pass</button>
+    </div>`;
+}
+
+function requestCardMarkup(s, enter) {
+  const r = s.request;
+  const cat = categoryByKey(r.dest.categoryKey);
+  const from = r.from ? ` from ${escapeHtml(r.from.name)}` : "";
+  return `
+    <div class="h-card request ${enter ? "enter" : ""}" data-key="${s.key}" style="--accent:${cat.color}">
+      <button type="button" class="h-card-top" data-open="${s.key}">
+        ${avatarHtml(s)}
+        <span class="h-who">
+          <span class="h-name">${escapeHtml(s.name)}</span>
+          <span class="h-sub">Asking to leave${from}</span>
+        </span>
+        <span class="h-dest-icon" style="background:${cat.color}">${categoryIconMarkup(cat)}</span>
+      </button>
+      <div class="h-dest">Wants to go to <b>${escapeHtml(r.dest.name)}</b> · ${r.minutes} min</div>
+      <div class="h-actions">
+        <button type="button" class="btn btn-danger-outline" data-decide="deny" data-id="${r.id}">Deny</button>
+        <button type="button" class="btn btn-primary" data-decide="approve" data-id="${r.id}">Approve</button>
+      </div>
+    </div>`;
+}
+
+function setBadge(el, count, danger) {
+  const text = String(count);
+  const changed = el.textContent !== text;
+  el.textContent = text;
+  el.classList.toggle("hidden", count === 0);
+  el.classList.toggle("danger", !!danger);
+  if (changed && count > 0) popElement(el);
+}
+
+function renderHall() {
+  const now = serverTime();
+  const out = students
+    .filter((s) => s.active)
+    .sort((a, b) => a.active.endTime - b.active.endTime);
+  const requests = students.filter((s) => s.request && !s.active);
+
+  const gridEl = document.getElementById("hall-grid");
+  const reqEl = document.getElementById("hall-requests");
+
+  gridEl.innerHTML = out.map((s) => hallCardMarkup(s, !hallShown.has(s.key))).join("");
+  hallShown = new Set(out.map((s) => s.key));
+
+  reqEl.innerHTML = requests.map((s) => requestCardMarkup(s, true)).join("");
+  document.getElementById("hall-requests-wrap").classList.toggle("hidden", requests.length === 0);
+  document.getElementById("hall-req-count").textContent = requests.length;
+  document.getElementById("hall-empty").classList.toggle("hidden", out.length > 0);
+  document.getElementById("hall-count").textContent = out.length;
+
+  const late = out.filter((s) => s.active.endTime < now).length;
+  document.getElementById("hall-sub").textContent = out.length === 0
+    ? "Nobody is out right now"
+    : `${out.length} out${late ? ` · ${late} overtime` : ""}`;
+
+  setBadge(document.getElementById("hall-badge"), out.length, late > 0);
+  setBadge(document.getElementById("req-badge"), requests.length, false);
+
+  hallView.querySelectorAll("[data-open]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setView("students");
+      selectStudent(btn.dataset.open);
+      const row = listEl.querySelector(`.t-student[data-key="${btn.dataset.open}"]`);
+      if (row) row.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+  });
+  hallView.querySelectorAll("[data-end]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const s = studentMap.get(btn.dataset.end);
+      if (s) endStudentPass(s);
+    });
+  });
+  hallView.querySelectorAll("[data-decide]").forEach((btn) => {
+    btn.addEventListener("click", () => decideRequest(Number(btn.dataset.id), btn.dataset.decide === "approve", btn));
+  });
+
+  tickHall(now);
+}
+
+function tickHall(now) {
+  document.querySelectorAll(".js-h-time").forEach((el) => {
+    const s = studentMap.get(el.dataset.key);
+    if (!s || !s.active) return;
+    const remaining = s.active.endTime - now;
+    const card = el.closest(".h-card");
+    const late = remaining <= 0;
+    card.classList.toggle("overtime", late);
+    el.innerHTML = late
+      ? `+${clock(-remaining, false)}<small>overtime</small>`
+      : `${clock(remaining, true)}<small>remaining</small>`;
+
+    const total = Math.max(1, s.active.endTime - s.active.startTime);
+    const pct = late ? 100 : Math.min(100, Math.max(0, ((now - s.active.startTime) / total) * 100));
+    const bar = card.querySelector(".js-h-bar");
+    if (bar) bar.style.width = `${pct}%`;
+  });
 }
 
 /* ---------- actions ---------- */
@@ -276,20 +530,56 @@ async function refresh(force) {
   if (!force && signature === lastSignature) return;
   lastSignature = signature;
 
+  const previousSelected = selectedKey;
   students = list
     .map((s) => ({ ...s, log: s.log || [] }))
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
   studentMap = new Map(students.map((s) => [s.key, s]));
   if (!selectedKey && students.length > 0) selectedKey = students[0].key;
   if (selectedKey && !studentMap.has(selectedKey)) selectedKey = null;
+
+  announceNewRequests();
   renderList();
-  renderDetail();
+  renderDetail(selectedKey !== previousSelected);
+  renderHall();
+}
+
+function announceNewRequests() {
+  const ids = new Set(students.filter((s) => s.request).map((s) => s.request.id));
+  if (knownRequestIds) {
+    students.forEach((s) => {
+      if (s.request && !knownRequestIds.has(s.request.id)) {
+        showToast(`${s.name} is asking to go to ${s.request.dest.name}`, "info");
+      }
+    });
+  }
+  knownRequestIds = ids;
 }
 
 async function endStudentPass(s) {
   if (!s.active) return;
   const res = await teacherApi("/api/teacher/pass/end", { key: s.key });
   if (res.status === 401) return kickToSignIn();
+  showToast(`Ended ${s.name}'s pass`, "info");
+  refresh(true);
+}
+
+async function decideRequest(id, approve, btn) {
+  if (btn) btn.disabled = true;
+  const res = await teacherApi("/api/teacher/request/decide", { id, approve });
+  if (res.status === 401) return kickToSignIn();
+  if (!res.ok) showToast(res.data.error || "Couldn't update that request.", "warn");
+  else showToast(approve ? "Request approved. Their pass has started." : "Request denied.", approve ? "success" : "info");
+  refresh(true);
+}
+
+async function saveSettings(s, change) {
+  Object.assign(s, change);
+  renderDetail(false);
+  renderList();
+  const res = await teacherApi("/api/teacher/student/settings", { key: s.key, ...change });
+  if (res.status === 401) return kickToSignIn();
+  if (!res.ok) showToast(res.data.error || "Couldn't save that setting.", "warn");
   refresh(true);
 }
 
@@ -304,7 +594,6 @@ const durationValue = document.getElementById("t-duration-value");
 const createBtnModal = document.getElementById("t-modal-create");
 let modalStudent = null;
 let modalRoom = null;
-let modalTimer = null;
 
 function renderRooms() {
   const term = roomSearch.value.trim().toLowerCase();
@@ -332,7 +621,7 @@ function renderRooms() {
     row.addEventListener("click", () => {
       modalRoom = FLAT_ROOMS.find((r) => r.name === row.dataset.name);
       createBtnModal.disabled = false;
-      renderRooms();
+      roomListEl.querySelectorAll(".room-row").forEach((r) => r.classList.toggle("selected", r === row));
     });
   });
 }
@@ -341,28 +630,36 @@ function updateDuration() {
   durationValue.textContent = `${slider.value} min`;
 }
 
+function openOverlay(overlay) {
+  clearTimeout(overlay._timer);
+  overlay.classList.remove("closing");
+  overlay.classList.remove("hidden");
+}
+
+function closeOverlay(overlay) {
+  overlay.classList.add("closing");
+  clearTimeout(overlay._timer);
+  overlay._timer = setTimeout(() => {
+    overlay.classList.add("hidden");
+    overlay.classList.remove("closing");
+  }, 180);
+}
+
 function openCreate(s) {
   modalStudent = s;
   modalRoom = null;
-  modalSub.textContent = `Create a pass for ${s.name}.`; // textContent: safe
+  modalSub.textContent = `Create a pass for ${s.name}.`;
   roomSearch.value = "";
   slider.value = 5;
   updateDuration();
   createBtnModal.disabled = true;
   renderRooms();
-  clearTimeout(modalTimer);
-  modalOverlay.classList.remove("closing");
-  modalOverlay.classList.remove("hidden");
+  openOverlay(modalOverlay);
   roomSearch.focus();
 }
 
 function closeCreate() {
-  modalOverlay.classList.add("closing");
-  clearTimeout(modalTimer);
-  modalTimer = setTimeout(() => {
-    modalOverlay.classList.add("hidden");
-    modalOverlay.classList.remove("closing");
-  }, 180);
+  closeOverlay(modalOverlay);
 }
 
 roomSearch.addEventListener("input", renderRooms);
@@ -370,9 +667,6 @@ slider.addEventListener("input", updateDuration);
 document.getElementById("t-modal-cancel").addEventListener("click", closeCreate);
 modalOverlay.addEventListener("click", (e) => {
   if (e.target === modalOverlay) closeCreate();
-});
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && !modalOverlay.classList.contains("hidden")) closeCreate();
 });
 
 createBtnModal.addEventListener("click", async () => {
@@ -385,7 +679,158 @@ createBtnModal.addEventListener("click", async () => {
   });
   if (res.status === 401) return kickToSignIn();
   closeCreate();
+  if (!res.ok) showToast(res.data.error || "Couldn't create that pass.", "warn");
+  else showToast(`Pass created for ${modalStudent.name}`, "success");
   refresh(true);
+});
+
+/* ---------- profile photos ---------- */
+
+const PRESETS = [
+  ["🦊", "#f2994a"], ["🐼", "#8fa1b5"], ["🐸", "#1ed17a"], ["🦁", "#f2b544"],
+  ["🐙", "#b21cc4"], ["🦄", "#7b68ee"], ["🐢", "#14a3a1"], ["🚀", "#2599d6"],
+  ["⚽", "#4b5261"], ["🎸", "#fb6d4c"], ["🌟", "#e2574c"], ["🐶", "#a1887f"],
+];
+const PHOTO_SIZE = 112;
+
+const photoOverlay = document.getElementById("photo-overlay");
+const photoPreview = document.getElementById("photo-preview");
+const photoSave = document.getElementById("photo-save");
+const photoError = document.getElementById("photo-error");
+const photoFile = document.getElementById("photo-file");
+let photoTarget = null;
+let photoPending; // undefined = unchanged, null = remove, string = new photo
+let presetUrls = null;
+
+function presetDataUrl([emoji, color]) {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = PHOTO_SIZE;
+  const g = canvas.getContext("2d");
+  g.fillStyle = color;
+  g.fillRect(0, 0, PHOTO_SIZE, PHOTO_SIZE);
+  g.font = `${Math.round(PHOTO_SIZE * 0.58)}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`;
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.fillText(emoji, PHOTO_SIZE / 2, PHOTO_SIZE / 2 + 4);
+  return canvas.toDataURL("image/jpeg", 0.85);
+}
+
+function fileToAvatar(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const side = Math.min(img.width, img.height);
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = PHOTO_SIZE;
+      canvas.getContext("2d").drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, PHOTO_SIZE, PHOTO_SIZE);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("bad image"));
+    };
+    img.src = url;
+  });
+}
+
+function currentPhotoFor(target) {
+  if (target.type === "me") return teacherPhoto;
+  const s = studentMap.get(target.key);
+  return s ? s.photo : null;
+}
+
+function showPhotoPreview(photo) {
+  photoPreview.style.backgroundImage = photo ? `url("${photo}")` : "";
+  photoPreview.classList.toggle("has-photo", !!photo);
+  photoPreview.style.backgroundColor = photo ? "" : "#c3c9d6";
+  const label = photoTarget.type === "me" ? teacherName : photoTarget.name;
+  photoPreview.textContent = photo ? "" : label.charAt(0).toUpperCase();
+}
+
+function setPendingPhoto(value) {
+  photoPending = value;
+  photoError.classList.add("hidden");
+  showPhotoPreview(value === undefined ? currentPhotoFor(photoTarget) : value);
+  photoSave.disabled = value === undefined;
+  document.querySelectorAll("#photo-presets .preset").forEach((b) => {
+    b.classList.toggle("selected", typeof value === "string" && b.dataset.url === value);
+  });
+}
+
+function openPhotoDialog(target) {
+  photoTarget = target;
+  document.getElementById("photo-sub").textContent =
+    target.type === "me" ? "This is what students see next to your name." : `Choose a photo for ${target.name}.`;
+
+  if (!presetUrls) presetUrls = PRESETS.map(presetDataUrl);
+  document.getElementById("photo-presets").innerHTML = presetUrls
+    .map((url, i) => `<button type="button" class="preset" data-url="${url}" style="background-image:url('${url}')" aria-label="Choose image ${i + 1}"></button>`)
+    .join("");
+  document.querySelectorAll("#photo-presets .preset").forEach((b) => {
+    b.addEventListener("click", () => setPendingPhoto(b.dataset.url));
+  });
+
+  setPendingPhoto(undefined);
+  openOverlay(photoOverlay);
+}
+
+document.getElementById("photo-upload-btn").addEventListener("click", () => photoFile.click());
+photoFile.addEventListener("change", async () => {
+  const file = photoFile.files && photoFile.files[0];
+  photoFile.value = "";
+  if (!file) return;
+  if (!file.type.startsWith("image/")) {
+    photoError.textContent = "Please choose an image file.";
+    return photoError.classList.remove("hidden");
+  }
+  try {
+    setPendingPhoto(await fileToAvatar(file));
+  } catch {
+    photoError.textContent = "That image couldn't be read. Try a different one.";
+    photoError.classList.remove("hidden");
+  }
+});
+document.getElementById("photo-remove-btn").addEventListener("click", () => setPendingPhoto(null));
+document.getElementById("photo-cancel").addEventListener("click", () => closeOverlay(photoOverlay));
+photoOverlay.addEventListener("click", (e) => {
+  if (e.target === photoOverlay) closeOverlay(photoOverlay);
+});
+
+photoSave.addEventListener("click", async () => {
+  if (photoPending === undefined || !photoTarget) return;
+  photoSave.disabled = true;
+  const isMe = photoTarget.type === "me";
+  const res = await teacherApi(isMe ? "/api/teacher/photo" : "/api/teacher/student/photo", {
+    ...(isMe ? {} : { key: photoTarget.key }),
+    photo: photoPending,
+  });
+  if (res.status === 401) return kickToSignIn();
+  if (!res.ok) {
+    photoError.textContent = res.data.error || "Couldn't save that photo.";
+    photoError.classList.remove("hidden");
+    photoSave.disabled = false;
+    return;
+  }
+  if (isMe) {
+    teacherPhoto = photoPending;
+    applyTeacherPhoto();
+  }
+  closeOverlay(photoOverlay);
+  showToast("Photo updated", "success");
+  refresh(true);
+});
+
+function applyTeacherPhoto() {
+  applyPhoto(document.getElementById("avatar-btn"), teacherPhoto);
+  applyPhoto(document.getElementById("teacher-avatar-preview"), teacherPhoto);
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (!photoOverlay.classList.contains("hidden")) closeOverlay(photoOverlay);
+  else if (!modalOverlay.classList.contains("hidden")) closeCreate();
 });
 
 /* ---------- account menu ---------- */
@@ -404,6 +849,11 @@ document.addEventListener("click", (e) => {
   }
 });
 
+document.getElementById("change-photo-btn").addEventListener("click", () => {
+  avatarMenu.classList.add("hidden");
+  openPhotoDialog({ type: "me" });
+});
+
 document.getElementById("sign-out-btn").addEventListener("click", () => {
   teacherApi("/api/teacher/logout", {});
   localStorage.removeItem("smartpass_role");
@@ -420,7 +870,18 @@ document.getElementById("sign-out-btn").addEventListener("click", () => {
 
 searchEl.addEventListener("input", renderList);
 window.addEventListener("focus", () => refresh());
+window.addEventListener("hashchange", () => setView(location.hash === "#hall" ? "hall" : "students"));
 
+(async () => {
+  const me = await teacherApi("/api/teacher/me");
+  if (me.status === 401) return kickToSignIn();
+  if (me.ok) {
+    teacherPhoto = me.data.photo || null;
+    applyTeacherPhoto();
+  }
+})();
+
+setView(location.hash === "#hall" ? "hall" : "students");
 refresh(true);
 setInterval(() => refresh(), 3000);
 setInterval(tick, 1000);

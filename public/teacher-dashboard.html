@@ -11,6 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="dashboard.css">
 <link rel="stylesheet" href="teacher.css">
+<link rel="stylesheet" href="teacher-extra.css">
 </head>
 <body>
 
@@ -20,9 +21,15 @@
     </div>
 
     <nav class="main-nav">
-      <a href="/teacher-dashboard" class="nav-item active">
+      <a href="#students" class="nav-item active" data-view="students">
         <svg viewBox="0 0 24 24" class="nav-icon"><circle cx="9" cy="8" r="3.4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M2.8 19.5c0-3.4 2.8-5.5 6.2-5.5s6.2 2.1 6.2 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="17" cy="9" r="2.6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M17.5 14.2c2.4 0 4.2 1.6 4.2 4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         <span>Students</span>
+      </a>
+      <a href="#hall" class="nav-item" data-view="hall">
+        <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 3 4 6v5.5c0 4.6 3.2 8.3 8 9.5 4.8-1.2 8-4.9 8-9.5V6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.6 16c.6-1.6 1.9-2.4 3.4-2.4s2.8.8 3.4 2.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>Hall Monitor</span>
+        <span class="nav-badge hidden" id="hall-badge">0</span>
+        <span class="nav-badge amber hidden" id="req-badge">0</span>
       </a>
     </nav>
 
@@ -37,13 +44,18 @@
 
         <div class="avatar-menu hidden" id="avatar-menu">
           <div class="avatar-menu-header">
-            <div class="avatar avatar-lg">
+            <div class="avatar avatar-lg" id="teacher-avatar-preview">
               <svg viewBox="0 0 24 24" class="avatar-icon"><circle cx="12" cy="9" r="4.6" fill="currentColor"/><path d="M2 24c0-5.6 4.4-8.6 10-8.6s10 3 10 8.6z" fill="currentColor"/></svg>
             </div>
             <span class="avatar-menu-name" id="teacher-name"></span>
           </div>
 
           <div class="avatar-menu-divider"></div>
+
+          <button class="avatar-menu-item" id="change-photo-btn">
+            <svg viewBox="0 0 24 24"><path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.4" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            Change photo
+          </button>
 
           <button class="avatar-menu-item avatar-signout" id="sign-out-btn">
             <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 17l5-5-5-5M21 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -54,7 +66,7 @@
     </div>
   </header>
 
-  <main class="t-content">
+  <main class="t-content" id="students-view">
     <aside class="t-students">
       <div class="t-students-head">
         <h2>Students</h2>
@@ -62,10 +74,33 @@
       </div>
       <input type="text" class="t-search" id="t-search" placeholder="Search students" autocomplete="off">
       <div class="t-student-list" id="t-student-list"></div>
-      <p class="t-empty hidden" id="t-empty">No students yet. Students show up here after they sign in on this device.</p>
+      <p class="t-empty hidden" id="t-empty">No students yet. Students show up here after they sign in.</p>
     </aside>
 
     <section class="t-detail" id="t-detail"></section>
+  </main>
+
+  <main class="t-hall hidden" id="hall-view">
+    <div class="t-hall-inner">
+      <div class="t-hall-head">
+        <h1>Hall Monitor</h1>
+        <span class="t-hall-sub" id="hall-sub"></span>
+      </div>
+
+      <section class="t-hall-section hidden" id="hall-requests-wrap">
+        <h2 class="t-section-title">Pass requests <span class="t-count amber" id="hall-req-count">0</span></h2>
+        <div class="h-grid" id="hall-requests"></div>
+      </section>
+
+      <section class="t-hall-section">
+        <h2 class="t-section-title">In the hall <span class="t-count" id="hall-count">0</span></h2>
+        <div class="h-grid" id="hall-grid"></div>
+        <div class="h-empty hidden" id="hall-empty">
+          <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Everyone is in class</span>
+        </div>
+      </section>
+    </div>
   </main>
 
   <div class="confirm-overlay hidden" id="t-modal-overlay">
@@ -85,6 +120,31 @@
       <div class="confirm-actions">
         <button type="button" class="confirm-btn confirm-cancel" id="t-modal-cancel">Cancel</button>
         <button type="button" class="confirm-btn confirm-primary" id="t-modal-create" disabled>Create pass</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="confirm-overlay hidden" id="photo-overlay">
+    <div class="confirm-box t-modal photo-modal" role="dialog" aria-modal="true" aria-labelledby="photo-title">
+      <h3 id="photo-title">Profile photo</h3>
+      <p class="t-modal-sub" id="photo-sub"></p>
+
+      <div class="photo-preview-row">
+        <span class="t-avatar photo-preview" id="photo-preview"></span>
+        <div class="photo-actions">
+          <button type="button" class="btn btn-outline" id="photo-upload-btn">Upload a photo</button>
+          <button type="button" class="btn btn-danger-outline" id="photo-remove-btn">Remove photo</button>
+          <input type="file" id="photo-file" accept="image/*" hidden>
+        </div>
+      </div>
+
+      <p class="photo-label">Or choose an image</p>
+      <div class="photo-presets" id="photo-presets"></div>
+      <p class="photo-error hidden" id="photo-error" role="alert"></p>
+
+      <div class="confirm-actions">
+        <button type="button" class="confirm-btn confirm-cancel" id="photo-cancel">Cancel</button>
+        <button type="button" class="confirm-btn confirm-primary" id="photo-save" disabled>Save</button>
       </div>
     </div>
   </div>

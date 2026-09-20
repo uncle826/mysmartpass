@@ -6,6 +6,18 @@ const TEACHER_RE = /^[\p{L}\p{N} .,'’_-]{3,40}$/u;
 const DEST_RE = /^[\p{L}\p{N} .,'’()#&_-]{1,60}$/u;
 const KEY_RE = /^[a-z0-9]+$/;
 
+const PHOTO_RE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
+const MAX_PHOTO_CHARS = 30000;
+const DAY_MS = 86400000;
+
+const MIGRATIONS = [
+  "ALTER TABLE students ADD COLUMN photo TEXT",
+  "ALTER TABLE students ADD COLUMN request_only INTEGER NOT NULL DEFAULT 0",
+  "ALTER TABLE students ADD COLUMN daily_limit INTEGER",
+  "ALTER TABLE students ADD COLUMN tz_offset INTEGER NOT NULL DEFAULT 0",
+  "ALTER TABLE teachers ADD COLUMN photo TEXT",
+];
+
 const encoder = new TextEncoder();
 
 /* ---------------- helpers ---------------- */
@@ -86,6 +98,24 @@ function cleanDest(dest) {
   return { name, room, categoryKey };
 }
 
+function cleanPhoto(photo) {
+  if (photo === null) return { ok: true, value: null };
+  if (typeof photo !== "string" || photo.length > MAX_PHOTO_CHARS || !PHOTO_RE.test(photo)) return { ok: false };
+  return { ok: true, value: photo };
+}
+
+function cleanTz(raw) {
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= -840 && n <= 840 ? n : null;
+}
+
+// start of the student's current day, using the timezone their browser reported
+function dayStart(now, tzOffset) {
+  const shift = (tzOffset || 0) * 60000;
+  const local = now - shift;
+  return local - (((local % DAY_MS) + DAY_MS) % DAY_MS) + shift;
+}
+
 function clientIp(request) {
   return request.headers.get("cf-connecting-ip") || "local";
 }
@@ -114,7 +144,20 @@ function ensureSchema(env) {
           "CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, username TEXT NOT NULL, expires_at INTEGER NOT NULL)"
         ),
         db.prepare("CREATE TABLE IF NOT EXISTS rate_limits (k TEXT PRIMARY KEY, count INTEGER NOT NULL, reset_at INTEGER NOT NULL)"),
+        db.prepare(
+          "CREATE TABLE IF NOT EXISTS pass_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, student_key TEXT NOT NULL, dest_name TEXT NOT NULL, dest_room TEXT, dest_category TEXT NOT NULL, from_name TEXT, from_room TEXT, from_category TEXT, minutes INTEGER NOT NULL, created_at INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending', decided_by TEXT, decided_at INTEGER)"
+        ),
+        db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS one_pending_request ON pass_requests (student_key) WHERE status = 'pending'"),
       ])
+      .then(async () => {
+        for (const sql of MIGRATIONS) {
+          try {
+            await db.prepare(sql).run();
+          } catch (err) {
+            if (!/duplicate column/i.test(String(err && err.message))) throw err;
+          }
+        }
+      })
       .catch((err) => {
         schemaReady = null;
         throw err;
@@ -165,10 +208,39 @@ function logFromRow(row) {
   };
 }
 
+function requestFromRow(row) {
+  return {
+    id: row.id,
+    dest: { name: row.dest_name, room: row.dest_room || "", categoryKey: row.dest_category },
+    from: row.from_name ? { name: row.from_name, room: row.from_room || "", categoryKey: row.from_category } : null,
+    minutes: row.minutes,
+    createdAt: row.created_at,
+  };
+}
+
+async function passesToday(env, key, tzOffset) {
+  const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM passes WHERE student_key = ? AND start_time >= ?")
+    .bind(key, dayStart(Date.now(), tzOffset))
+    .first();
+  return row ? row.n : 0;
+}
+
+// returns a message when the student isn't allowed another pass right now
+async function limitMessage(env, key, student) {
+  if (student.daily_limit === null || student.daily_limit === undefined) return null;
+  if (student.daily_limit === 0) return "Passes are turned off for you right now.";
+  const used = await passesToday(env, key, student.tz_offset);
+  return used >= student.daily_limit ? `You've used all ${student.daily_limit} of your passes for today.` : null;
+}
+
 async function studentState(env, key) {
-  const student = await env.DB.prepare("SELECT key, name, avatar_color FROM students WHERE key = ?").bind(key).first();
+  const student = await env.DB
+    .prepare("SELECT key, name, avatar_color, photo, request_only, daily_limit, tz_offset FROM students WHERE key = ?")
+    .bind(key)
+    .first();
   if (!student) return null;
 
+  const now = Date.now();
   const activeRow = await env.DB.prepare("SELECT * FROM passes WHERE student_key = ? AND finished_at IS NULL").bind(key).first();
   const logRows = await env.DB
     .prepare(
@@ -176,14 +248,27 @@ async function studentState(env, key) {
     )
     .bind(key)
     .all();
+  const pending = await env.DB.prepare("SELECT * FROM pass_requests WHERE student_key = ? AND status = 'pending'").bind(key).first();
+  const decided = await env.DB
+    .prepare(
+      "SELECT * FROM pass_requests WHERE student_key = ? AND status IN ('approved', 'denied') AND decided_at >= ? ORDER BY id DESC LIMIT 1"
+    )
+    .bind(key, now - 180000)
+    .first();
 
   return {
     key: student.key,
     name: student.name,
     avatarColor: student.avatar_color,
+    photo: student.photo || null,
+    requestOnly: !!student.request_only,
+    dailyLimit: student.daily_limit === null || student.daily_limit === undefined ? null : student.daily_limit,
+    usedToday: await passesToday(env, key, student.tz_offset),
+    request: pending ? requestFromRow(pending) : null,
+    decision: decided ? { id: decided.id, status: decided.status, destName: decided.dest_name } : null,
     active: activeRow ? activeFromRow(activeRow) : null,
     log: logRows.results.map(logFromRow),
-    serverNow: Date.now(),
+    serverNow: now,
   };
 }
 
@@ -248,7 +333,7 @@ async function requireTeacher(request, env) {
     .first();
   if (!session || session.expires_at < Date.now()) return null;
 
-  return env.DB.prepare("SELECT username, display FROM teachers WHERE username = ?").bind(session.username).first();
+  return env.DB.prepare("SELECT username, display, photo FROM teachers WHERE username = ?").bind(session.username).first();
 }
 
 async function codeIsValid(env, code) {
@@ -272,12 +357,15 @@ async function handleApi(request, env, url) {
     if (!key) return fail("Please enter a valid name.");
 
     const now = Date.now();
+    const tz = cleanTz(body.tz);
     const existing = await env.DB.prepare("SELECT key FROM students WHERE key = ?").bind(key).first();
     if (existing) {
-      await env.DB.prepare("UPDATE students SET last_seen = ? WHERE key = ?").bind(now, key).run();
+      await env.DB.prepare("UPDATE students SET last_seen = ?, tz_offset = COALESCE(?, tz_offset) WHERE key = ?")
+        .bind(now, tz, key)
+        .run();
     } else {
-      await env.DB.prepare("INSERT INTO students (key, name, created_at, last_seen) VALUES (?, ?, ?, ?)")
-        .bind(key, name, now, now)
+      await env.DB.prepare("INSERT INTO students (key, name, created_at, last_seen, tz_offset) VALUES (?, ?, ?, ?, ?)")
+        .bind(key, name, now, now, tz === null ? 0 : tz)
         .run();
     }
     return json(await studentState(env, key));
@@ -287,6 +375,8 @@ async function handleApi(request, env, url) {
     const name = cleanName(url.searchParams.get("name"));
     const key = name && keyOf(name);
     if (!key) return fail("Please enter a valid name.");
+    const tz = cleanTz(url.searchParams.get("tz"));
+    if (tz !== null) await env.DB.prepare("UPDATE students SET tz_offset = ? WHERE key = ? AND tz_offset != ?").bind(tz, key, tz).run();
     const state = await studentState(env, key);
     return state ? json(state) : fail("Student not found.", 404);
   }
@@ -303,10 +393,66 @@ async function handleApi(request, env, url) {
       from = cleanDest(body.from);
       if (!from) return fail("Invalid pass.");
     }
-    if (!(await studentState(env, key))) return fail("Student not found.", 404);
+    const student = await env.DB.prepare("SELECT request_only, daily_limit, tz_offset FROM students WHERE key = ?").bind(key).first();
+    if (!student) return fail("Student not found.", 404);
+    if (student.request_only) return fail("Your teacher needs to approve your passes. Send a request instead.", 403);
+    const blocked = await limitMessage(env, key, student);
+    if (blocked) return fail(blocked, 403);
 
     const created = await createPass(env, key, dest, from, clampMinutes(body.minutes), null);
     if (!created) return fail("You're already on a pass.", 409);
+    await env.DB.prepare("UPDATE pass_requests SET status = 'cancelled' WHERE student_key = ? AND status = 'pending'").bind(key).run();
+    return json(await studentState(env, key));
+  }
+
+  if (pathname === "/api/student/request" && method === "POST") {
+    const body = await readBody(request);
+    const name = cleanName(body.name);
+    const key = name && keyOf(name);
+    const dest = cleanDest(body.dest);
+    if (!key || !dest) return fail("Invalid request.");
+
+    let from = null;
+    if (body.from) {
+      from = cleanDest(body.from);
+      if (!from) return fail("Invalid request.");
+    }
+    const student = await env.DB.prepare("SELECT request_only, daily_limit, tz_offset FROM students WHERE key = ?").bind(key).first();
+    if (!student) return fail("Student not found.", 404);
+    const active = await env.DB.prepare("SELECT id FROM passes WHERE student_key = ? AND finished_at IS NULL").bind(key).first();
+    if (active) return fail("You're already on a pass.", 409);
+    const blocked = await limitMessage(env, key, student);
+    if (blocked) return fail(blocked, 403);
+
+    try {
+      await env.DB.prepare(
+        "INSERT INTO pass_requests (student_key, dest_name, dest_room, dest_category, from_name, from_room, from_category, minutes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      )
+        .bind(
+          key,
+          dest.name,
+          dest.room,
+          dest.categoryKey,
+          from ? from.name : null,
+          from ? from.room : null,
+          from ? from.categoryKey : null,
+          clampMinutes(body.minutes),
+          Date.now()
+        )
+        .run();
+    } catch (err) {
+      if (String(err && err.message).includes("UNIQUE")) return fail("You already have a request waiting.", 409);
+      throw err;
+    }
+    return json(await studentState(env, key));
+  }
+
+  if (pathname === "/api/student/request/cancel" && method === "POST") {
+    const body = await readBody(request);
+    const name = cleanName(body.name);
+    const key = name && keyOf(name);
+    if (!key) return fail("Invalid request.");
+    await env.DB.prepare("UPDATE pass_requests SET status = 'cancelled' WHERE student_key = ? AND status = 'pending'").bind(key).run();
     return json(await studentState(env, key));
   }
 
@@ -406,7 +552,15 @@ async function handleApi(request, env, url) {
     if (!teacher) return fail("Please sign in.", 401);
 
     if (pathname === "/api/teacher/me" && method === "GET") {
-      return json({ name: teacher.display });
+      return json({ name: teacher.display, photo: teacher.photo || null });
+    }
+
+    if (pathname === "/api/teacher/photo" && method === "POST") {
+      const body = await readBody(request);
+      const photo = cleanPhoto(body.photo);
+      if (!photo.ok) return fail("That photo isn't valid. Try a different image.");
+      await env.DB.prepare("UPDATE teachers SET photo = ? WHERE username = ?").bind(photo.value, teacher.username).run();
+      return json({ ok: true });
     }
 
     if (pathname === "/api/teacher/logout" && method === "POST") {
@@ -416,29 +570,94 @@ async function handleApi(request, env, url) {
     }
 
     if (pathname === "/api/teacher/students" && method === "GET") {
-      const students = await env.DB.prepare("SELECT key, name, avatar_color FROM students ORDER BY name COLLATE NOCASE").all();
+      const now = Date.now();
+      const students = await env.DB
+        .prepare("SELECT key, name, avatar_color, photo, request_only, daily_limit, tz_offset FROM students ORDER BY name COLLATE NOCASE")
+        .all();
       const active = await env.DB.prepare("SELECT * FROM passes WHERE finished_at IS NULL").all();
       const finished = await env.DB
         .prepare("SELECT * FROM passes WHERE finished_at IS NOT NULL ORDER BY id ASC")
         .all();
+      const pending = await env.DB.prepare("SELECT * FROM pass_requests WHERE status = 'pending' ORDER BY id ASC").all();
 
       const activeByKey = new Map(active.results.map((r) => [r.student_key, activeFromRow(r)]));
+      const requestByKey = new Map(pending.results.map((r) => [r.student_key, requestFromRow(r)]));
       const logByKey = new Map();
+      const startsByKey = new Map();
+      for (const row of [...finished.results, ...active.results]) {
+        if (!startsByKey.has(row.student_key)) startsByKey.set(row.student_key, []);
+        startsByKey.get(row.student_key).push(row.start_time);
+      }
       for (const row of finished.results) {
         if (!logByKey.has(row.student_key)) logByKey.set(row.student_key, []);
         logByKey.get(row.student_key).push(logFromRow(row));
       }
 
       return json({
-        serverNow: Date.now(),
-        students: students.results.map((s) => ({
-          key: s.key,
-          name: s.name,
-          avatarColor: s.avatar_color,
-          active: activeByKey.get(s.key) || null,
-          log: logByKey.get(s.key) || [],
-        })),
+        serverNow: now,
+        students: students.results.map((s) => {
+          const since = dayStart(now, s.tz_offset);
+          return {
+            key: s.key,
+            name: s.name,
+            avatarColor: s.avatar_color,
+            photo: s.photo || null,
+            requestOnly: !!s.request_only,
+            dailyLimit: s.daily_limit === null || s.daily_limit === undefined ? null : s.daily_limit,
+            usedToday: (startsByKey.get(s.key) || []).filter((t) => t >= since).length,
+            request: requestByKey.get(s.key) || null,
+            active: activeByKey.get(s.key) || null,
+            log: logByKey.get(s.key) || [],
+          };
+        }),
       });
+    }
+
+    if (pathname === "/api/teacher/student/settings" && method === "POST") {
+      const body = await readBody(request);
+      const key = String(body.key || "");
+      if (!KEY_RE.test(key)) return fail("Invalid request.");
+
+      if ("requestOnly" in body) {
+        await env.DB.prepare("UPDATE students SET request_only = ? WHERE key = ?").bind(body.requestOnly ? 1 : 0, key).run();
+      }
+      if ("dailyLimit" in body) {
+        const v = body.dailyLimit;
+        if (v !== null && !(Number.isInteger(v) && v >= 0 && v <= 3)) return fail("Invalid limit.");
+        await env.DB.prepare("UPDATE students SET daily_limit = ? WHERE key = ?").bind(v, key).run();
+      }
+      return json({ ok: true });
+    }
+
+    if (pathname === "/api/teacher/student/photo" && method === "POST") {
+      const body = await readBody(request);
+      const key = String(body.key || "");
+      const photo = cleanPhoto(body.photo);
+      if (!KEY_RE.test(key) || !photo.ok) return fail("That photo isn't valid. Try a different image.");
+      await env.DB.prepare("UPDATE students SET photo = ? WHERE key = ?").bind(photo.value, key).run();
+      return json({ ok: true });
+    }
+
+    if (pathname === "/api/teacher/request/decide" && method === "POST") {
+      const body = await readBody(request);
+      const id = Number(body.id);
+      if (!Number.isInteger(id)) return fail("Invalid request.");
+      const req = await env.DB.prepare("SELECT * FROM pass_requests WHERE id = ? AND status = 'pending'").bind(id).first();
+      if (!req) return fail("That request is no longer waiting.", 409);
+
+      if (body.approve) {
+        const dest = { name: req.dest_name, room: req.dest_room || "", categoryKey: req.dest_category };
+        const from = req.from_name ? { name: req.from_name, room: req.from_room || "", categoryKey: req.from_category } : null;
+        const created = await createPass(env, req.student_key, dest, from, clampMinutes(req.minutes), null);
+        if (!created) {
+          await env.DB.prepare("UPDATE pass_requests SET status = 'cancelled' WHERE id = ?").bind(id).run();
+          return fail("That student is already on a pass.", 409);
+        }
+      }
+      await env.DB.prepare("UPDATE pass_requests SET status = ?, decided_by = ?, decided_at = ? WHERE id = ?")
+        .bind(body.approve ? "approved" : "denied", teacher.display, Date.now(), id)
+        .run();
+      return json({ ok: true, serverNow: Date.now() });
     }
 
     if (pathname === "/api/teacher/pass" && method === "POST") {
@@ -450,6 +669,7 @@ async function handleApi(request, env, url) {
 
       const created = await createPass(env, key, dest, null, clampMinutes(body.minutes), teacher.display);
       if (!created) return fail("That student is already on a pass.", 409);
+      await env.DB.prepare("UPDATE pass_requests SET status = 'cancelled' WHERE student_key = ? AND status = 'pending'").bind(key).run();
       return json({ ok: true, serverNow: Date.now() });
     }
 

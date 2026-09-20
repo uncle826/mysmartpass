@@ -1516,3 +1516,123 @@ body.fade-out {
   font-weight: 600;
   text-align: center;
 }
+
+/* Profile photos */
+
+.avatar.has-photo,
+.t-avatar.has-photo {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.avatar.has-photo .avatar-icon {
+  display: none;
+}
+
+/* Toasts */
+
+.toast-host {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.toast {
+  max-width: min(440px, calc(100vw - 32px));
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: #2b2560;
+  color: #ffffff;
+  font-size: 14.5px;
+  font-weight: 600;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(20, 20, 60, 0.28);
+  opacity: 0;
+  transform: translateY(16px) scale(0.96);
+  transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.toast.show {
+  opacity: 1;
+  transform: none;
+}
+
+.toast-success {
+  background: #0e9f6e;
+}
+
+.toast-warn {
+  background: #e2574c;
+}
+
+/* Pass rules + requests */
+
+.pass-rules {
+  margin: 14px 0 0 0;
+  padding: 6px 14px;
+  border-radius: 14px;
+  background: #eef0fb;
+  color: #4b55c9;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.pass-rules.blocked {
+  background: #fdf1f0;
+  color: #e2574c;
+}
+
+.request-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 40px;
+  padding: 34px 26px;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.07);
+  animation: riseIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.request-title {
+  margin: 8px 0 0 0;
+  font-family: "Baloo 2", "Segoe UI", Arial, sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #2b2560;
+}
+
+.request-sub {
+  margin: 0 0 14px 0;
+  color: #8a94a3;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.request-spinner {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 5px solid #e4f7ee;
+  border-top-color: #10b981;
+  animation: requestSpin 0.9s linear infinite;
+}
+
+@keyframes requestSpin {
+  to { transform: rotate(360deg); }
+}
+
+button:not(:disabled):active {
+  transform: scale(0.97);
+}

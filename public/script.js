@@ -52,7 +52,7 @@ loginForm.addEventListener("submit", async function (e) {
     localStorage.setItem("smartpass_teacher_token", res.data.token);
     finishSignIn(res.data.name);
   } else {
-    const res = await apiFetch("/api/student/login", { body: { name: typed } });
+    const res = await apiFetch("/api/student/login", { body: { name: typed, tz: tzOffset() } });
     setBusy(loginForm, false);
     if (!res.ok) return showError(loginForm, res.data.error || "Couldn't sign in. Please try again.");
     finishSignIn(res.data.name);
