@@ -160,16 +160,54 @@ function categoryIconMarkup(category) {
   return TILE_ICONS[category.icon.slice(4)] || "";
 }
 
+function categoryByKey(key) {
+  return CATEGORIES.find((c) => c.key === key) || CUSTOM_CATEGORY;
+}
+
+// a room can carry its own logo (a category's icon reused, or a fully custom image) —
+// falls back to the category's default icon when it doesn't
+function roomIconMarkup(name, categoryKey) {
+  const room = FLAT_ROOMS.find((r) => r.categoryKey === categoryKey && r.name === name);
+  if (room && room.logo) {
+    if (room.logo.startsWith("preset:")) {
+      const preset = CATEGORIES.find((c) => c.key === room.logo.slice(7));
+      if (preset) return categoryIconMarkup(preset);
+    } else {
+      return `<img src="${room.logo}" alt="">`;
+    }
+  }
+  return categoryIconMarkup(categoryByKey(categoryKey));
+}
+
 const byName = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
 
 CATEGORIES.forEach((c) => {
   if (c.rooms) c.rooms.sort(byName);
 });
 
-const FLAT_ROOMS = CATEGORIES.flatMap((c) =>
-  c.leaf
-    ? [{ name: c.leaf.name, room: c.leaf.room, categoryKey: c.key }]
-    : c.rooms.map((r) => ({ name: r.name, room: r.room, categoryKey: c.key }))
-);
+function rebuildFlatRooms() {
+  FLAT_ROOMS = CATEGORIES.flatMap((c) =>
+    c.leaf
+      ? [{ name: c.leaf.name, room: c.leaf.room, categoryKey: c.key }]
+      : c.rooms.map((r) => ({ name: r.name, room: r.room, categoryKey: c.key, logo: r.logo || null }))
+  );
+  FLAT_ROOMS.sort(byName);
+}
 
-FLAT_ROOMS.sort(byName);
+// merges classes a teacher has added on top of the built-in Classrooms list —
+// called once after fetching them from the server
+function applyCustomClasses(list) {
+  const category = CATEGORIES.find((c) => c.key === "classrooms");
+  if (!category || !Array.isArray(list) || list.length === 0) return;
+  const existingNames = new Set(category.rooms.map((r) => r.name));
+  list.forEach((cls) => {
+    if (!cls || !cls.name || existingNames.has(cls.name)) return;
+    category.rooms.push({ name: cls.name, room: cls.room || "", logo: cls.logo || null });
+    existingNames.add(cls.name);
+  });
+  category.rooms.sort(byName);
+  rebuildFlatRooms();
+}
+
+let FLAT_ROOMS = [];
+rebuildFlatRooms();

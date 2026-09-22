@@ -615,18 +615,17 @@
 
 /* ---------- remove / unhide a student ---------- */
 
-.t-student {
-  position: relative;
-  padding-right: 34px;
+.t-row-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
-.t-row-btn {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 26px;
-  height: 26px;
+.t-delete-btn {
+  width: 27px;
+  height: 27px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -634,34 +633,29 @@
   padding: 0;
   border: none;
   border-radius: 50%;
-  background: none;
-  color: #b3bbd0;
+  background: #e2574c;
+  color: #ffffff;
   cursor: pointer;
-  opacity: 0;
+  box-shadow: 0 1px 3px rgba(226, 87, 76, 0.4);
 }
 
-.t-row-btn svg {
-  width: 14px;
-  height: 14px;
+.t-delete-btn svg {
+  width: 13px;
+  height: 13px;
 }
 
-.t-student:hover .t-row-btn,
-.t-student:focus-within .t-row-btn,
-.t-unhide-btn {
-  opacity: 1;
-}
-
-.t-remove-btn:hover {
-  background: #fdf1f0;
-  color: #e2574c;
+.t-delete-btn:hover {
+  background: #c8493f;
+  transform: scale(1.08);
 }
 
 .t-unhide-btn {
-  color: #0e9f6e;
+  background: #10b981;
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.4);
 }
 
 .t-unhide-btn:hover {
-  background: #e7f8f1;
+  background: #0e9f6e;
 }
 
 .t-student.is-hidden {
@@ -737,41 +731,11 @@
 /* ---------- deletable history entries ---------- */
 
 .t-history-item {
-  position: relative;
-  padding-right: 36px;
+  padding-right: 4px;
 }
 
-.t-history-delete {
-  position: absolute;
-  right: 4px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 26px;
-  height: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: none;
-  color: #b3bbd0;
-  cursor: pointer;
-  opacity: 0;
-}
-
-.t-history-delete svg {
-  width: 13px;
-  height: 13px;
-}
-
-.t-history-item:hover .t-history-delete {
-  opacity: 1;
-}
-
-.t-history-delete:hover {
-  background: #fdf1f0;
-  color: #e2574c;
+.t-history-item .t-delete-btn {
+  margin-left: auto;
 }
 
 /* ---------- create-pass dialog: dest mode, duration, message ---------- */
@@ -860,37 +824,120 @@
   margin-bottom: 4px;
 }
 
-/* ---------- toast action button ---------- */
 
-.toast {
+.t-student:focus-visible {
+  outline: 2px solid #6370eb;
+  outline-offset: -2px;
+}
+
+/* ---------- bounce that pass ---------- */
+
+.t-bounce-row {
   display: flex;
   align-items: center;
   gap: 14px;
+  margin-bottom: 14px;
+  padding: 12px 16px;
+  border: 1px solid #eceef3;
+  border-radius: 10px;
+  background: #fbfcfe;
 }
 
-.toast-text {
+.t-bounce-text {
   flex: 1;
-  min-width: 0;
 }
 
-.toast-action {
-  flex-shrink: 0;
-  padding: 5px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+.t-bounce-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #2b2560;
+}
+
+.t-bounce-sub {
+  font-size: 12.5px;
+  color: #8a94a3;
+}
+
+.h-bounce-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 0;
+  border: 1px solid #eceef3;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.12);
-  color: #ffffff;
+  background: #f7f8fb;
+  color: #6b7484;
   font: inherit;
   font-size: 12.5px;
   font-weight: 700;
   cursor: pointer;
 }
 
-.toast-action:hover {
-  background: rgba(255, 255, 255, 0.22);
+.h-bounce-btn svg {
+  width: 14px;
+  height: 14px;
 }
 
-.t-student:focus-visible {
-  outline: 2px solid #6370eb;
-  outline-offset: -2px;
+.h-bounce-btn:hover {
+  border-color: #c9cee0;
+  color: #2b2560;
+}
+
+.h-bounce-btn.active {
+  border-color: #7b68ee;
+  background: #eef0fb;
+  color: #4b55c9;
+}
+
+/* ---------- add a class ---------- */
+
+.t-add-class-link {
+  display: block;
+  margin: 8px 0 12px 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #6370eb;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.t-add-class-link:hover {
+  text-decoration: underline;
+}
+
+.class-logo-preview {
+  width: 84px;
+  height: 84px;
+  font-size: 32px;
+}
+
+.class-logo-preview svg,
+.class-logo-preview img {
+  width: 46%;
+  height: 46%;
+}
+
+.preset.class-preset {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.preset.class-preset svg,
+.preset.class-preset img {
+  width: 46%;
+  height: 46%;
+}
+
+.preset.class-preset.selected {
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.35);
+  border-color: #10b981;
 }

@@ -152,10 +152,6 @@ let currentCategory = null;
 let comingFromRoom = null;
 let goingToRoom = null;
 
-function categoryByKey(key) {
-  return CATEGORIES.find((c) => c.key === key) || CUSTOM_CATEGORY;
-}
-
 function setActiveField(field) {
   activeField = field;
   comingFromField.classList.toggle("active", field === "comingFrom");
@@ -172,7 +168,7 @@ function roomRowMarkup(r, extraClass) {
   const isSelected = selected && selected.name === r.name ? "selected" : "";
   return `
         <button type="button" class="room-row ${isSelected} ${extraClass || ""}" data-name="${r.name}">
-          <span class="room-icon" style="background:${category.color}">${categoryIconMarkup(category)}</span>
+          <span class="room-icon" style="background:${category.color}">${roomIconMarkup(r.name, r.categoryKey)}</span>
           <span class="room-name">${r.name}</span>
           <span class="room-code">
             <svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
@@ -336,7 +332,7 @@ function showDurationView(room) {
   pickerView.classList.add("hidden");
   durationView.classList.remove("hidden");
   durationDestIcon.style.background = category.color;
-  durationDestIcon.innerHTML = categoryIconMarkup(category);
+  durationDestIcon.innerHTML = roomIconMarkup(room.name, room.categoryKey);
   durationDestName.textContent = room.name;
   durationFrom.textContent = comingFromRoom ? comingFromRoom.name : "—";
   document.getElementById("start-pass-label").textContent = rules.requestOnly ? "Send Request" : "Start Pass";
@@ -499,8 +495,9 @@ function updateActivePassTimer(endTime) {
 let currentPass = null;
 
 const activePassMessage = document.getElementById("active-pass-message");
+const TEACHER_FROM_ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.6" fill="#fff"/><path d="M4.2 20c0-4.4 3.5-6.8 7.8-6.8s7.8 2.4 7.8 6.8" fill="#fff"/></svg>';
 
-function startActivePass(room, endTime, fromRoom, startTime, message) {
+function startActivePass(room, endTime, fromRoom, startTime, message, createdBy) {
   goingSomewhere.classList.add("hidden");
   activePass.classList.remove("hidden");
   createPassNavBtn.disabled = true;
@@ -510,7 +507,7 @@ function startActivePass(room, endTime, fromRoom, startTime, message) {
   activePass.classList.remove("overtime");
   overtimePill.classList.add("hidden");
 
-  currentPass = { room, endTime, startTime: startTime || serverTime() };
+  currentPass = { room, endTime, startTime: startTime || serverTime(), bounce: false };
 
   activePassMessage.textContent = message || "";
   activePassMessage.classList.toggle("hidden", !message);
@@ -519,18 +516,83 @@ function startActivePass(room, endTime, fromRoom, startTime, message) {
   activePass.style.background = `linear-gradient(160deg, ${shadeColor(category.color, -110)}, ${shadeColor(category.color, -155)})`;
   passCard.style.background = `linear-gradient(160deg, ${shadeColor(category.color, 25)}, ${shadeColor(category.color, -20)})`;
   activePassDestination.textContent = room.name;
-  activePassFrom.textContent = fromRoom ? fromRoom.name : "—";
-  activePassDestIcon.innerHTML = categoryIconMarkup(category);
-  const fromCategory = fromRoom ? categoryByKey(fromRoom.categoryKey) : null;
-  activePassFromIcon.innerHTML = fromCategory ? categoryIconMarkup(fromCategory) : "";
+  activePassDestIcon.innerHTML = roomIconMarkup(room.name, room.categoryKey);
+  if (fromRoom) {
+    activePassFrom.textContent = fromRoom.name;
+    activePassFromIcon.innerHTML = roomIconMarkup(fromRoom.name, fromRoom.categoryKey);
+  } else if (createdBy) {
+    activePassFrom.textContent = createdBy;
+    activePassFromIcon.innerHTML = TEACHER_FROM_ICON;
+  } else {
+    activePassFrom.textContent = "—";
+    activePassFromIcon.innerHTML = "";
+  }
 
   updateActivePassTimer(endTime);
   clearInterval(timerInterval);
   timerInterval = setInterval(() => updateActivePassTimer(endTime), 1000);
 }
 
+const BOUNCE_COLORS = ["#e2574c", "#10b981", "#2599d6", "#f2a33a", "#7b68ee", "#e08a1e", "#b21cc4", "#14a3a1"];
+let bounceLoop = null;
+
+function startBounce() {
+  if (bounceLoop) return;
+  const rect = passCard.getBoundingClientRect();
+  const width = rect.width;
+  const height = rect.height;
+  let x = rect.left;
+  let y = rect.top;
+  let vx = (Math.random() < 0.5 ? -1 : 1) * (2.6 + Math.random() * 1.6);
+  let vy = (Math.random() < 0.5 ? -1 : 1) * (2.6 + Math.random() * 1.6);
+  let colorIdx = 0;
+
+  passCard.classList.add("bouncing");
+  passCard.style.width = width + "px";
+  passCard.style.height = height + "px";
+  passCard.style.left = "0px";
+  passCard.style.top = "0px";
+
+  function step() {
+    x += vx;
+    y += vy;
+    const maxX = Math.max(0, window.innerWidth - width);
+    const maxY = Math.max(0, window.innerHeight - height);
+    let bounced = false;
+    if (x <= 0) { x = 0; vx = Math.abs(vx); bounced = true; }
+    if (x >= maxX) { x = maxX; vx = -Math.abs(vx); bounced = true; }
+    if (y <= 0) { y = 0; vy = Math.abs(vy); bounced = true; }
+    if (y >= maxY) { y = maxY; vy = -Math.abs(vy); bounced = true; }
+    if (bounced) {
+      colorIdx = (colorIdx + 1) % BOUNCE_COLORS.length;
+      const c = BOUNCE_COLORS[colorIdx];
+      passCard.style.background = "linear-gradient(160deg, " + shadeColor(c, 25) + ", " + shadeColor(c, -20) + ")";
+    }
+    passCard.style.transform = "translate(" + x + "px, " + y + "px)";
+    bounceLoop = requestAnimationFrame(step);
+  }
+  bounceLoop = requestAnimationFrame(step);
+}
+
+function stopBounce() {
+  if (!bounceLoop) return;
+  cancelAnimationFrame(bounceLoop);
+  bounceLoop = null;
+  passCard.classList.remove("bouncing");
+  passCard.style.transform = "";
+  passCard.style.width = "";
+  passCard.style.height = "";
+  passCard.style.left = "";
+  passCard.style.top = "";
+  if (currentPass) {
+    const category = categoryByKey(currentPass.room.categoryKey);
+    passCard.style.background = "linear-gradient(160deg, " + shadeColor(category.color, 25) + ", " + shadeColor(category.color, -20) + ")";
+  }
+}
+
 function resetActivePassUI() {
   clearInterval(timerInterval);
+  stopBounce();
   activePass.classList.add("hidden");
   goingSomewhere.classList.remove("hidden");
   createPassNavBtn.disabled = false;
@@ -547,6 +609,7 @@ async function endActivePass() {
   busy = true;
   resetActivePassUI();
   currentPass = null;
+  stopBounce();
   if (ended) sendBrowserNotification("Pass ended", `You ended your pass to ${ended.room.name}.`);
 
   const res = await apiFetch("/api/student/pass/end", { body: { name } });
@@ -666,7 +729,7 @@ function renderNotifications(force) {
       const overtimeTag = p.overtime ? ' · <span class="notif-overtime-tag">Overtime</span>' : "";
       return `
         <div class="notif-item" style="--i:${idx}">
-          <span class="notif-icon" style="background:${category.color}">${categoryIconMarkup(category)}</span>
+          <span class="notif-icon" style="background:${category.color}">${roomIconMarkup(p.name, p.categoryKey)}</span>
           <div class="notif-info">
             <span class="notif-name">${escapeHtml(p.name)}</span>
             <span class="notif-meta">${formatClockTime(p.startTime)} · ${duration}${overtimeTag}</span>
@@ -792,13 +855,17 @@ function applyServerState(state) {
   if (a) {
     if (!currentPass || currentPass.startTime !== a.startTime) {
       if (!overlay.classList.contains("hidden")) closeModal();
-      startActivePass(a.room, a.endTime, a.from, a.startTime, a.message);
+      startActivePass(a.room, a.endTime, a.from, a.startTime, a.message, a.createdBy);
       if (a.createdBy && !firstSync) {
         sendBrowserNotification(
           "Pass created",
           a.message ? `${a.room.name}: ${a.message}` : `A pass to ${a.room.name} was created for you.`
         );
       }
+    }
+    if (currentPass) {
+      currentPass.bounce = !!a.bounce;
+      if (a.bounce) startBounce(); else stopBounce();
     }
   } else if (currentPass) {
     resetActivePassUI();
@@ -815,6 +882,11 @@ async function loadState() {
   if (res.status === 404) res = await apiFetch("/api/student/login", { body: { name, tz: tzOffset() } });
   if (res.ok && !busy) applyServerState(res.data);
 }
+
+(async () => {
+  const res = await apiFetch("/api/classes");
+  if (res.ok) applyCustomClasses(res.data.classes || []);
+})();
 
 loadState();
 setInterval(loadState, 3000);

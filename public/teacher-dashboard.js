@@ -51,10 +51,6 @@ let showHidden = false;
 
 /* ---------- helpers ---------- */
 
-function categoryByKey(key) {
-  return CATEGORIES.find((c) => c.key === key) || CUSTOM_CATEGORY;
-}
-
 function avatarColor(name) {
   let hash = 0;
   for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
@@ -174,11 +170,11 @@ function renderList() {
       const st = statusInfo(s, now);
       const chip = s.request ? '<span class="t-chip amber">Request</span>' : s.requestOnly ? '<span class="t-chip">Approval</span>' : "";
       const rowAction = s.hidden
-        ? `<button type="button" class="t-row-btn t-unhide-btn" data-unhide="${s.key}" title="Add back to your list" aria-label="Add ${escapeHtml(s.name)} back to your list">
+        ? `<button type="button" class="t-delete-btn t-unhide-btn" data-unhide="${s.key}" title="Add back to your list" aria-label="Add ${escapeHtml(s.name)} back to your list">
             <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 1 2.6 6.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M3 7v5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>`
-        : `<button type="button" class="t-row-btn t-remove-btn" data-remove="${s.key}" title="Remove from list" aria-label="Remove ${escapeHtml(s.name)} from your list">
-            <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        : `<button type="button" class="t-delete-btn t-remove-btn" data-remove="${s.key}" title="Remove from list" aria-label="Remove ${escapeHtml(s.name)} from your list">
+            <svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M8 7l1 13a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2l1-13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>`;
       return `
         <div class="t-student ${s.key === selectedKey ? "selected" : ""} ${stagger ? "stagger" : ""} ${s.hidden ? "is-hidden" : ""}" style="--i:${Math.min(i, 14)}" data-key="${s.key}" role="button" tabindex="0">
@@ -187,8 +183,10 @@ function renderList() {
             <span class="t-student-name">${escapeHtml(s.name)}</span>
             <span class="t-student-sub js-status ${st.cls}" data-key="${s.key}">${escapeHtml(st.text)}</span>
           </span>
-          ${chip}
-          ${rowAction}
+          <span class="t-row-right">
+            ${chip}
+            ${rowAction}
+          </span>
         </div>`;
     })
     .join("");
@@ -305,8 +303,18 @@ function renderDetail(animate = true) {
     const cat = categoryByKey(s.active.room.categoryKey);
     const activeMsg = s.active.message ? `<div class="t-active-message">${escapeHtml(s.active.message)}</div>` : "";
     activeBlock = `
+      <div class="t-bounce-row">
+        <div class="t-bounce-text">
+          <div class="t-bounce-title">Bounce that pass</div>
+          <div class="t-bounce-sub">Makes it bounce around their screen for fun</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="t-bounce-toggle" ${s.active.bounce ? "checked" : ""}>
+          <span class="switch-track"></span>
+        </label>
+      </div>
       <div class="t-active" style="background:linear-gradient(135deg, ${cat.color}, ${shade(cat.color, -45)})">
-        <span class="t-active-icon">${categoryIconMarkup(cat)}</span>
+        <span class="t-active-icon">${roomIconMarkup(s.active.room.name, s.active.room.categoryKey)}</span>
         <div class="t-active-info">
           <div class="t-active-label" id="t-active-label">On a pass to</div>
           <div class="t-active-name">${escapeHtml(s.active.room.name)}</div>
@@ -355,13 +363,13 @@ function renderDetail(animate = true) {
         const tag = p.overtime ? ' · <span class="notif-overtime-tag">Overtime</span>' : "";
         return `${heading}
           <div class="notif-item t-history-item" style="--i:${Math.min(i, 12)}">
-            <span class="notif-icon" style="background:${cat.color}">${categoryIconMarkup(cat)}</span>
+            <span class="notif-icon" style="background:${cat.color}">${roomIconMarkup(p.name, p.categoryKey)}</span>
             <div class="notif-info">
               <span class="notif-name">${escapeHtml(p.name)}</span>
               <span class="notif-meta">${timeOfDay(p.startTime)} · ${formatDuration(p.endTime - p.startTime)}${tag}</span>
             </div>
-            <button type="button" class="t-history-delete" data-delete-id="${p.id}" title="Delete this entry" aria-label="Delete this pass from history">
-              <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            <button type="button" class="t-delete-btn" data-delete-id="${p.id}" title="Delete this entry" aria-label="Delete this pass from history">
+              <svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M8 7l1 13a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2l1-13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
           </div>`;
       })
@@ -426,6 +434,8 @@ function renderDetail(animate = true) {
   document.getElementById("t-request-only").addEventListener("change", (e) => {
     saveSettings(s, { requestOnly: e.target.checked });
   });
+  const bounceToggle = document.getElementById("t-bounce-toggle");
+  if (bounceToggle) bounceToggle.addEventListener("change", (e) => setBounce(s, e.target.checked));
   document.querySelectorAll("#t-limit .seg-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const v = btn.dataset.limit === "off" ? null : Number(btn.dataset.limit);
@@ -487,12 +497,16 @@ function hallCardMarkup(s, enter) {
           <span class="h-name">${escapeHtml(s.name)}</span>
           <span class="h-sub">Left at ${timeOfDay(s.active.startTime)}${from}${by}</span>
         </span>
-        <span class="h-dest-icon" style="background:${cat.color}">${categoryIconMarkup(cat)}</span>
+        <span class="h-dest-icon" style="background:${cat.color}">${roomIconMarkup(s.active.room.name, s.active.room.categoryKey)}</span>
       </button>
       <div class="h-dest">Going to <b>${escapeHtml(s.active.room.name)}</b></div>
       ${msg}
       <div class="h-time js-h-time" data-key="${s.key}"></div>
       <div class="h-bar"><div class="h-bar-fill js-h-bar" data-key="${s.key}"></div></div>
+      <button type="button" class="h-bounce-btn ${s.active.bounce ? "active" : ""}" data-bounce="${s.key}">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="6.5" r="2.8" fill="currentColor"/><path d="M12 9.3v3.2m-5.2 7.5 5.2-5 5.2 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        ${s.active.bounce ? "Bouncing" : "Bounce"}
+      </button>
       <button type="button" class="btn btn-danger-outline h-end" data-end="${s.key}">End pass</button>
     </div>`;
 }
@@ -509,7 +523,7 @@ function requestCardMarkup(s, enter) {
           <span class="h-name">${escapeHtml(s.name)}</span>
           <span class="h-sub">Asking to leave${from}</span>
         </span>
-        <span class="h-dest-icon" style="background:${cat.color}">${categoryIconMarkup(cat)}</span>
+        <span class="h-dest-icon" style="background:${cat.color}">${roomIconMarkup(r.dest.name, r.dest.categoryKey)}</span>
       </button>
       <div class="h-dest">Wants to go to <b>${escapeHtml(r.dest.name)}</b> · ${r.minutes} min</div>
       <div class="h-actions">
@@ -564,9 +578,17 @@ function renderHall() {
     });
   });
   hallView.querySelectorAll("[data-end]").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
       const s = studentMap.get(btn.dataset.end);
       if (s) endStudentPass(s);
+    });
+  });
+  hallView.querySelectorAll("[data-bounce]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const s = studentMap.get(btn.dataset.bounce);
+      if (s && s.active) setBounce(s, !s.active.bounce);
     });
   });
   hallView.querySelectorAll("[data-decide]").forEach((btn) => {
@@ -666,6 +688,21 @@ async function deleteHistoryEntry(s, id) {
   refresh(true);
 }
 
+async function setBounce(s, bounce) {
+  if (!s.active) return;
+  s.active.bounce = bounce;
+  renderDetail(false);
+  renderHall();
+  const res = await teacherApi("/api/teacher/pass/bounce", { key: s.key, bounce });
+  if (res.status === 401) return kickToSignIn();
+  if (!res.ok) {
+    s.active.bounce = !bounce;
+    renderDetail(false);
+    renderHall();
+    showToast(res.data.error || "Couldn't update that.", "warn");
+  }
+}
+
 async function saveSettings(s, change) {
   Object.assign(s, change);
   renderDetail(false);
@@ -754,7 +791,7 @@ function renderRooms() {
       const selected = modalRoom && modalRoom.name === r.name ? "selected" : "";
       return `
         <button type="button" class="room-row ${selected}" data-name="${escapeHtml(r.name)}">
-          <span class="room-icon" style="background:${cat.color}">${categoryIconMarkup(cat)}</span>
+          <span class="room-icon" style="background:${cat.color}">${roomIconMarkup(r.name, r.categoryKey)}</span>
           <span class="room-name">${escapeHtml(r.name)}</span>
           <span class="room-code">${escapeHtml(r.room || "—")}</span>
         </button>`;
@@ -823,6 +860,117 @@ createBtnModal.addEventListener("click", async () => {
   if (!res.ok) showToast(res.data.error || "Couldn't create that pass.", "warn");
   else showToast(`Pass created for ${modalStudent.name}`, "success");
   refresh(true);
+});
+
+/* ---------- add a class ---------- */
+
+const classOverlay = document.getElementById("class-overlay");
+const classNameInput = document.getElementById("class-name");
+const classRoomInput = document.getElementById("class-room");
+const classLogoPreview = document.getElementById("class-logo-preview");
+const classPresetsEl = document.getElementById("class-logo-presets");
+const classError = document.getElementById("class-error");
+const classSave = document.getElementById("class-save");
+const classFile = document.getElementById("class-logo-file");
+let classLogo = null;
+
+function classLogoIconMarkup(value) {
+  if (value && value.startsWith("preset:")) {
+    const cat = CATEGORIES.find((c) => c.key === value.slice(7));
+    return cat ? categoryIconMarkup(cat) : "";
+  }
+  if (value) return `<img src="${value}" alt="">`;
+  return categoryIconMarkup(categoryByKey("classrooms"));
+}
+
+function renderClassPresets() {
+  const options = CATEGORIES.filter((c) => c.key !== "classrooms");
+  classPresetsEl.innerHTML = options
+    .map(
+      (c) =>
+        `<button type="button" class="preset class-preset" data-logo="preset:${c.key}" style="background:${c.color}" aria-label="${escapeHtml(c.label)} icon">${categoryIconMarkup(c)}</button>`
+    )
+    .join("");
+  classPresetsEl.querySelectorAll(".class-preset").forEach((b) => {
+    b.addEventListener("click", () => setClassLogo(b.dataset.logo));
+  });
+}
+
+function setClassLogo(value) {
+  classLogo = value;
+  const isImage = value && !value.startsWith("preset:");
+  classLogoPreview.style.backgroundImage = isImage ? `url("${value}")` : "";
+  classLogoPreview.classList.toggle("has-photo", !!isImage);
+  const cat = value && value.startsWith("preset:") ? CATEGORIES.find((c) => c.key === value.slice(7)) : categoryByKey("classrooms");
+  classLogoPreview.style.backgroundColor = isImage ? "" : cat.color;
+  classLogoPreview.innerHTML = isImage ? "" : classLogoIconMarkup(value);
+  classPresetsEl.querySelectorAll(".class-preset").forEach((b) => {
+    b.classList.toggle("selected", b.dataset.logo === value);
+  });
+}
+
+function openClassDialog() {
+  classNameInput.value = "";
+  classRoomInput.value = "";
+  classError.classList.add("hidden");
+  classSave.disabled = true;
+  renderClassPresets();
+  setClassLogo(null);
+  openOverlay(classOverlay);
+  classNameInput.focus();
+}
+
+document.getElementById("t-add-class-link").addEventListener("click", openClassDialog);
+document.getElementById("class-cancel").addEventListener("click", () => closeOverlay(classOverlay));
+classOverlay.addEventListener("click", (e) => {
+  if (e.target === classOverlay) closeOverlay(classOverlay);
+});
+classNameInput.addEventListener("input", () => {
+  classSave.disabled = classNameInput.value.trim().length === 0;
+});
+
+document.getElementById("class-logo-upload-btn").addEventListener("click", () => classFile.click());
+classFile.addEventListener("change", async () => {
+  const file = classFile.files && classFile.files[0];
+  classFile.value = "";
+  if (!file) return;
+  if (!file.type.startsWith("image/")) {
+    classError.textContent = "Please choose an image file.";
+    return classError.classList.remove("hidden");
+  }
+  try {
+    setClassLogo(await fileToAvatar(file));
+  } catch {
+    classError.textContent = "That image couldn't be read. Try a different one.";
+    classError.classList.remove("hidden");
+  }
+});
+
+classSave.addEventListener("click", async () => {
+  const name = classNameInput.value.trim();
+  const room = classRoomInput.value.trim();
+  if (!name) return;
+  classSave.disabled = true;
+  const res = await teacherApi("/api/teacher/class", { name, room, logo: classLogo });
+  if (res.status === 401) return kickToSignIn();
+  if (!res.ok) {
+    classError.textContent = res.data.error || "Couldn't add that class.";
+    classError.classList.remove("hidden");
+    classSave.disabled = false;
+    return;
+  }
+  applyCustomClasses([{ name, room, logo: classLogo }]);
+  closeOverlay(classOverlay);
+  showToast(`Added ${name} to Classrooms`, "success");
+
+  modalRoom = { name, room, categoryKey: "classrooms" };
+  createBtnModal.disabled = false;
+  roomSearch.value = name;
+  renderRooms();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !classOverlay.classList.contains("hidden")) closeOverlay(classOverlay);
 });
 
 /* ---------- profile photos ---------- */
@@ -1020,6 +1168,11 @@ window.addEventListener("hashchange", () => setView(location.hash === "#hall" ? 
     teacherPhoto = me.data.photo || null;
     applyTeacherPhoto();
   }
+})();
+
+(async () => {
+  const res = await apiFetch("/api/classes");
+  if (res.ok) applyCustomClasses(res.data.classes || []);
 })();
 
 setView(location.hash === "#hall" ? "hall" : "students");

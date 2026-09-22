@@ -116,6 +116,7 @@
 
       <div id="t-room-mode">
         <input type="text" class="t-search" id="t-room-search" placeholder="Where are they going?" autocomplete="off">
+        <button type="button" class="t-add-class-link" id="t-add-class-link">+ Add a class</button>
         <div class="t-room-list" id="t-room-list"></div>
       </div>
 
@@ -159,6 +160,37 @@
       <div class="confirm-actions">
         <button type="button" class="confirm-btn confirm-cancel" id="photo-cancel">Cancel</button>
         <button type="button" class="confirm-btn confirm-primary" id="photo-save" disabled>Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="confirm-overlay hidden" id="class-overlay">
+    <div class="confirm-box t-modal photo-modal" role="dialog" aria-modal="true" aria-labelledby="class-title">
+      <h3 id="class-title">Add a class</h3>
+      <p class="t-modal-sub">Add a teacher or class so students can pick it as a destination.</p>
+
+      <label for="class-name" class="t-message-label">Class name</label>
+      <input type="text" id="class-name" class="t-search" placeholder="e.g. Mr. Reynolds" maxlength="60" autocomplete="off">
+
+      <label for="class-room" class="t-message-label">Room number <span>(optional)</span></label>
+      <input type="text" id="class-room" class="t-search" placeholder="e.g. 214" maxlength="60" autocomplete="off">
+
+      <p class="photo-label">Logo</p>
+      <div class="photo-preview-row">
+        <span class="t-avatar photo-preview class-logo-preview" id="class-logo-preview"></span>
+        <div class="photo-actions">
+          <button type="button" class="btn btn-outline" id="class-logo-upload-btn">Upload an image</button>
+          <input type="file" id="class-logo-file" accept="image/*" hidden>
+        </div>
+      </div>
+
+      <p class="photo-label">Or choose one</p>
+      <div class="photo-presets" id="class-logo-presets"></div>
+      <p class="photo-error hidden" id="class-error" role="alert"></p>
+
+      <div class="confirm-actions">
+        <button type="button" class="confirm-btn confirm-cancel" id="class-cancel">Cancel</button>
+        <button type="button" class="confirm-btn confirm-primary" id="class-save" disabled>Add class</button>
       </div>
     </div>
   </div>

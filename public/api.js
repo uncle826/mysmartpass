@@ -57,6 +57,12 @@ function applyPhoto(el, photo) {
   }
 }
 
+const TOAST_ICONS = {
+  info: '<svg viewBox="0 0 24 24"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5S10.5 3.17 10.5 4v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="currentColor"/></svg>',
+  success: '<svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  warn: '<svg viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+};
+
 function showToast(message, kind = "info", action = null) {
   let host = document.getElementById("toast-host");
   if (!host) {
@@ -69,6 +75,11 @@ function showToast(message, kind = "info", action = null) {
   toast.className = `toast toast-${kind}`;
   toast.setAttribute("role", "status");
 
+  const icon = document.createElement("span");
+  icon.className = "toast-icon";
+  icon.innerHTML = TOAST_ICONS[kind] || TOAST_ICONS.info;
+  toast.appendChild(icon);
+
   const text = document.createElement("span");
   text.className = "toast-text";
   text.textContent = message;
@@ -78,7 +89,7 @@ function showToast(message, kind = "info", action = null) {
   const dismiss = () => {
     clearTimeout(dismissTimer);
     toast.classList.remove("show");
-    setTimeout(() => toast.remove(), 350);
+    setTimeout(() => toast.remove(), 380);
   };
 
   if (action) {
