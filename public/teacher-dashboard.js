@@ -38,6 +38,8 @@ const searchEl = document.getElementById("t-search");
 const detailEl = document.getElementById("t-detail");
 const studentsView = document.getElementById("students-view");
 const hallView = document.getElementById("hall-view");
+const settingsView = document.getElementById("settings-view");
+const VIEWS = { students: studentsView, hall: hallView, settings: settingsView };
 
 let students = [];
 let studentMap = new Map();
@@ -48,6 +50,7 @@ let listAnimated = false;
 let hallShown = new Set();
 let knownRequestIds = null;
 let showHidden = false;
+let customClasses = [];
 
 /* ---------- helpers ---------- */
 
@@ -125,18 +128,17 @@ function popElement(el) {
 /* ---------- views ---------- */
 
 function setView(view) {
-  currentView = view === "hall" ? "hall" : "students";
+  currentView = VIEWS[view] ? view : "students";
   document.querySelectorAll(".main-nav .nav-item").forEach((a) => {
     a.classList.toggle("active", a.dataset.view === currentView);
   });
-  const show = currentView === "hall" ? hallView : studentsView;
-  const hide = currentView === "hall" ? studentsView : hallView;
-  hide.classList.add("hidden");
-  show.classList.remove("hidden");
+  Object.entries(VIEWS).forEach(([key, el]) => el.classList.toggle("hidden", key !== currentView));
+  const show = VIEWS[currentView];
   show.classList.remove("view-enter");
   void show.offsetWidth;
   show.classList.add("view-enter");
   if (location.hash !== `#${currentView}`) history.replaceState(null, "", `#${currentView}`);
+  if (currentView === "settings") renderClassSettings();
   tick();
 }
 
@@ -909,7 +911,37 @@ function setClassLogo(value) {
   });
 }
 
-function openClassDialog() {
+function classIconColor(c) {
+  if (c.logo && c.logo.startsWith("preset:")) {
+    const cat = CATEGORIES.find((x) => x.key === c.logo.slice(7));
+    if (cat) return cat.color;
+  }
+  return categoryByKey("classrooms").color;
+}
+
+function renderClassSettings() {
+  const listEl = document.getElementById("settings-class-list");
+  const emptyEl = document.getElementById("settings-class-empty");
+  const sorted = customClasses.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+  emptyEl.classList.toggle("hidden", sorted.length > 0);
+  listEl.innerHTML = sorted
+    .map(
+      (c) => `
+      <div class="t-class-card">
+        <span class="t-class-icon" style="background:${classIconColor(c)}">${classLogoIconMarkup(c.logo)}</span>
+        <div class="t-class-info">
+          <div class="t-class-name">${escapeHtml(c.name)}</div>
+          <div class="t-class-room">${c.room ? escapeHtml(c.room) : "No room set"}</div>
+        </div>
+      </div>`
+    )
+    .join("");
+}
+
+let classDialogSource = "create-pass";
+
+function openClassDialog(source) {
+  classDialogSource = source || "create-pass";
   classNameInput.value = "";
   classRoomInput.value = "";
   classError.classList.add("hidden");
@@ -920,7 +952,8 @@ function openClassDialog() {
   classNameInput.focus();
 }
 
-document.getElementById("t-add-class-link").addEventListener("click", openClassDialog);
+document.getElementById("t-add-class-link").addEventListener("click", () => openClassDialog("create-pass"));
+document.getElementById("settings-add-class-btn").addEventListener("click", () => openClassDialog("settings"));
 document.getElementById("class-cancel").addEventListener("click", () => closeOverlay(classOverlay));
 classOverlay.addEventListener("click", (e) => {
   if (e.target === classOverlay) closeOverlay(classOverlay);
@@ -959,14 +992,19 @@ classSave.addEventListener("click", async () => {
     classSave.disabled = false;
     return;
   }
-  applyCustomClasses([{ name, room, logo: classLogo }]);
+  const added = { name, room, logo: classLogo };
+  applyCustomClasses([added]);
+  if (!customClasses.some((c) => c.name === name)) customClasses.push(added);
+  renderClassSettings();
   closeOverlay(classOverlay);
   showToast(`Added ${name} to Classrooms`, "success");
 
-  modalRoom = { name, room, categoryKey: "classrooms" };
-  createBtnModal.disabled = false;
-  roomSearch.value = name;
-  renderRooms();
+  if (classDialogSource === "create-pass") {
+    modalRoom = { name, room, categoryKey: "classrooms" };
+    createBtnModal.disabled = false;
+    roomSearch.value = name;
+    renderRooms();
+  }
 });
 
 document.addEventListener("keydown", (e) => {
@@ -1159,7 +1197,7 @@ document.getElementById("sign-out-btn").addEventListener("click", () => {
 
 searchEl.addEventListener("input", renderList);
 window.addEventListener("focus", () => refresh());
-window.addEventListener("hashchange", () => setView(location.hash === "#hall" ? "hall" : "students"));
+window.addEventListener("hashchange", () => setView(location.hash.slice(1)));
 
 (async () => {
   const me = await teacherApi("/api/teacher/me");
@@ -1172,10 +1210,14 @@ window.addEventListener("hashchange", () => setView(location.hash === "#hall" ? 
 
 (async () => {
   const res = await apiFetch("/api/classes");
-  if (res.ok) applyCustomClasses(res.data.classes || []);
+  if (res.ok) {
+    customClasses = res.data.classes || [];
+    applyCustomClasses(customClasses);
+    if (currentView === "settings") renderClassSettings();
+  }
 })();
 
-setView(location.hash === "#hall" ? "hall" : "students");
+setView(location.hash.slice(1));
 refresh(true);
 setInterval(() => refresh(), 3000);
 setInterval(tick, 1000);
