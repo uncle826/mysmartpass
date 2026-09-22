@@ -75,6 +75,7 @@
       <input type="text" class="t-search" id="t-search" placeholder="Search students" autocomplete="off">
       <div class="t-student-list" id="t-student-list"></div>
       <p class="t-empty hidden" id="t-empty">No students yet. Students show up here after they sign in.</p>
+      <button type="button" class="t-hidden-toggle hidden" id="t-hidden-toggle"></button>
     </aside>
 
     <section class="t-detail" id="t-detail"></section>
@@ -108,14 +109,27 @@
       <h3 id="t-modal-title">Create pass</h3>
       <p class="t-modal-sub" id="t-modal-sub"></p>
 
-      <input type="text" class="t-search" id="t-room-search" placeholder="Where are they going?" autocomplete="off">
-      <div class="t-room-list" id="t-room-list"></div>
+      <div class="segmented t-dest-mode" id="t-dest-mode">
+        <button type="button" class="seg-btn active" data-mode="room">Pick a room</button>
+        <button type="button" class="seg-btn" data-mode="custom">Custom place</button>
+      </div>
+
+      <div id="t-room-mode">
+        <input type="text" class="t-search" id="t-room-search" placeholder="Where are they going?" autocomplete="off">
+        <div class="t-room-list" id="t-room-list"></div>
+      </div>
+
+      <input type="text" class="t-search hidden" id="t-custom-place" placeholder="Type a custom place…" maxlength="60" autocomplete="off">
 
       <div class="t-duration">
-        <label for="t-duration-slider">Time</label>
-        <input type="range" id="t-duration-slider" min="1" max="15" step="1" value="5">
-        <span class="t-duration-value" id="t-duration-value">5 min</span>
+        <label for="t-duration-input">Time</label>
+        <input type="number" id="t-duration-input" class="t-duration-input" min="1" max="480" value="5" inputmode="numeric">
+        <span class="t-duration-unit">min</span>
       </div>
+      <div class="t-duration-presets" id="t-duration-presets"></div>
+
+      <label for="t-message" class="t-message-label">Message <span>(optional)</span></label>
+      <input type="text" id="t-message" class="t-search t-message-input" placeholder="Shown on their pass — e.g. “Stop by the office first”" maxlength="140" autocomplete="off">
 
       <div class="confirm-actions">
         <button type="button" class="confirm-btn confirm-cancel" id="t-modal-cancel">Cancel</button>

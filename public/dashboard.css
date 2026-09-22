@@ -1636,3 +1636,16 @@ body.fade-out {
 button:not(:disabled):active {
   transform: scale(0.97);
 }
+
+/* Custom message on an active pass */
+
+.pass-message {
+  margin: 14px 0 0 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}

@@ -153,7 +153,7 @@ let comingFromRoom = null;
 let goingToRoom = null;
 
 function categoryByKey(key) {
-  return CATEGORIES.find((c) => c.key === key);
+  return CATEGORIES.find((c) => c.key === key) || CUSTOM_CATEGORY;
 }
 
 function setActiveField(field) {
@@ -498,7 +498,9 @@ function updateActivePassTimer(endTime) {
 
 let currentPass = null;
 
-function startActivePass(room, endTime, fromRoom, startTime) {
+const activePassMessage = document.getElementById("active-pass-message");
+
+function startActivePass(room, endTime, fromRoom, startTime, message) {
   goingSomewhere.classList.add("hidden");
   activePass.classList.remove("hidden");
   createPassNavBtn.disabled = true;
@@ -509,6 +511,9 @@ function startActivePass(room, endTime, fromRoom, startTime) {
   overtimePill.classList.add("hidden");
 
   currentPass = { room, endTime, startTime: startTime || serverTime() };
+
+  activePassMessage.textContent = message || "";
+  activePassMessage.classList.toggle("hidden", !message);
 
   const category = categoryByKey(room.categoryKey);
   activePass.style.background = `linear-gradient(160deg, ${shadeColor(category.color, -110)}, ${shadeColor(category.color, -155)})`;
@@ -626,8 +631,16 @@ function formatClockTime(ts) {
   return new Date(ts).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
-function renderNotifications() {
+let lastNotifSignature = null;
+
+function renderNotifications(force) {
   const log = getPassLog();
+  const signature = JSON.stringify(log);
+  // the log is polled every few seconds — skip the rebuild when nothing actually
+  // changed so the list doesn't visibly "refresh" and replay its entrance animation
+  if (!force && signature === lastNotifSignature) return;
+  lastNotifSignature = signature;
+
   const overtimeCount = log.filter((p) => p.overtime).length;
 
   notifClear.disabled = log.length === 0;
@@ -663,7 +676,7 @@ function renderNotifications() {
     .join("");
 }
 
-renderNotifications();
+renderNotifications(true);
 
 function showDurationError(message) {
   const el = document.getElementById("duration-error");
@@ -779,9 +792,12 @@ function applyServerState(state) {
   if (a) {
     if (!currentPass || currentPass.startTime !== a.startTime) {
       if (!overlay.classList.contains("hidden")) closeModal();
-      startActivePass(a.room, a.endTime, a.from, a.startTime);
+      startActivePass(a.room, a.endTime, a.from, a.startTime, a.message);
       if (a.createdBy && !firstSync) {
-        sendBrowserNotification("Pass created", `A pass to ${a.room.name} was created for you.`);
+        sendBrowserNotification(
+          "Pass created",
+          a.message ? `${a.room.name}: ${a.message}` : `A pass to ${a.room.name} was created for you.`
+        );
       }
     }
   } else if (currentPass) {

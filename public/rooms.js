@@ -146,7 +146,12 @@ const CATEGORIES = [
 const TILE_ICONS = {
   locker: '<svg viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="1.5" fill="none" stroke="#fff" stroke-width="1.7"/><circle cx="14" cy="12" r="1" fill="#fff"/></svg>',
   status: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  custom: '<svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" fill="none" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="9.5" r="2.4" fill="#fff"/></svg>',
 };
+
+// used when a pass's category isn't one of the normal picker categories —
+// currently only a teacher's typed-in custom destination
+const CUSTOM_CATEGORY = { key: "custom", label: "Custom", color: "#6b7484", icon: "svg:custom" };
 
 function categoryIconMarkup(category) {
   if (category.icon.startsWith("img:")) {

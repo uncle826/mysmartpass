@@ -16,6 +16,8 @@ const MIGRATIONS = [
   "ALTER TABLE students ADD COLUMN daily_limit INTEGER",
   "ALTER TABLE students ADD COLUMN tz_offset INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE teachers ADD COLUMN photo TEXT",
+  "ALTER TABLE students ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0",
+  "ALTER TABLE passes ADD COLUMN message TEXT",
 ];
 
 const encoder = new TextEncoder();
@@ -102,6 +104,17 @@ function cleanPhoto(photo) {
   if (photo === null) return { ok: true, value: null };
   if (typeof photo !== "string" || photo.length > MAX_PHOTO_CHARS || !PHOTO_RE.test(photo)) return { ok: false };
   return { ok: true, value: photo };
+}
+
+function cleanMessage(raw) {
+  if (raw === null || raw === undefined || raw === "") return { ok: true, value: null };
+  const text = String(raw)
+    .replace(/[\u0000-\u001F\u007F]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text) return { ok: true, value: null };
+  if (text.length > 140) return { ok: false };
+  return { ok: true, value: text };
 }
 
 function cleanTz(raw) {
@@ -193,11 +206,13 @@ function activeFromRow(row) {
     startTime: row.start_time,
     endTime: row.end_time,
     createdBy: row.created_by || null,
+    message: row.message || null,
   };
 }
 
 function logFromRow(row) {
   return {
+    id: row.id,
     name: row.dest_name,
     room: row.dest_room || "",
     categoryKey: row.dest_category,
@@ -205,6 +220,7 @@ function logFromRow(row) {
     plannedEnd: row.end_time,
     endTime: row.finished_at,
     overtime: !!row.overtime,
+    message: row.message || null,
   };
 }
 
@@ -272,12 +288,12 @@ async function studentState(env, key) {
   };
 }
 
-async function createPass(env, key, dest, from, minutes, createdBy) {
+async function createPass(env, key, dest, from, minutes, createdBy, message = null) {
   const start = Date.now();
   const end = start + minutes * 60000;
   try {
     await env.DB.prepare(
-      "INSERT INTO passes (student_key, dest_name, dest_room, dest_category, from_name, from_room, from_category, start_time, end_time, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO passes (student_key, dest_name, dest_room, dest_category, from_name, from_room, from_category, start_time, end_time, created_by, message) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
       .bind(
         key,
@@ -289,9 +305,12 @@ async function createPass(env, key, dest, from, minutes, createdBy) {
         from ? from.categoryKey : null,
         start,
         end,
-        createdBy
+        createdBy,
+        message
       )
       .run();
+    // making a pass (by the student, a teacher, or an approved request) brings a removed student back into view
+    await env.DB.prepare("UPDATE students SET hidden = 0 WHERE key = ?").bind(key).run();
     return true;
   } catch (err) {
     if (String(err && err.message).includes("UNIQUE")) return false;
@@ -311,6 +330,11 @@ async function endPass(env, key) {
 function clampMinutes(value) {
   const n = Math.round(Number(value));
   return Number.isFinite(n) ? Math.min(60, Math.max(1, n)) : 5;
+}
+
+function clampMinutesTeacher(value) {
+  const n = Math.round(Number(value));
+  return Number.isFinite(n) ? Math.min(480, Math.max(1, n)) : 5;
 }
 
 /* ---------------- teacher auth ---------------- */
@@ -572,7 +596,7 @@ async function handleApi(request, env, url) {
     if (pathname === "/api/teacher/students" && method === "GET") {
       const now = Date.now();
       const students = await env.DB
-        .prepare("SELECT key, name, avatar_color, photo, request_only, daily_limit, tz_offset FROM students ORDER BY name COLLATE NOCASE")
+        .prepare("SELECT key, name, avatar_color, photo, request_only, daily_limit, tz_offset, hidden FROM students ORDER BY name COLLATE NOCASE")
         .all();
       const active = await env.DB.prepare("SELECT * FROM passes WHERE finished_at IS NULL").all();
       const finished = await env.DB
@@ -603,6 +627,7 @@ async function handleApi(request, env, url) {
             avatarColor: s.avatar_color,
             photo: s.photo || null,
             requestOnly: !!s.request_only,
+            hidden: !!s.hidden,
             dailyLimit: s.daily_limit === null || s.daily_limit === undefined ? null : s.daily_limit,
             usedToday: (startsByKey.get(s.key) || []).filter((t) => t >= since).length,
             request: requestByKey.get(s.key) || null,
@@ -629,12 +654,33 @@ async function handleApi(request, env, url) {
       return json({ ok: true });
     }
 
+    if (pathname === "/api/teacher/student/hide" && method === "POST") {
+      const body = await readBody(request);
+      const key = String(body.key || "");
+      if (!KEY_RE.test(key)) return fail("Invalid request.");
+      if (body.hidden) {
+        const active = await env.DB.prepare("SELECT id FROM passes WHERE student_key = ? AND finished_at IS NULL").bind(key).first();
+        if (active) return fail("Can't remove a student while they're on a pass.", 409);
+      }
+      await env.DB.prepare("UPDATE students SET hidden = ? WHERE key = ?").bind(body.hidden ? 1 : 0, key).run();
+      return json({ ok: true });
+    }
+
     if (pathname === "/api/teacher/student/photo" && method === "POST") {
       const body = await readBody(request);
       const key = String(body.key || "");
       const photo = cleanPhoto(body.photo);
       if (!KEY_RE.test(key) || !photo.ok) return fail("That photo isn't valid. Try a different image.");
       await env.DB.prepare("UPDATE students SET photo = ? WHERE key = ?").bind(photo.value, key).run();
+      return json({ ok: true });
+    }
+
+    if (pathname === "/api/teacher/pass/delete" && method === "POST") {
+      const body = await readBody(request);
+      const key = String(body.key || "");
+      const id = Number(body.id);
+      if (!KEY_RE.test(key) || !Number.isInteger(id)) return fail("Invalid request.");
+      await env.DB.prepare("DELETE FROM passes WHERE id = ? AND student_key = ? AND finished_at IS NOT NULL").bind(id, key).run();
       return json({ ok: true });
     }
 
@@ -664,10 +710,11 @@ async function handleApi(request, env, url) {
       const body = await readBody(request);
       const key = String(body.key || "");
       const dest = cleanDest(body.dest);
-      if (!KEY_RE.test(key) || !dest) return fail("Invalid pass.");
+      const message = cleanMessage(body.message);
+      if (!KEY_RE.test(key) || !dest || !message.ok) return fail("Invalid pass.");
       if (!(await studentState(env, key))) return fail("Student not found.", 404);
 
-      const created = await createPass(env, key, dest, null, clampMinutes(body.minutes), teacher.display);
+      const created = await createPass(env, key, dest, null, clampMinutesTeacher(body.minutes), teacher.display, message.value);
       if (!created) return fail("That student is already on a pass.", 409);
       await env.DB.prepare("UPDATE pass_requests SET status = 'cancelled' WHERE student_key = ? AND status = 'pending'").bind(key).run();
       return json({ ok: true, serverNow: Date.now() });

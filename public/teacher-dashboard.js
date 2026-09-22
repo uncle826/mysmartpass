@@ -47,11 +47,12 @@ let teacherPhoto = null;
 let listAnimated = false;
 let hallShown = new Set();
 let knownRequestIds = null;
+let showHidden = false;
 
 /* ---------- helpers ---------- */
 
 function categoryByKey(key) {
-  return CATEGORIES.find((c) => c.key === key) || CATEGORIES[0];
+  return CATEGORIES.find((c) => c.key === key) || CUSTOM_CATEGORY;
 }
 
 function avatarColor(name) {
@@ -154,14 +155,16 @@ document.querySelectorAll(".main-nav .nav-item").forEach((a) => {
 
 function renderList() {
   const term = searchEl.value.trim().toLowerCase();
-  const shown = students.filter((s) => !term || s.name.toLowerCase().includes(term));
+  const visible = students.filter((s) => showHidden || !s.hidden);
+  const shown = visible.filter((s) => !term || s.name.toLowerCase().includes(term));
+  const hiddenCount = students.filter((s) => s.hidden).length;
   const now = serverTime();
 
-  if (countEl.textContent !== String(students.length)) {
-    countEl.textContent = students.length;
+  if (countEl.textContent !== String(visible.length)) {
+    countEl.textContent = visible.length;
     popElement(countEl);
   }
-  emptyEl.classList.toggle("hidden", students.length > 0);
+  emptyEl.classList.toggle("hidden", visible.length > 0);
 
   const stagger = !listAnimated && shown.length > 0;
   if (stagger) listAnimated = true;
@@ -170,21 +173,77 @@ function renderList() {
     .map((s, i) => {
       const st = statusInfo(s, now);
       const chip = s.request ? '<span class="t-chip amber">Request</span>' : s.requestOnly ? '<span class="t-chip">Approval</span>' : "";
+      const rowAction = s.hidden
+        ? `<button type="button" class="t-row-btn t-unhide-btn" data-unhide="${s.key}" title="Add back to your list" aria-label="Add ${escapeHtml(s.name)} back to your list">
+            <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 1 2.6 6.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M3 7v5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>`
+        : `<button type="button" class="t-row-btn t-remove-btn" data-remove="${s.key}" title="Remove from list" aria-label="Remove ${escapeHtml(s.name)} from your list">
+            <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          </button>`;
       return `
-        <button type="button" class="t-student ${s.key === selectedKey ? "selected" : ""} ${stagger ? "stagger" : ""}" style="--i:${Math.min(i, 14)}" data-key="${s.key}">
+        <div class="t-student ${s.key === selectedKey ? "selected" : ""} ${stagger ? "stagger" : ""} ${s.hidden ? "is-hidden" : ""}" style="--i:${Math.min(i, 14)}" data-key="${s.key}" role="button" tabindex="0">
           ${avatarHtml(s)}
           <span class="t-student-info">
             <span class="t-student-name">${escapeHtml(s.name)}</span>
             <span class="t-student-sub js-status ${st.cls}" data-key="${s.key}">${escapeHtml(st.text)}</span>
           </span>
           ${chip}
-        </button>`;
+          ${rowAction}
+        </div>`;
     })
     .join("");
 
-  listEl.querySelectorAll(".t-student").forEach((btn) => {
-    btn.addEventListener("click", () => selectStudent(btn.dataset.key));
+  listEl.querySelectorAll(".t-student").forEach((row) => {
+    row.addEventListener("click", () => selectStudent(row.dataset.key));
+    row.addEventListener("keydown", (e) => {
+      if (e.target !== row) return;
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        selectStudent(row.dataset.key);
+      }
+    });
   });
+  listEl.querySelectorAll("[data-remove]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const s = studentMap.get(btn.dataset.remove);
+      if (s) setHidden(s, true);
+    });
+  });
+  listEl.querySelectorAll("[data-unhide]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const s = studentMap.get(btn.dataset.unhide);
+      if (s) setHidden(s, false);
+    });
+  });
+
+  const toggleEl = document.getElementById("t-hidden-toggle");
+  if (hiddenCount === 0) {
+    toggleEl.classList.add("hidden");
+  } else {
+    toggleEl.classList.remove("hidden");
+    toggleEl.textContent = showHidden ? "Hide removed students" : `${hiddenCount} removed student${hiddenCount === 1 ? "" : "s"} — show`;
+  }
+}
+
+document.getElementById("t-hidden-toggle").addEventListener("click", () => {
+  showHidden = !showHidden;
+  renderList();
+});
+
+async function setHidden(s, hidden) {
+  const res = await teacherApi("/api/teacher/student/hide", { key: s.key, hidden });
+  if (res.status === 401) return kickToSignIn();
+  if (!res.ok) return showToast(res.data.error || "Couldn't update that.", "warn");
+  s.hidden = hidden;
+  if (hidden && selectedKey === s.key) selectedKey = null;
+  renderList();
+  renderDetail(true);
+  if (hidden) {
+    showToast(`Removed ${s.name} from your list`, "info", { label: "Undo", onClick: () => setHidden(s, false) });
+  }
+  refresh(true);
 }
 
 function selectStudent(key) {
@@ -244,16 +303,26 @@ function renderDetail(animate = true) {
   let activeBlock = "";
   if (s.active) {
     const cat = categoryByKey(s.active.room.categoryKey);
+    const activeMsg = s.active.message ? `<div class="t-active-message">${escapeHtml(s.active.message)}</div>` : "";
     activeBlock = `
       <div class="t-active" style="background:linear-gradient(135deg, ${cat.color}, ${shade(cat.color, -45)})">
         <span class="t-active-icon">${categoryIconMarkup(cat)}</span>
         <div class="t-active-info">
           <div class="t-active-label" id="t-active-label">On a pass to</div>
           <div class="t-active-name">${escapeHtml(s.active.room.name)}</div>
+          ${activeMsg}
         </div>
         <div class="t-active-time" id="t-active-time"></div>
       </div>`;
   }
+
+  const hiddenBanner = s.hidden
+    ? `<div class="t-hidden-banner">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 8v5M12 16h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span>Removed from your list — they'll reappear on their own once they make a pass.</span>
+        <button type="button" class="btn btn-outline" id="t-unhide-btn">Add back</button>
+      </div>`
+    : "";
 
   let requestBlock = "";
   if (s.request) {
@@ -285,12 +354,15 @@ function renderDetail(animate = true) {
         const cat = categoryByKey(p.categoryKey);
         const tag = p.overtime ? ' · <span class="notif-overtime-tag">Overtime</span>' : "";
         return `${heading}
-          <div class="notif-item" style="--i:${Math.min(i, 12)}">
+          <div class="notif-item t-history-item" style="--i:${Math.min(i, 12)}">
             <span class="notif-icon" style="background:${cat.color}">${categoryIconMarkup(cat)}</span>
             <div class="notif-info">
               <span class="notif-name">${escapeHtml(p.name)}</span>
               <span class="notif-meta">${timeOfDay(p.startTime)} · ${formatDuration(p.endTime - p.startTime)}${tag}</span>
             </div>
+            <button type="button" class="t-history-delete" data-delete-id="${p.id}" title="Delete this entry" aria-label="Delete this pass from history">
+              <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            </button>
           </div>`;
       })
       .join("");
@@ -304,6 +376,7 @@ function renderDetail(animate = true) {
        </button>`;
 
   detailEl.innerHTML = `
+    ${hiddenBanner}
     <div class="t-detail-head">
       <button type="button" class="t-avatar-btn" id="t-photo-btn" title="Change photo" aria-label="Change photo">
         ${avatarHtml(s)}
@@ -336,6 +409,15 @@ function renderDetail(animate = true) {
   const endBtn = document.getElementById("t-end-btn");
   if (endBtn) endBtn.addEventListener("click", () => endStudentPass(s));
   document.getElementById("t-photo-btn").addEventListener("click", () => openPhotoDialog({ type: "student", key: s.key, name: s.name }));
+  const unhideBtn = document.getElementById("t-unhide-btn");
+  if (unhideBtn) unhideBtn.addEventListener("click", () => setHidden(s, false));
+
+  detailEl.querySelectorAll("[data-delete-id]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      deleteHistoryEntry(s, Number(btn.dataset.deleteId));
+    });
+  });
 
   detailEl.querySelectorAll("[data-decide]").forEach((btn) => {
     btn.addEventListener("click", () => decideRequest(Number(btn.dataset.id), btn.dataset.decide === "approve", btn));
@@ -396,6 +478,7 @@ function hallCardMarkup(s, enter) {
   const cat = categoryByKey(s.active.room.categoryKey);
   const from = s.active.from ? ` from ${escapeHtml(s.active.from.name)}` : "";
   const by = s.active.createdBy ? ` · sent by ${escapeHtml(s.active.createdBy)}` : "";
+  const msg = s.active.message ? `<div class="h-message">${escapeHtml(s.active.message)}</div>` : "";
   return `
     <div class="h-card ${enter ? "enter" : ""}" data-key="${s.key}" style="--accent:${cat.color}">
       <button type="button" class="h-card-top" data-open="${s.key}">
@@ -407,6 +490,7 @@ function hallCardMarkup(s, enter) {
         <span class="h-dest-icon" style="background:${cat.color}">${categoryIconMarkup(cat)}</span>
       </button>
       <div class="h-dest">Going to <b>${escapeHtml(s.active.room.name)}</b></div>
+      ${msg}
       <div class="h-time js-h-time" data-key="${s.key}"></div>
       <div class="h-bar"><div class="h-bar-fill js-h-bar" data-key="${s.key}"></div></div>
       <button type="button" class="btn btn-danger-outline h-end" data-end="${s.key}">End pass</button>
@@ -573,6 +657,15 @@ async function decideRequest(id, approve, btn) {
   refresh(true);
 }
 
+async function deleteHistoryEntry(s, id) {
+  const res = await teacherApi("/api/teacher/pass/delete", { key: s.key, id });
+  if (res.status === 401) return kickToSignIn();
+  if (!res.ok) return showToast(res.data.error || "Couldn't delete that entry.", "warn");
+  s.log = s.log.filter((p) => p.id !== id);
+  renderDetail(false);
+  refresh(true);
+}
+
 async function saveSettings(s, change) {
   Object.assign(s, change);
   renderDetail(false);
@@ -587,13 +680,64 @@ async function saveSettings(s, change) {
 
 const modalOverlay = document.getElementById("t-modal-overlay");
 const modalSub = document.getElementById("t-modal-sub");
+const destModeEl = document.getElementById("t-dest-mode");
+const roomModeEl = document.getElementById("t-room-mode");
 const roomSearch = document.getElementById("t-room-search");
 const roomListEl = document.getElementById("t-room-list");
-const slider = document.getElementById("t-duration-slider");
-const durationValue = document.getElementById("t-duration-value");
+const customPlaceInput = document.getElementById("t-custom-place");
+const durationInput = document.getElementById("t-duration-input");
+const durationPresetsEl = document.getElementById("t-duration-presets");
+const messageInput = document.getElementById("t-message");
 const createBtnModal = document.getElementById("t-modal-create");
 let modalStudent = null;
 let modalRoom = null;
+let destMode = "room";
+
+const DURATION_PRESETS = [5, 10, 15, 20, 30, 45, 60];
+durationPresetsEl.innerHTML = DURATION_PRESETS.map((m) => `<button type="button" class="chip-btn" data-minutes="${m}">${m}</button>`).join("");
+
+function markDurationPreset() {
+  durationPresetsEl.querySelectorAll("[data-minutes]").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.minutes === String(durationInput.value));
+  });
+}
+durationPresetsEl.querySelectorAll("[data-minutes]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    durationInput.value = btn.dataset.minutes;
+    markDurationPreset();
+  });
+});
+durationInput.addEventListener("input", markDurationPreset);
+
+function setDestMode(mode) {
+  destMode = mode;
+  destModeEl.querySelectorAll(".seg-btn").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
+  roomModeEl.classList.toggle("hidden", mode !== "room");
+  customPlaceInput.classList.toggle("hidden", mode !== "custom");
+  modalRoom = null;
+  createBtnModal.disabled = true;
+  if (mode === "room") {
+    customPlaceInput.value = "";
+    renderRooms();
+  } else {
+    roomSearch.value = "";
+    customPlaceInput.focus();
+  }
+}
+destModeEl.querySelectorAll(".seg-btn").forEach((btn) => {
+  btn.addEventListener("click", () => setDestMode(btn.dataset.mode));
+});
+
+customPlaceInput.addEventListener("input", () => {
+  const name = customPlaceInput.value.trim();
+  if (name) {
+    modalRoom = { name, room: "", categoryKey: "custom" };
+    createBtnModal.disabled = false;
+  } else {
+    modalRoom = null;
+    createBtnModal.disabled = true;
+  }
+});
 
 function renderRooms() {
   const term = roomSearch.value.trim().toLowerCase();
@@ -626,10 +770,6 @@ function renderRooms() {
   });
 }
 
-function updateDuration() {
-  durationValue.textContent = `${slider.value} min`;
-}
-
 function openOverlay(overlay) {
   clearTimeout(overlay._timer);
   overlay.classList.remove("closing");
@@ -647,13 +787,12 @@ function closeOverlay(overlay) {
 
 function openCreate(s) {
   modalStudent = s;
-  modalRoom = null;
   modalSub.textContent = `Create a pass for ${s.name}.`;
   roomSearch.value = "";
-  slider.value = 5;
-  updateDuration();
-  createBtnModal.disabled = true;
-  renderRooms();
+  messageInput.value = "";
+  durationInput.value = 5;
+  markDurationPreset();
+  setDestMode("room");
   openOverlay(modalOverlay);
   roomSearch.focus();
 }
@@ -663,7 +802,6 @@ function closeCreate() {
 }
 
 roomSearch.addEventListener("input", renderRooms);
-slider.addEventListener("input", updateDuration);
 document.getElementById("t-modal-cancel").addEventListener("click", closeCreate);
 modalOverlay.addEventListener("click", (e) => {
   if (e.target === modalOverlay) closeCreate();
@@ -671,11 +809,14 @@ modalOverlay.addEventListener("click", (e) => {
 
 createBtnModal.addEventListener("click", async () => {
   if (!modalStudent || !modalRoom) return;
+  const minutes = parseInt(durationInput.value, 10);
+  if (!Number.isFinite(minutes) || minutes < 1) return showToast("Enter a time of at least 1 minute.", "warn");
   createBtnModal.disabled = true;
   const res = await teacherApi("/api/teacher/pass", {
     key: modalStudent.key,
     dest: { name: modalRoom.name, room: modalRoom.room, categoryKey: modalRoom.categoryKey },
-    minutes: parseInt(slider.value, 10),
+    minutes,
+    message: messageInput.value.trim(),
   });
   if (res.status === 401) return kickToSignIn();
   closeCreate();

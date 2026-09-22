@@ -57,7 +57,7 @@ function applyPhoto(el, photo) {
   }
 }
 
-function showToast(message, kind = "info") {
+function showToast(message, kind = "info", action = null) {
   let host = document.getElementById("toast-host");
   if (!host) {
     host = document.createElement("div");
@@ -68,11 +68,32 @@ function showToast(message, kind = "info") {
   const toast = document.createElement("div");
   toast.className = `toast toast-${kind}`;
   toast.setAttribute("role", "status");
-  toast.textContent = message;
-  host.appendChild(toast);
-  requestAnimationFrame(() => toast.classList.add("show"));
-  setTimeout(() => {
+
+  const text = document.createElement("span");
+  text.className = "toast-text";
+  text.textContent = message;
+  toast.appendChild(text);
+
+  let dismissTimer;
+  const dismiss = () => {
+    clearTimeout(dismissTimer);
     toast.classList.remove("show");
     setTimeout(() => toast.remove(), 350);
-  }, 4200);
+  };
+
+  if (action) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "toast-action";
+    btn.textContent = action.label;
+    btn.addEventListener("click", () => {
+      dismiss();
+      action.onClick();
+    });
+    toast.appendChild(btn);
+  }
+
+  host.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add("show"));
+  dismissTimer = setTimeout(dismiss, action ? 6000 : 4200);
 }
