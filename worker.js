@@ -18,7 +18,10 @@ const MIGRATIONS = [
   "ALTER TABLE teachers ADD COLUMN photo TEXT",
   "ALTER TABLE students ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE passes ADD COLUMN message TEXT",
+  "ALTER TABLE passes ADD COLUMN bounce INTEGER NOT NULL DEFAULT 0",
 ];
+
+const LOGO_PRESET_RE = /^preset:[A-Za-z]{2,30}$/;
 
 const encoder = new TextEncoder();
 
@@ -117,6 +120,21 @@ function cleanMessage(raw) {
   return { ok: true, value: text };
 }
 
+function cleanLogo(raw) {
+  if (raw === null || raw === undefined || raw === "") return { ok: true, value: null };
+  if (typeof raw !== "string") return { ok: false };
+  if (LOGO_PRESET_RE.test(raw)) return { ok: true, value: raw };
+  if (raw.length <= MAX_PHOTO_CHARS && PHOTO_RE.test(raw)) return { ok: true, value: raw };
+  return { ok: false };
+}
+
+// null = invalid, "" only allowed when a field isn't required
+function cleanClassField(raw, required) {
+  const text = String(raw || "").trim();
+  if (!text) return required ? null : "";
+  return DEST_RE.test(text) ? text : null;
+}
+
 function cleanTz(raw) {
   const n = Number(raw);
   return Number.isInteger(n) && n >= -840 && n <= 840 ? n : null;
@@ -161,6 +179,10 @@ function ensureSchema(env) {
           "CREATE TABLE IF NOT EXISTS pass_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, student_key TEXT NOT NULL, dest_name TEXT NOT NULL, dest_room TEXT, dest_category TEXT NOT NULL, from_name TEXT, from_room TEXT, from_category TEXT, minutes INTEGER NOT NULL, created_at INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending', decided_by TEXT, decided_at INTEGER)"
         ),
         db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS one_pending_request ON pass_requests (student_key) WHERE status = 'pending'"),
+        db.prepare(
+          "CREATE TABLE IF NOT EXISTS classes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, room TEXT, logo TEXT, created_by TEXT, created_at INTEGER NOT NULL)"
+        ),
+        db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS classes_name ON classes (name COLLATE NOCASE)"),
       ])
       .then(async () => {
         for (const sql of MIGRATIONS) {
@@ -207,6 +229,7 @@ function activeFromRow(row) {
     endTime: row.end_time,
     createdBy: row.created_by || null,
     message: row.message || null,
+    bounce: !!row.bounce,
   };
 }
 
@@ -288,12 +311,12 @@ async function studentState(env, key) {
   };
 }
 
-async function createPass(env, key, dest, from, minutes, createdBy, message = null) {
+async function createPass(env, key, dest, from, minutes, createdBy, message = null, bounce = false) {
   const start = Date.now();
   const end = start + minutes * 60000;
   try {
     await env.DB.prepare(
-      "INSERT INTO passes (student_key, dest_name, dest_room, dest_category, from_name, from_room, from_category, start_time, end_time, created_by, message) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO passes (student_key, dest_name, dest_room, dest_category, from_name, from_room, from_category, start_time, end_time, created_by, message, bounce) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
       .bind(
         key,
@@ -306,7 +329,8 @@ async function createPass(env, key, dest, from, minutes, createdBy, message = nu
         start,
         end,
         createdBy,
-        message
+        message,
+        bounce ? 1 : 0
       )
       .run();
     // making a pass (by the student, a teacher, or an approved request) brings a removed student back into view
@@ -508,6 +532,11 @@ async function handleApi(request, env, url) {
     return json({ ok: true });
   }
 
+  if (pathname === "/api/classes" && method === "GET") {
+    const rows = await env.DB.prepare("SELECT name, room, logo FROM classes ORDER BY name COLLATE NOCASE").all();
+    return json({ classes: rows.results });
+  }
+
   /* ----- teacher accounts ----- */
 
   if (pathname === "/api/teacher/verify-code" && method === "POST") {
@@ -675,6 +704,33 @@ async function handleApi(request, env, url) {
       return json({ ok: true });
     }
 
+    if (pathname === "/api/teacher/class" && method === "POST") {
+      const body = await readBody(request);
+      const name = cleanClassField(body.name, true);
+      const room = cleanClassField(body.room, false);
+      const logo = cleanLogo(body.logo);
+      if (!name || room === null || !logo.ok) return fail("Invalid class.");
+      try {
+        await env.DB.prepare("INSERT INTO classes (name, room, logo, created_by, created_at) VALUES (?, ?, ?, ?, ?)")
+          .bind(name, room, logo.value, teacher.display, Date.now())
+          .run();
+      } catch (err) {
+        if (String(err && err.message).includes("UNIQUE")) return fail("A class with that name already exists.", 409);
+        throw err;
+      }
+      return json({ ok: true });
+    }
+
+    if (pathname === "/api/teacher/pass/bounce" && method === "POST") {
+      const body = await readBody(request);
+      const key = String(body.key || "");
+      if (!KEY_RE.test(key)) return fail("Invalid request.");
+      const active = await env.DB.prepare("SELECT id FROM passes WHERE student_key = ? AND finished_at IS NULL").bind(key).first();
+      if (!active) return fail("That student isn't on a pass right now.", 409);
+      await env.DB.prepare("UPDATE passes SET bounce = ? WHERE id = ?").bind(body.bounce ? 1 : 0, active.id).run();
+      return json({ ok: true });
+    }
+
     if (pathname === "/api/teacher/pass/delete" && method === "POST") {
       const body = await readBody(request);
       const key = String(body.key || "");
@@ -714,7 +770,7 @@ async function handleApi(request, env, url) {
       if (!KEY_RE.test(key) || !dest || !message.ok) return fail("Invalid pass.");
       if (!(await studentState(env, key))) return fail("Student not found.", 404);
 
-      const created = await createPass(env, key, dest, null, clampMinutesTeacher(body.minutes), teacher.display, message.value);
+      const created = await createPass(env, key, dest, null, clampMinutesTeacher(body.minutes), teacher.display, message.value, !!body.bounce);
       if (!created) return fail("That student is already on a pass.", 409);
       await env.DB.prepare("UPDATE pass_requests SET status = 'cancelled' WHERE student_key = ? AND status = 'pending'").bind(key).run();
       return json({ ok: true, serverNow: Date.now() });

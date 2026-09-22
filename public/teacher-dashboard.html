@@ -157,6 +157,17 @@
       <label for="t-message" class="t-message-label">Message <span>(optional)</span></label>
       <input type="text" id="t-message" class="t-search t-message-input" placeholder="Shown on their pass — e.g. “Stop by the office first”" maxlength="140" autocomplete="off">
 
+      <div class="t-bounce-row t-modal-bounce">
+        <div class="t-bounce-text">
+          <div class="t-bounce-title">Bounce this pass</div>
+          <div class="t-bounce-sub">Makes it bounce around their screen for fun</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="t-modal-bounce">
+          <span class="switch-track"></span>
+        </label>
+      </div>
+
       <div class="confirm-actions">
         <button type="button" class="confirm-btn confirm-cancel" id="t-modal-cancel">Cancel</button>
         <button type="button" class="confirm-btn confirm-primary" id="t-modal-create" disabled>Create pass</button>

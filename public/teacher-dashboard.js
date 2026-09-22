@@ -831,6 +831,7 @@ function openCreate(s) {
   messageInput.value = "";
   durationInput.value = 5;
   markDurationPreset();
+  document.getElementById("t-modal-bounce").checked = false;
   setDestMode("room");
   openOverlay(modalOverlay);
   roomSearch.focus();
@@ -856,6 +857,7 @@ createBtnModal.addEventListener("click", async () => {
     dest: { name: modalRoom.name, room: modalRoom.room, categoryKey: modalRoom.categoryKey },
     minutes,
     message: messageInput.value.trim(),
+    bounce: document.getElementById("t-modal-bounce").checked,
   });
   if (res.status === 401) return kickToSignIn();
   closeCreate();
