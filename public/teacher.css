@@ -355,14 +355,17 @@
 
 .confirm-box.t-modal {
   max-width: 460px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  padding: 20px 22px 18px 22px;
 }
 
 .t-modal-sub {
-  margin-bottom: 14px !important;
+  margin-bottom: 12px !important;
 }
 
 .t-room-list {
-  max-height: 250px;
+  max-height: 190px;
   overflow-y: auto;
   margin: 10px -8px 14px -8px;
 }

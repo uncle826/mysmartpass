@@ -176,7 +176,7 @@ function renderList() {
             <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 1 2.6 6.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M3 7v5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>`
         : `<button type="button" class="t-delete-btn t-remove-btn" data-remove="${s.key}" title="Remove from list" aria-label="Remove ${escapeHtml(s.name)} from your list">
-            <svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M8 7l1 13a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2l1-13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M4 7h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </button>`;
       return `
         <div class="t-student ${s.key === selectedKey ? "selected" : ""} ${stagger ? "stagger" : ""} ${s.hidden ? "is-hidden" : ""}" style="--i:${Math.min(i, 14)}" data-key="${s.key}" role="button" tabindex="0">
@@ -280,6 +280,16 @@ function renderRules(s) {
         </div>
         <div class="segmented" id="t-limit">${options}</div>
       </div>
+      <div class="t-rule">
+        <div class="t-rule-text">
+          <div class="t-rule-title">Bounce passes</div>
+          <div class="t-rule-sub">New passes for them start bouncing around their screen</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="t-always-bounce" ${s.alwaysBounce ? "checked" : ""}>
+          <span class="switch-track"></span>
+        </label>
+      </div>
     </div>`;
 }
 
@@ -307,8 +317,8 @@ function renderDetail(animate = true) {
     activeBlock = `
       <div class="t-bounce-row">
         <div class="t-bounce-text">
-          <div class="t-bounce-title">Bounce that pass</div>
-          <div class="t-bounce-sub">Makes it bounce around their screen for fun</div>
+          <div class="t-bounce-title">Bounce this pass</div>
+          <div class="t-bounce-sub">Bouncing right now, on or off</div>
         </div>
         <label class="switch">
           <input type="checkbox" id="t-bounce-toggle" ${s.active.bounce ? "checked" : ""}>
@@ -371,7 +381,7 @@ function renderDetail(animate = true) {
               <span class="notif-meta">${timeOfDay(p.startTime)} · ${formatDuration(p.endTime - p.startTime)}${tag}</span>
             </div>
             <button type="button" class="t-delete-btn" data-delete-id="${p.id}" title="Delete this entry" aria-label="Delete this pass from history">
-              <svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M8 7l1 13a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2l1-13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <svg viewBox="0 0 24 24"><path d="M4 7h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             </button>
           </div>`;
       })
@@ -412,7 +422,13 @@ function renderDetail(animate = true) {
     ${activeBlock}
 
     <h3 class="t-history-title">Where ${escapeHtml(s.name)} has been</h3>
-    ${historyHtml}`;
+    ${historyHtml}
+
+    ${s.hidden ? "" : `
+    <button type="button" class="btn btn-danger-outline t-delete-student-btn" id="t-delete-student-btn">
+      <svg viewBox="0 0 24 24"><path d="M4 7h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Delete student
+    </button>`}`;
 
   const createBtn = document.getElementById("t-create-btn");
   if (createBtn) createBtn.addEventListener("click", () => openCreate(s));
@@ -421,6 +437,8 @@ function renderDetail(animate = true) {
   document.getElementById("t-photo-btn").addEventListener("click", () => openPhotoDialog({ type: "student", key: s.key, name: s.name }));
   const unhideBtn = document.getElementById("t-unhide-btn");
   if (unhideBtn) unhideBtn.addEventListener("click", () => setHidden(s, false));
+  const deleteStudentBtn = document.getElementById("t-delete-student-btn");
+  if (deleteStudentBtn) deleteStudentBtn.addEventListener("click", () => setHidden(s, true));
 
   detailEl.querySelectorAll("[data-delete-id]").forEach((btn) => {
     btn.addEventListener("click", (e) => {
@@ -435,6 +453,9 @@ function renderDetail(animate = true) {
 
   document.getElementById("t-request-only").addEventListener("change", (e) => {
     saveSettings(s, { requestOnly: e.target.checked });
+  });
+  document.getElementById("t-always-bounce").addEventListener("change", (e) => {
+    saveSettings(s, { alwaysBounce: e.target.checked });
   });
   const bounceToggle = document.getElementById("t-bounce-toggle");
   if (bounceToggle) bounceToggle.addEventListener("change", (e) => setBounce(s, e.target.checked));
@@ -831,7 +852,6 @@ function openCreate(s) {
   messageInput.value = "";
   durationInput.value = 5;
   markDurationPreset();
-  document.getElementById("t-modal-bounce").checked = false;
   setDestMode("room");
   openOverlay(modalOverlay);
   roomSearch.focus();
@@ -857,7 +877,6 @@ createBtnModal.addEventListener("click", async () => {
     dest: { name: modalRoom.name, room: modalRoom.room, categoryKey: modalRoom.categoryKey },
     minutes,
     message: messageInput.value.trim(),
-    bounce: document.getElementById("t-modal-bounce").checked,
   });
   if (res.status === 401) return kickToSignIn();
   closeCreate();
@@ -935,27 +954,73 @@ function renderClassSettings() {
           <div class="t-class-name">${escapeHtml(c.name)}</div>
           <div class="t-class-room">${c.room ? escapeHtml(c.room) : "No room set"}</div>
         </div>
+        <span class="t-class-actions">
+          <button type="button" class="t-class-edit-btn" data-edit-id="${c.id}" title="Edit ${escapeHtml(c.name)}" aria-label="Edit ${escapeHtml(c.name)}">
+            <svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          </button>
+          <button type="button" class="t-delete-btn" data-delete-class-id="${c.id}" title="Delete ${escapeHtml(c.name)}" aria-label="Delete ${escapeHtml(c.name)}">
+            <svg viewBox="0 0 24 24"><path d="M4 7h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          </button>
+        </span>
       </div>`
     )
     .join("");
+
+  listEl.querySelectorAll("[data-edit-id]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const c = customClasses.find((x) => String(x.id) === btn.dataset.editId);
+      if (c) openClassDialog(c);
+    });
+  });
+  listEl.querySelectorAll("[data-delete-class-id]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const c = customClasses.find((x) => String(x.id) === btn.dataset.deleteClassId);
+      if (c) deleteClass(c);
+    });
+  });
 }
 
-let classDialogSource = "create-pass";
+async function deleteClass(c) {
+  customClasses = customClasses.filter((x) => x.id !== c.id);
+  applyCustomClasses(customClasses);
+  renderClassSettings();
+  const res = await teacherApi("/api/teacher/class/delete", { id: c.id });
+  if (res.status === 401) return kickToSignIn();
+  if (!res.ok) {
+    customClasses.push(c);
+    applyCustomClasses(customClasses);
+    renderClassSettings();
+    return showToast(res.data.error || "Couldn't delete that class.", "warn");
+  }
+  showToast(`Removed ${c.name}`, "info", {
+    label: "Undo",
+    onClick: async () => {
+      const r = await teacherApi("/api/teacher/class", { name: c.name, room: c.room, logo: c.logo });
+      if (!r.ok) return showToast(r.data.error || "Couldn't bring that class back.", "warn");
+      customClasses.push({ ...c, id: r.data.id });
+      applyCustomClasses(customClasses);
+      renderClassSettings();
+    },
+  });
+}
 
-function openClassDialog(source) {
-  classDialogSource = source || "create-pass";
-  classNameInput.value = "";
-  classRoomInput.value = "";
+let editingClassId = null;
+
+function openClassDialog(existing) {
+  editingClassId = existing ? existing.id : null;
+  document.getElementById("class-title").textContent = existing ? "Edit class" : "Add a class";
+  classSave.textContent = existing ? "Save changes" : "Add class";
+  classNameInput.value = existing ? existing.name : "";
+  classRoomInput.value = existing ? existing.room || "" : "";
   classError.classList.add("hidden");
-  classSave.disabled = true;
+  classSave.disabled = !existing;
   renderClassPresets();
-  setClassLogo(null);
+  setClassLogo(existing ? existing.logo || null : null);
   openOverlay(classOverlay);
   classNameInput.focus();
 }
 
-document.getElementById("t-add-class-link").addEventListener("click", () => openClassDialog("create-pass"));
-document.getElementById("settings-add-class-btn").addEventListener("click", () => openClassDialog("settings"));
+document.getElementById("settings-add-class-btn").addEventListener("click", () => openClassDialog());
 document.getElementById("class-cancel").addEventListener("click", () => closeOverlay(classOverlay));
 classOverlay.addEventListener("click", (e) => {
   if (e.target === classOverlay) closeOverlay(classOverlay);
@@ -986,27 +1051,30 @@ classSave.addEventListener("click", async () => {
   const room = classRoomInput.value.trim();
   if (!name) return;
   classSave.disabled = true;
-  const res = await teacherApi("/api/teacher/class", { name, room, logo: classLogo });
+  const isEdit = editingClassId !== null;
+  const res = await teacherApi(isEdit ? "/api/teacher/class/update" : "/api/teacher/class", {
+    ...(isEdit ? { id: editingClassId } : {}),
+    name,
+    room,
+    logo: classLogo,
+  });
   if (res.status === 401) return kickToSignIn();
   if (!res.ok) {
-    classError.textContent = res.data.error || "Couldn't add that class.";
+    classError.textContent = res.data.error || "Couldn't save that class.";
     classError.classList.remove("hidden");
     classSave.disabled = false;
     return;
   }
-  const added = { name, room, logo: classLogo };
-  applyCustomClasses([added]);
-  if (!customClasses.some((c) => c.name === name)) customClasses.push(added);
+  if (isEdit) {
+    const existing = customClasses.find((c) => c.id === editingClassId);
+    if (existing) Object.assign(existing, { name, room, logo: classLogo });
+  } else {
+    customClasses.push({ id: res.data.id, name, room, logo: classLogo });
+  }
+  applyCustomClasses(customClasses);
   renderClassSettings();
   closeOverlay(classOverlay);
-  showToast(`Added ${name} to Classrooms`, "success");
-
-  if (classDialogSource === "create-pass") {
-    modalRoom = { name, room, categoryKey: "classrooms" };
-    createBtnModal.disabled = false;
-    roomSearch.value = name;
-    renderRooms();
-  }
+  showToast(isEdit ? `Saved changes to ${name}` : `Added ${name} to Classrooms`, "success");
 });
 
 document.addEventListener("keydown", (e) => {

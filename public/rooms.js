@@ -194,15 +194,17 @@ function rebuildFlatRooms() {
   FLAT_ROOMS.sort(byName);
 }
 
-// merges classes a teacher has added on top of the built-in Classrooms list —
-// called once after fetching them from the server
+// replaces the classes a teacher has added on top of the built-in Classrooms list —
+// pass the full current list every time (after adding, editing or deleting one),
+// never just the one that changed
 function applyCustomClasses(list) {
   const category = CATEGORIES.find((c) => c.key === "classrooms");
-  if (!category || !Array.isArray(list) || list.length === 0) return;
+  if (!category || !Array.isArray(list)) return;
+  category.rooms = category.rooms.filter((r) => !r.custom);
   const existingNames = new Set(category.rooms.map((r) => r.name));
   list.forEach((cls) => {
     if (!cls || !cls.name || existingNames.has(cls.name)) return;
-    category.rooms.push({ name: cls.name, room: cls.room || "", logo: cls.logo || null });
+    category.rooms.push({ name: cls.name, room: cls.room || "", logo: cls.logo || null, custom: true });
     existingNames.add(cls.name);
   });
   category.rooms.sort(byName);
