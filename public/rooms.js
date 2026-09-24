@@ -173,7 +173,7 @@ function roomIconMarkup(name, categoryKey) {
       const preset = CATEGORIES.find((c) => c.key === room.logo.slice(7));
       if (preset) return categoryIconMarkup(preset);
     } else {
-      return `<img src="${room.logo}" alt="">`;
+      return `<img src="${room.logo}" alt="" class="room-logo-img">`;
     }
   }
   return categoryIconMarkup(categoryByKey(categoryKey));

@@ -862,7 +862,7 @@ function classLogoIconMarkup(value) {
     const cat = CATEGORIES.find((c) => c.key === value.slice(7));
     return cat ? categoryIconMarkup(cat) : "";
   }
-  if (value) return `<img src="${value}" alt="">`;
+  if (value) return `<img src="${value}" alt="" class="room-logo-img">`;
   return categoryIconMarkup(categoryByKey("classrooms"));
 }
 

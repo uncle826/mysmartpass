@@ -538,6 +538,8 @@ let bounceLoop = null;
 
 const bounceEndBtn = document.getElementById("bounce-end-btn");
 
+const BOUNCE_SPEED = 42; // pixels per second — a slow, lazy DVD-logo drift
+
 function startBounce() {
   if (bounceLoop) return;
   bounceEndBtn.classList.remove("hidden");
@@ -546,9 +548,11 @@ function startBounce() {
   const height = rect.height;
   let x = rect.left;
   let y = rect.top;
-  let vx = (Math.random() < 0.5 ? -1 : 1) * (1.0 + Math.random() * 0.7);
-  let vy = (Math.random() < 0.5 ? -1 : 1) * (1.0 + Math.random() * 0.7);
+  const angle = Math.random() * Math.PI * 2;
+  let vx = Math.cos(angle) * BOUNCE_SPEED;
+  let vy = Math.sin(angle) * BOUNCE_SPEED;
   let colorIdx = 0;
+  let lastTime = null;
 
   passCard.classList.add("bouncing");
   passCard.style.width = width + "px";
@@ -556,9 +560,13 @@ function startBounce() {
   passCard.style.left = "0px";
   passCard.style.top = "0px";
 
-  function step() {
-    x += vx;
-    y += vy;
+  function step(now) {
+    if (lastTime === null) lastTime = now;
+    // real-world seconds elapsed, not frames — keeps the speed the same on every screen's refresh rate
+    const dt = Math.min(0.05, (now - lastTime) / 1000);
+    lastTime = now;
+    x += vx * dt;
+    y += vy * dt;
     const maxX = Math.max(0, window.innerWidth - width);
     const maxY = Math.max(0, window.innerHeight - height);
     let bounced = false;
@@ -570,6 +578,8 @@ function startBounce() {
       colorIdx = (colorIdx + 1) % BOUNCE_COLORS.length;
       const c = BOUNCE_COLORS[colorIdx];
       passCard.style.background = "linear-gradient(160deg, " + shadeColor(c, 25) + ", " + shadeColor(c, -20) + ")";
+      // a faded, dark version of the same color washes over the full background, in sync
+      activePass.style.background = "linear-gradient(160deg, " + shadeColor(c, -110) + ", " + shadeColor(c, -155) + ")";
     }
     passCard.style.transform = "translate(" + x + "px, " + y + "px)";
     bounceLoop = requestAnimationFrame(step);
@@ -591,6 +601,7 @@ function stopBounce() {
   if (currentPass) {
     const category = categoryByKey(currentPass.room.categoryKey);
     passCard.style.background = "linear-gradient(160deg, " + shadeColor(category.color, 25) + ", " + shadeColor(category.color, -20) + ")";
+    activePass.style.background = "linear-gradient(160deg, " + shadeColor(category.color, -110) + ", " + shadeColor(category.color, -155) + ")";
   }
 }
 
