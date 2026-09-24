@@ -536,15 +536,18 @@ function startActivePass(room, endTime, fromRoom, startTime, message, createdBy)
 const BOUNCE_COLORS = ["#e2574c", "#10b981", "#2599d6", "#f2a33a", "#7b68ee", "#e08a1e", "#b21cc4", "#14a3a1"];
 let bounceLoop = null;
 
+const bounceEndBtn = document.getElementById("bounce-end-btn");
+
 function startBounce() {
   if (bounceLoop) return;
+  bounceEndBtn.classList.remove("hidden");
   const rect = passCard.getBoundingClientRect();
   const width = rect.width;
   const height = rect.height;
   let x = rect.left;
   let y = rect.top;
-  let vx = (Math.random() < 0.5 ? -1 : 1) * (2.6 + Math.random() * 1.6);
-  let vy = (Math.random() < 0.5 ? -1 : 1) * (2.6 + Math.random() * 1.6);
+  let vx = (Math.random() < 0.5 ? -1 : 1) * (1.0 + Math.random() * 0.7);
+  let vy = (Math.random() < 0.5 ? -1 : 1) * (1.0 + Math.random() * 0.7);
   let colorIdx = 0;
 
   passCard.classList.add("bouncing");
@@ -575,6 +578,7 @@ function startBounce() {
 }
 
 function stopBounce() {
+  bounceEndBtn.classList.add("hidden");
   if (!bounceLoop) return;
   cancelAnimationFrame(bounceLoop);
   bounceLoop = null;
@@ -618,6 +622,7 @@ async function endActivePass() {
 }
 
 document.getElementById("end-pass-btn").addEventListener("click", endActivePass);
+bounceEndBtn.addEventListener("click", endActivePass);
 
 /* Notifications: completed pass log */
 
@@ -883,10 +888,13 @@ async function loadState() {
   if (res.ok && !busy) applyServerState(res.data);
 }
 
-(async () => {
+async function loadClasses() {
   const res = await apiFetch("/api/classes");
   if (res.ok) applyCustomClasses(res.data.classes || []);
-})();
+}
+
+loadClasses();
+setInterval(loadClasses, 20000);
 
 loadState();
 setInterval(loadState, 3000);

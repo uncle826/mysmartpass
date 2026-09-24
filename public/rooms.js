@@ -189,7 +189,7 @@ function rebuildFlatRooms() {
   FLAT_ROOMS = CATEGORIES.flatMap((c) =>
     c.leaf
       ? [{ name: c.leaf.name, room: c.leaf.room, categoryKey: c.key }]
-      : c.rooms.map((r) => ({ name: r.name, room: r.room, categoryKey: c.key, logo: r.logo || null }))
+      : c.rooms.map((r) => ({ name: r.name, room: r.room, categoryKey: c.key, logo: r.logo || null, custom: !!r.custom }))
   );
   FLAT_ROOMS.sort(byName);
 }

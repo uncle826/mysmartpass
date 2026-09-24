@@ -138,7 +138,10 @@ function setView(view) {
   void show.offsetWidth;
   show.classList.add("view-enter");
   if (location.hash !== `#${currentView}`) history.replaceState(null, "", `#${currentView}`);
-  if (currentView === "settings") renderClassSettings();
+  if (currentView === "settings") {
+    renderClassSettings();
+    loadClasses();
+  }
   tick();
 }
 
@@ -171,13 +174,6 @@ function renderList() {
     .map((s, i) => {
       const st = statusInfo(s, now);
       const chip = s.request ? '<span class="t-chip amber">Request</span>' : s.requestOnly ? '<span class="t-chip">Approval</span>' : "";
-      const rowAction = s.hidden
-        ? `<button type="button" class="t-delete-btn t-unhide-btn" data-unhide="${s.key}" title="Add back to your list" aria-label="Add ${escapeHtml(s.name)} back to your list">
-            <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 1 2.6 6.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M3 7v5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>`
-        : `<button type="button" class="t-delete-btn t-remove-btn" data-remove="${s.key}" title="Remove from list" aria-label="Remove ${escapeHtml(s.name)} from your list">
-            <svg viewBox="0 0 24 24"><path d="M4 7h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </button>`;
       return `
         <div class="t-student ${s.key === selectedKey ? "selected" : ""} ${stagger ? "stagger" : ""} ${s.hidden ? "is-hidden" : ""}" style="--i:${Math.min(i, 14)}" data-key="${s.key}" role="button" tabindex="0">
           ${avatarHtml(s)}
@@ -185,10 +181,7 @@ function renderList() {
             <span class="t-student-name">${escapeHtml(s.name)}</span>
             <span class="t-student-sub js-status ${st.cls}" data-key="${s.key}">${escapeHtml(st.text)}</span>
           </span>
-          <span class="t-row-right">
-            ${chip}
-            ${rowAction}
-          </span>
+          ${chip}
         </div>`;
     })
     .join("");
@@ -201,20 +194,6 @@ function renderList() {
         e.preventDefault();
         selectStudent(row.dataset.key);
       }
-    });
-  });
-  listEl.querySelectorAll("[data-remove]").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const s = studentMap.get(btn.dataset.remove);
-      if (s) setHidden(s, true);
-    });
-  });
-  listEl.querySelectorAll("[data-unhide]").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const s = studentMap.get(btn.dataset.unhide);
-      if (s) setHidden(s, false);
     });
   });
 
@@ -279,16 +258,6 @@ function renderRules(s) {
           <div class="t-rule-sub" id="t-limit-sub">${escapeHtml(limitSummary(s))}</div>
         </div>
         <div class="segmented" id="t-limit">${options}</div>
-      </div>
-      <div class="t-rule">
-        <div class="t-rule-text">
-          <div class="t-rule-title">Bounce passes</div>
-          <div class="t-rule-sub">New passes for them start bouncing around their screen</div>
-        </div>
-        <label class="switch">
-          <input type="checkbox" id="t-always-bounce" ${s.alwaysBounce ? "checked" : ""}>
-          <span class="switch-track"></span>
-        </label>
       </div>
     </div>`;
 }
@@ -454,9 +423,6 @@ function renderDetail(animate = true) {
   document.getElementById("t-request-only").addEventListener("change", (e) => {
     saveSettings(s, { requestOnly: e.target.checked });
   });
-  document.getElementById("t-always-bounce").addEventListener("change", (e) => {
-    saveSettings(s, { alwaysBounce: e.target.checked });
-  });
   const bounceToggle = document.getElementById("t-bounce-toggle");
   if (bounceToggle) bounceToggle.addEventListener("change", (e) => setBounce(s, e.target.checked));
   document.querySelectorAll("#t-limit .seg-btn").forEach((btn) => {
@@ -584,12 +550,6 @@ function renderHall() {
   document.getElementById("hall-empty").classList.toggle("hidden", out.length > 0);
   document.getElementById("hall-count").textContent = out.length;
 
-  const late = out.filter((s) => s.active.endTime < now).length;
-  document.getElementById("hall-sub").textContent = out.length === 0
-    ? "Nobody is out right now"
-    : `${out.length} out${late ? ` · ${late} overtime` : ""}`;
-
-  setBadge(document.getElementById("hall-badge"), out.length, late > 0);
   setBadge(document.getElementById("req-badge"), requests.length, false);
 
   hallView.querySelectorAll("[data-open]").forEach((btn) => {
@@ -1050,8 +1010,21 @@ classSave.addEventListener("click", async () => {
   const name = classNameInput.value.trim();
   const room = classRoomInput.value.trim();
   if (!name) return;
-  classSave.disabled = true;
   const isEdit = editingClassId !== null;
+
+  // a name that already belongs to another room never shows up as its own entry in the
+  // picker — it saves fine but silently does nothing, which looks like a broken delete later
+  const collision = FLAT_ROOMS.find(
+    (r) => r.categoryKey === "classrooms" && r.name.toLowerCase() === name.toLowerCase()
+  );
+  const editingThisOne = isEdit && collision && collision.custom && customClasses.some((c) => c.id === editingClassId && c.name.toLowerCase() === name.toLowerCase());
+  if (collision && !editingThisOne) {
+    classError.textContent = "A room with that name already exists. Choose a different name.";
+    classError.classList.remove("hidden");
+    return;
+  }
+
+  classSave.disabled = true;
   const res = await teacherApi(isEdit ? "/api/teacher/class/update" : "/api/teacher/class", {
     ...(isEdit ? { id: editingClassId } : {}),
     name,
@@ -1278,14 +1251,17 @@ window.addEventListener("hashchange", () => setView(location.hash.slice(1)));
   }
 })();
 
-(async () => {
+async function loadClasses() {
   const res = await apiFetch("/api/classes");
   if (res.ok) {
     customClasses = res.data.classes || [];
     applyCustomClasses(customClasses);
     if (currentView === "settings") renderClassSettings();
   }
-})();
+}
+
+loadClasses();
+setInterval(loadClasses, 8000);
 
 setView(location.hash.slice(1));
 refresh(true);

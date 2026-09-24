@@ -1708,3 +1708,24 @@ button:not(:disabled):active {
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
   will-change: transform;
 }
+
+.bounce-end-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 2001;
+  padding: 14px 26px;
+  border: none;
+  border-radius: 10px;
+  background: #e2574c;
+  color: #ffffff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 10px 26px rgba(226, 87, 76, 0.45);
+  cursor: pointer;
+}
+
+.bounce-end-btn:hover {
+  background: #c8493f;
+}
