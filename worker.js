@@ -19,6 +19,7 @@ const MIGRATIONS = [
   "ALTER TABLE students ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE passes ADD COLUMN message TEXT",
   "ALTER TABLE passes ADD COLUMN bounce INTEGER NOT NULL DEFAULT 0",
+  "ALTER TABLE students ADD COLUMN always_bounce INTEGER NOT NULL DEFAULT 0",
 ];
 
 const LOGO_PRESET_RE = /^preset:[A-Za-z]{2,30}$/;
@@ -533,7 +534,7 @@ async function handleApi(request, env, url) {
   }
 
   if (pathname === "/api/classes" && method === "GET") {
-    const rows = await env.DB.prepare("SELECT name, room, logo FROM classes ORDER BY name COLLATE NOCASE").all();
+    const rows = await env.DB.prepare("SELECT id, name, room, logo FROM classes ORDER BY name COLLATE NOCASE").all();
     return json({ classes: rows.results });
   }
 
@@ -710,14 +711,42 @@ async function handleApi(request, env, url) {
       const room = cleanClassField(body.room, false);
       const logo = cleanLogo(body.logo);
       if (!name || room === null || !logo.ok) return fail("Invalid class.");
+      let id;
       try {
-        await env.DB.prepare("INSERT INTO classes (name, room, logo, created_by, created_at) VALUES (?, ?, ?, ?, ?)")
+        const res = await env.DB.prepare("INSERT INTO classes (name, room, logo, created_by, created_at) VALUES (?, ?, ?, ?, ?)")
           .bind(name, room, logo.value, teacher.display, Date.now())
+          .run();
+        id = res.meta.last_row_id;
+      } catch (err) {
+        if (String(err && err.message).includes("UNIQUE")) return fail("A class with that name already exists.", 409);
+        throw err;
+      }
+      return json({ ok: true, id });
+    }
+
+    if (pathname === "/api/teacher/class/update" && method === "POST") {
+      const body = await readBody(request);
+      const id = Number(body.id);
+      const name = cleanClassField(body.name, true);
+      const room = cleanClassField(body.room, false);
+      const logo = cleanLogo(body.logo);
+      if (!Number.isInteger(id) || !name || room === null || !logo.ok) return fail("Invalid class.");
+      try {
+        await env.DB.prepare("UPDATE classes SET name = ?, room = ?, logo = ? WHERE id = ?")
+          .bind(name, room, logo.value, id)
           .run();
       } catch (err) {
         if (String(err && err.message).includes("UNIQUE")) return fail("A class with that name already exists.", 409);
         throw err;
       }
+      return json({ ok: true });
+    }
+
+    if (pathname === "/api/teacher/class/delete" && method === "POST") {
+      const body = await readBody(request);
+      const id = Number(body.id);
+      if (!Number.isInteger(id)) return fail("Invalid request.");
+      await env.DB.prepare("DELETE FROM classes WHERE id = ?").bind(id).run();
       return json({ ok: true });
     }
 
@@ -770,7 +799,7 @@ async function handleApi(request, env, url) {
       if (!KEY_RE.test(key) || !dest || !message.ok) return fail("Invalid pass.");
       if (!(await studentState(env, key))) return fail("Student not found.", 404);
 
-      const created = await createPass(env, key, dest, null, clampMinutesTeacher(body.minutes), teacher.display, message.value, !!body.bounce);
+      const created = await createPass(env, key, dest, null, clampMinutesTeacher(body.minutes), teacher.display, message.value);
       if (!created) return fail("That student is already on a pass.", 409);
       await env.DB.prepare("UPDATE pass_requests SET status = 'cancelled' WHERE student_key = ? AND status = 'pending'").bind(key).run();
       return json({ ok: true, serverNow: Date.now() });
