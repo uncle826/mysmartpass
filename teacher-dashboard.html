@@ -11,6 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="dashboard.css">
 <link rel="stylesheet" href="teacher.css">
+<link rel="stylesheet" href="teacher-extra.css">
 </head>
 <body>
 
@@ -20,9 +21,18 @@
     </div>
 
     <nav class="main-nav">
-      <a href="/teacher-dashboard" class="nav-item active">
+      <a href="#students" class="nav-item active" data-view="students">
         <svg viewBox="0 0 24 24" class="nav-icon"><circle cx="9" cy="8" r="3.4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M2.8 19.5c0-3.4 2.8-5.5 6.2-5.5s6.2 2.1 6.2 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="17" cy="9" r="2.6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M17.5 14.2c2.4 0 4.2 1.6 4.2 4.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         <span>Students</span>
+      </a>
+      <a href="#hall" class="nav-item" data-view="hall">
+        <svg viewBox="0 0 24 24" class="nav-icon"><path d="M12 3 4 6v5.5c0 4.6 3.2 8.3 8 9.5 4.8-1.2 8-4.9 8-9.5V6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="10" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.6 16c.6-1.6 1.9-2.4 3.4-2.4s2.8.8 3.4 2.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span>Hall Monitor</span>
+        <span class="nav-badge amber hidden" id="req-badge">0</span>
+      </a>
+      <a href="#settings" class="nav-item" data-view="settings">
+        <svg viewBox="0 0 24 24" class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.8"/><path d="M19.1 14.6a1.5 1.5 0 0 0 .3 1.65l.05.05a1.8 1.8 0 1 1-2.55 2.55l-.05-.05a1.5 1.5 0 0 0-1.65-.3 1.5 1.5 0 0 0-.9 1.37V20a1.8 1.8 0 0 1-3.6 0v-.08a1.5 1.5 0 0 0-.98-1.38 1.5 1.5 0 0 0-1.65.3l-.05.05a1.8 1.8 0 1 1-2.55-2.55l.05-.05a1.5 1.5 0 0 0 .3-1.65 1.5 1.5 0 0 0-1.37-.9H4a1.8 1.8 0 0 1 0-3.6h.08a1.5 1.5 0 0 0 1.38-.98 1.5 1.5 0 0 0-.3-1.65l-.05-.05A1.8 1.8 0 1 1 7.66 4.86l.05.05a1.5 1.5 0 0 0 1.65.3H9.5a1.5 1.5 0 0 0 .9-1.37V3.8a1.8 1.8 0 0 1 3.6 0v.08a1.5 1.5 0 0 0 .9 1.37 1.5 1.5 0 0 0 1.65-.3l.05-.05a1.8 1.8 0 1 1 2.55 2.55l-.05.05a1.5 1.5 0 0 0-.3 1.65V9.5a1.5 1.5 0 0 0 1.37.9H20a1.8 1.8 0 0 1 0 3.6h-.08a1.5 1.5 0 0 0-1.37.9z"/></svg>
+        <span>Settings</span>
       </a>
     </nav>
 
@@ -37,13 +47,18 @@
 
         <div class="avatar-menu hidden" id="avatar-menu">
           <div class="avatar-menu-header">
-            <div class="avatar avatar-lg">
+            <div class="avatar avatar-lg" id="teacher-avatar-preview">
               <svg viewBox="0 0 24 24" class="avatar-icon"><circle cx="12" cy="9" r="4.6" fill="currentColor"/><path d="M2 24c0-5.6 4.4-8.6 10-8.6s10 3 10 8.6z" fill="currentColor"/></svg>
             </div>
             <span class="avatar-menu-name" id="teacher-name"></span>
           </div>
 
           <div class="avatar-menu-divider"></div>
+
+          <button class="avatar-menu-item" id="change-photo-btn">
+            <svg viewBox="0 0 24 24"><path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.4" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            Change photo
+          </button>
 
           <button class="avatar-menu-item avatar-signout" id="sign-out-btn">
             <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 17l5-5-5-5M21 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -54,7 +69,7 @@
     </div>
   </header>
 
-  <main class="t-content">
+  <main class="t-content" id="students-view">
     <aside class="t-students">
       <div class="t-students-head">
         <h2>Students</h2>
@@ -62,10 +77,54 @@
       </div>
       <input type="text" class="t-search" id="t-search" placeholder="Search students" autocomplete="off">
       <div class="t-student-list" id="t-student-list"></div>
-      <p class="t-empty hidden" id="t-empty">No students yet. Students show up here after they sign in on this device.</p>
+      <p class="t-empty hidden" id="t-empty">No students yet. Students show up here after they sign in.</p>
+      <button type="button" class="t-hidden-toggle hidden" id="t-hidden-toggle"></button>
     </aside>
 
     <section class="t-detail" id="t-detail"></section>
+  </main>
+
+  <main class="t-hall hidden" id="hall-view">
+    <div class="t-hall-inner">
+      <div class="t-hall-head">
+        <h1>Hall Monitor</h1>
+      </div>
+
+      <section class="t-hall-section hidden" id="hall-requests-wrap">
+        <h2 class="t-section-title">Pass requests <span class="t-count amber" id="hall-req-count">0</span></h2>
+        <div class="h-grid" id="hall-requests"></div>
+      </section>
+
+      <section class="t-hall-section">
+        <h2 class="t-section-title">In the hall <span class="t-count" id="hall-count">0</span></h2>
+        <div class="h-grid" id="hall-grid"></div>
+        <div class="h-empty hidden" id="hall-empty">
+          <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Everyone is in class</span>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <main class="t-hall hidden" id="settings-view">
+    <div class="t-hall-inner">
+      <div class="t-hall-head">
+        <h1>Settings</h1>
+      </div>
+
+      <section class="t-hall-section">
+        <div class="t-settings-section-head">
+          <h2 class="t-section-title">Classes</h2>
+          <button type="button" class="btn btn-primary" id="settings-add-class-btn">
+            <svg viewBox="0 0 24 24" class="btn-icon"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+            Add a class
+          </button>
+        </div>
+        <p class="t-settings-sub">Classes and teachers students can pick as a destination when creating a pass.</p>
+        <div class="t-class-grid" id="settings-class-list"></div>
+        <p class="t-no-history hidden" id="settings-class-empty">No classes added yet.</p>
+      </section>
+    </div>
   </main>
 
   <div class="confirm-overlay hidden" id="t-modal-overlay">
@@ -73,18 +132,87 @@
       <h3 id="t-modal-title">Create pass</h3>
       <p class="t-modal-sub" id="t-modal-sub"></p>
 
-      <input type="text" class="t-search" id="t-room-search" placeholder="Where are they going?" autocomplete="off">
-      <div class="t-room-list" id="t-room-list"></div>
+      <div class="segmented t-dest-mode" id="t-dest-mode">
+        <button type="button" class="seg-btn active" data-mode="room">Pick a room</button>
+        <button type="button" class="seg-btn" data-mode="custom">Custom place</button>
+      </div>
+
+      <div id="t-room-mode">
+        <input type="text" class="t-search" id="t-room-search" placeholder="Where are they going?" autocomplete="off">
+        <div class="t-room-list" id="t-room-list"></div>
+      </div>
+
+      <input type="text" class="t-search hidden" id="t-custom-place" placeholder="Type a custom place…" maxlength="60" autocomplete="off">
 
       <div class="t-duration">
-        <label for="t-duration-slider">Time</label>
-        <input type="range" id="t-duration-slider" min="1" max="15" step="1" value="5">
-        <span class="t-duration-value" id="t-duration-value">5 min</span>
+        <label for="t-duration-input">Time</label>
+        <input type="number" id="t-duration-input" class="t-duration-input" min="1" max="480" value="5" inputmode="numeric">
+        <span class="t-duration-unit">min</span>
       </div>
+      <div class="t-duration-presets" id="t-duration-presets"></div>
+
+      <label for="t-message" class="t-message-label">Message <span>(optional)</span></label>
+      <input type="text" id="t-message" class="t-search t-message-input" placeholder="Shown on their pass — e.g. “Stop by the office first”" maxlength="140" autocomplete="off">
 
       <div class="confirm-actions">
         <button type="button" class="confirm-btn confirm-cancel" id="t-modal-cancel">Cancel</button>
         <button type="button" class="confirm-btn confirm-primary" id="t-modal-create" disabled>Create pass</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="confirm-overlay hidden" id="photo-overlay">
+    <div class="confirm-box t-modal photo-modal" role="dialog" aria-modal="true" aria-labelledby="photo-title">
+      <h3 id="photo-title">Profile photo</h3>
+      <p class="t-modal-sub" id="photo-sub"></p>
+
+      <div class="photo-preview-row">
+        <span class="t-avatar photo-preview" id="photo-preview"></span>
+        <div class="photo-actions">
+          <button type="button" class="btn btn-outline" id="photo-upload-btn">Upload a photo</button>
+          <button type="button" class="btn btn-danger-outline" id="photo-remove-btn">Remove photo</button>
+          <input type="file" id="photo-file" accept="image/*" hidden>
+        </div>
+      </div>
+
+      <p class="photo-label">Or choose an image</p>
+      <div class="photo-presets" id="photo-presets"></div>
+      <p class="photo-error hidden" id="photo-error" role="alert"></p>
+
+      <div class="confirm-actions">
+        <button type="button" class="confirm-btn confirm-cancel" id="photo-cancel">Cancel</button>
+        <button type="button" class="confirm-btn confirm-primary" id="photo-save" disabled>Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="confirm-overlay hidden" id="class-overlay">
+    <div class="confirm-box t-modal photo-modal" role="dialog" aria-modal="true" aria-labelledby="class-title">
+      <h3 id="class-title">Add a class</h3>
+      <p class="t-modal-sub">Add a teacher or class so students can pick it as a destination.</p>
+
+      <label for="class-name" class="t-message-label">Class name</label>
+      <input type="text" id="class-name" class="t-search" placeholder="e.g. Mr. Reynolds" maxlength="60" autocomplete="off">
+
+      <label for="class-room" class="t-message-label">Room number <span>(optional)</span></label>
+      <input type="text" id="class-room" class="t-search" placeholder="e.g. 214" maxlength="60" autocomplete="off">
+
+      <p class="photo-label">Logo</p>
+      <div class="photo-preview-row">
+        <span class="t-avatar photo-preview class-logo-preview" id="class-logo-preview"></span>
+        <div class="photo-actions">
+          <button type="button" class="btn btn-outline" id="class-logo-upload-btn">Upload an image</button>
+          <input type="file" id="class-logo-file" accept="image/*" hidden>
+        </div>
+      </div>
+
+      <p class="photo-label">Or choose one</p>
+      <div class="photo-presets" id="class-logo-presets"></div>
+      <p class="photo-error hidden" id="class-error" role="alert"></p>
+
+      <div class="confirm-actions">
+        <button type="button" class="confirm-btn confirm-cancel" id="class-cancel">Cancel</button>
+        <button type="button" class="confirm-btn confirm-primary" id="class-save" disabled>Add class</button>
       </div>
     </div>
   </div>
