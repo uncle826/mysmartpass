@@ -24,10 +24,10 @@ document.getElementById("teacher-name").textContent = teacherName.toUpperCase();
 
 const AVATAR_PALETTE = ["#2599d6", "#7b68ee", "#fb6d4c", "#f2994a", "#b21cc4", "#14a3a1", "#1ed17a", "#e2574c"];
 const BOUNCE_SPEEDS = [
-  { value: 22, label: "Slow" },
-  { value: 42, label: "Medium" },
-  { value: 70, label: "Fast" },
-  { value: 110, label: "Very Fast" },
+  { value: 25, label: "Slow" },
+  { value: 55, label: "Medium" },
+  { value: 140, label: "Fast" },
+  { value: 380, label: "Very Fast" },
 ];
 const LIMIT_OPTIONS = [
   { value: null, label: "Off" },
