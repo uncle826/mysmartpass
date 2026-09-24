@@ -542,20 +542,7 @@ let bounceDirY = 0;
 
 // "Very Fast" crosses this and goes full chaos: rapid color flashing + a storm of notifications
 const CHAOS_SPEED_THRESHOLD = 300;
-const CHAOS_MESSAGES = [
-  "🚨 Your SmartPass has exploded!",
-  "ALERT: Hallway integrity compromised",
-  "Pass velocity: ludicrous speed",
-  "Containment breach in the hallway",
-  "SmartPass.exe has encountered a problem",
-  "Warning: excessive bouncing detected",
-  "This pass cannot be stopped",
-  "Notification storm incoming",
-  "Structural damage: hallway",
-  "Your pass has achieved escape velocity",
-  "Send help. It won't stop bouncing.",
-  "Hall monitor has left the chat",
-];
+const CHAOS_MESSAGE = "Your SmartPass has exploded!";
 let chaosColorTimer = null;
 let chaosNotifTimer = null;
 
@@ -567,11 +554,10 @@ function startChaos() {
     activePass.style.background = "linear-gradient(160deg, " + shadeColor(c, -110) + ", " + shadeColor(c, -155) + ")";
   }, 80);
   chaosNotifTimer = setInterval(() => {
-    const msg = CHAOS_MESSAGES[Math.floor(Math.random() * CHAOS_MESSAGES.length)];
     // real OS notifications only — stacks up in Windows/macOS/ChromeOS's own
     // notification center instead of cluttering the page itself
-    sendBrowserNotification("SmartPass", msg);
-  }, 500);
+    sendBrowserNotification("SmartPass", CHAOS_MESSAGE);
+  }, 180);
 }
 
 function stopChaos() {
