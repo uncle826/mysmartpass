@@ -568,9 +568,8 @@ function startChaos() {
   }, 80);
   chaosNotifTimer = setInterval(() => {
     const msg = CHAOS_MESSAGES[Math.floor(Math.random() * CHAOS_MESSAGES.length)];
-    showToast(msg, Math.random() < 0.7 ? "warn" : "info");
-    // real OS notifications too, if the student has turned those on — stacks up in
-    // Windows/macOS/ChromeOS's own notification center for the full chaotic effect
+    // real OS notifications only — stacks up in Windows/macOS/ChromeOS's own
+    // notification center instead of cluttering the page itself
     sendBrowserNotification("SmartPass", msg);
   }, 500);
 }

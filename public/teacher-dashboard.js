@@ -27,7 +27,7 @@ const BOUNCE_SPEEDS = [
   { value: 25, label: "Slow" },
   { value: 55, label: "Medium" },
   { value: 140, label: "Fast" },
-  { value: 950, label: "Very Fast" },
+  { value: 47500, label: "Explode" },
 ];
 const LIMIT_OPTIONS = [
   { value: null, label: "Off" },
