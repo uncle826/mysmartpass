@@ -24,7 +24,7 @@ const MIGRATIONS = [
 ];
 
 const MIN_BOUNCE_SPEED = 10;
-const MAX_BOUNCE_SPEED = 500;
+const MAX_BOUNCE_SPEED = 1200;
 
 const LOGO_PRESET_RE = /^preset:[A-Za-z]{2,30}$/;
 
