@@ -20,7 +20,11 @@ const MIGRATIONS = [
   "ALTER TABLE passes ADD COLUMN message TEXT",
   "ALTER TABLE passes ADD COLUMN bounce INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE students ADD COLUMN always_bounce INTEGER NOT NULL DEFAULT 0",
+  "ALTER TABLE passes ADD COLUMN bounce_speed INTEGER NOT NULL DEFAULT 42",
 ];
+
+const MIN_BOUNCE_SPEED = 10;
+const MAX_BOUNCE_SPEED = 150;
 
 const LOGO_PRESET_RE = /^preset:[A-Za-z]{2,30}$/;
 
@@ -231,6 +235,7 @@ function activeFromRow(row) {
     createdBy: row.created_by || null,
     message: row.message || null,
     bounce: !!row.bounce,
+    bounceSpeed: row.bounce_speed || 42,
   };
 }
 
@@ -756,7 +761,16 @@ async function handleApi(request, env, url) {
       if (!KEY_RE.test(key)) return fail("Invalid request.");
       const active = await env.DB.prepare("SELECT id FROM passes WHERE student_key = ? AND finished_at IS NULL").bind(key).first();
       if (!active) return fail("That student isn't on a pass right now.", 409);
-      await env.DB.prepare("UPDATE passes SET bounce = ? WHERE id = ?").bind(body.bounce ? 1 : 0, active.id).run();
+
+      if ("speed" in body) {
+        const speed = Math.round(Number(body.speed));
+        if (!Number.isFinite(speed) || speed < MIN_BOUNCE_SPEED || speed > MAX_BOUNCE_SPEED) return fail("Invalid speed.");
+        await env.DB.prepare("UPDATE passes SET bounce = ?, bounce_speed = ? WHERE id = ?")
+          .bind(body.bounce ? 1 : 0, speed, active.id)
+          .run();
+      } else {
+        await env.DB.prepare("UPDATE passes SET bounce = ? WHERE id = ?").bind(body.bounce ? 1 : 0, active.id).run();
+      }
       return json({ ok: true });
     }
 

@@ -536,21 +536,25 @@ function startActivePass(room, endTime, fromRoom, startTime, message, createdBy)
 const BOUNCE_COLORS = ["#e2574c", "#10b981", "#2599d6", "#f2a33a", "#7b68ee", "#e08a1e", "#b21cc4", "#14a3a1"];
 let bounceLoop = null;
 
-const bounceEndBtn = document.getElementById("bounce-end-btn");
+let bounceSpeed = 42; // pixels per second — adjustable live by the teacher, even mid-bounce
+let bounceDirX = 1;
+let bounceDirY = 0;
 
-const BOUNCE_SPEED = 42; // pixels per second — a slow, lazy DVD-logo drift
+function setBounceSpeed(speed) {
+  bounceSpeed = speed > 0 ? speed : 42;
+}
 
-function startBounce() {
+function startBounce(speed) {
+  if (speed) setBounceSpeed(speed);
   if (bounceLoop) return;
-  bounceEndBtn.classList.remove("hidden");
   const rect = passCard.getBoundingClientRect();
   const width = rect.width;
   const height = rect.height;
   let x = rect.left;
   let y = rect.top;
   const angle = Math.random() * Math.PI * 2;
-  let vx = Math.cos(angle) * BOUNCE_SPEED;
-  let vy = Math.sin(angle) * BOUNCE_SPEED;
+  bounceDirX = Math.cos(angle);
+  bounceDirY = Math.sin(angle);
   let colorIdx = 0;
   let lastTime = null;
 
@@ -565,15 +569,16 @@ function startBounce() {
     // real-world seconds elapsed, not frames — keeps the speed the same on every screen's refresh rate
     const dt = Math.min(0.05, (now - lastTime) / 1000);
     lastTime = now;
-    x += vx * dt;
-    y += vy * dt;
+    // speed is read live each frame, so a teacher's change applies instantly without restarting
+    x += bounceDirX * bounceSpeed * dt;
+    y += bounceDirY * bounceSpeed * dt;
     const maxX = Math.max(0, window.innerWidth - width);
     const maxY = Math.max(0, window.innerHeight - height);
     let bounced = false;
-    if (x <= 0) { x = 0; vx = Math.abs(vx); bounced = true; }
-    if (x >= maxX) { x = maxX; vx = -Math.abs(vx); bounced = true; }
-    if (y <= 0) { y = 0; vy = Math.abs(vy); bounced = true; }
-    if (y >= maxY) { y = maxY; vy = -Math.abs(vy); bounced = true; }
+    if (x <= 0) { x = 0; bounceDirX = Math.abs(bounceDirX); bounced = true; }
+    if (x >= maxX) { x = maxX; bounceDirX = -Math.abs(bounceDirX); bounced = true; }
+    if (y <= 0) { y = 0; bounceDirY = Math.abs(bounceDirY); bounced = true; }
+    if (y >= maxY) { y = maxY; bounceDirY = -Math.abs(bounceDirY); bounced = true; }
     if (bounced) {
       colorIdx = (colorIdx + 1) % BOUNCE_COLORS.length;
       const c = BOUNCE_COLORS[colorIdx];
@@ -588,7 +593,6 @@ function startBounce() {
 }
 
 function stopBounce() {
-  bounceEndBtn.classList.add("hidden");
   if (!bounceLoop) return;
   cancelAnimationFrame(bounceLoop);
   bounceLoop = null;
@@ -633,7 +637,6 @@ async function endActivePass() {
 }
 
 document.getElementById("end-pass-btn").addEventListener("click", endActivePass);
-bounceEndBtn.addEventListener("click", endActivePass);
 
 /* Notifications: completed pass log */
 
@@ -881,7 +884,13 @@ function applyServerState(state) {
     }
     if (currentPass) {
       currentPass.bounce = !!a.bounce;
-      if (a.bounce) startBounce(); else stopBounce();
+      currentPass.bounceSpeed = a.bounceSpeed || 42;
+      if (a.bounce) {
+        startBounce(currentPass.bounceSpeed);
+        setBounceSpeed(currentPass.bounceSpeed);
+      } else {
+        stopBounce();
+      }
     }
   } else if (currentPass) {
     resetActivePassUI();

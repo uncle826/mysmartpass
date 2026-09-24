@@ -23,6 +23,12 @@ const teacherName = localStorage.getItem("smartpass_name") || "Teacher";
 document.getElementById("teacher-name").textContent = teacherName.toUpperCase();
 
 const AVATAR_PALETTE = ["#2599d6", "#7b68ee", "#fb6d4c", "#f2994a", "#b21cc4", "#14a3a1", "#1ed17a", "#e2574c"];
+const BOUNCE_SPEEDS = [
+  { value: 22, label: "Slow" },
+  { value: 42, label: "Medium" },
+  { value: 70, label: "Fast" },
+  { value: 110, label: "Very Fast" },
+];
 const LIMIT_OPTIONS = [
   { value: null, label: "Off" },
   { value: 3, label: "3" },
@@ -294,6 +300,18 @@ function renderDetail(animate = true) {
           <span class="switch-track"></span>
         </label>
       </div>
+      <div class="t-bounce-row">
+        <div class="t-bounce-text">
+          <div class="t-bounce-title">Bounce speed</div>
+          <div class="t-bounce-sub">Changes live, even while it's already bouncing</div>
+        </div>
+        <div class="segmented" id="t-bounce-speed">
+          ${BOUNCE_SPEEDS.map(
+            (o) =>
+              `<button type="button" class="seg-btn ${o.value === (s.active.bounceSpeed || 42) ? "active" : ""}" data-speed="${o.value}">${o.label}</button>`
+          ).join("")}
+        </div>
+      </div>
       <div class="t-active" style="background:linear-gradient(135deg, ${cat.color}, ${shade(cat.color, -45)})">
         <span class="t-active-icon">${roomIconMarkup(s.active.room.name, s.active.room.categoryKey)}</span>
         <div class="t-active-info">
@@ -425,6 +443,12 @@ function renderDetail(animate = true) {
   });
   const bounceToggle = document.getElementById("t-bounce-toggle");
   if (bounceToggle) bounceToggle.addEventListener("change", (e) => setBounce(s, e.target.checked));
+  document.querySelectorAll("#t-bounce-speed .seg-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const speed = Number(btn.dataset.speed);
+      if (speed !== (s.active.bounceSpeed || 42)) setBounce(s, s.active.bounce, speed);
+    });
+  });
   document.querySelectorAll("#t-limit .seg-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       const v = btn.dataset.limit === "off" ? null : Number(btn.dataset.limit);
@@ -671,15 +695,21 @@ async function deleteHistoryEntry(s, id) {
   refresh(true);
 }
 
-async function setBounce(s, bounce) {
+async function setBounce(s, bounce, speed) {
   if (!s.active) return;
+  const prevBounce = s.active.bounce;
+  const prevSpeed = s.active.bounceSpeed;
   s.active.bounce = bounce;
+  if (speed !== undefined) s.active.bounceSpeed = speed;
   renderDetail(false);
   renderHall();
-  const res = await teacherApi("/api/teacher/pass/bounce", { key: s.key, bounce });
+  const body = { key: s.key, bounce };
+  if (speed !== undefined) body.speed = speed;
+  const res = await teacherApi("/api/teacher/pass/bounce", body);
   if (res.status === 401) return kickToSignIn();
   if (!res.ok) {
-    s.active.bounce = !bounce;
+    s.active.bounce = prevBounce;
+    s.active.bounceSpeed = prevSpeed;
     renderDetail(false);
     renderHall();
     showToast(res.data.error || "Couldn't update that.", "warn");
