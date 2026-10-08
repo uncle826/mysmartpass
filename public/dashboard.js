@@ -152,6 +152,46 @@ let currentCategory = null;
 let comingFromRoom = null;
 let goingToRoom = null;
 
+// Schedule Pass: the popup starts with a date + time step, then shows the same room picker
+let scheduleMode = false;
+let scheduledFor = null;
+let scheduledCache = [];
+
+const passModal = document.getElementById("pass-modal");
+const scheduleView = document.getElementById("schedule-view");
+const schedWhen = document.getElementById("sched-when");
+const schedWhenText = document.getElementById("sched-when-text");
+
+/* Small date helpers (shared with calendar.js) */
+
+function startOfDay(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function sameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+// Monday-to-Friday weeks covering a month (days from the neighbouring months fill the gaps)
+function monthWeeks(monthDate) {
+  const y = monthDate.getFullYear();
+  const m = monthDate.getMonth();
+  const start = new Date(y, m, 1);
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  const last = new Date(y, m + 1, 0);
+  const weeks = [];
+  for (let w = new Date(start); w <= last; w.setDate(w.getDate() + 7)) {
+    const week = [];
+    for (let i = 0; i < 5; i++) week.push(new Date(w.getFullYear(), w.getMonth(), w.getDate() + i));
+    weeks.push(week);
+  }
+  return weeks;
+}
+
+function formatWhen(ts) {
+  return new Date(ts).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
 function setActiveField(field) {
   activeField = field;
   comingFromField.classList.toggle("active", field === "comingFrom");
@@ -320,8 +360,136 @@ function selectRoom(room) {
 
 function showPickerView() {
   durationView.classList.add("hidden");
+  scheduleView.classList.add("hidden");
+  passModal.classList.remove("schedule-mode");
   pickerView.classList.remove("hidden");
+  schedWhen.classList.toggle("hidden", !scheduleMode);
+  if (scheduleMode && scheduledFor) schedWhenText.textContent = formatWhen(scheduledFor);
 }
+
+function showScheduleView() {
+  pickerView.classList.add("hidden");
+  durationView.classList.add("hidden");
+  scheduleView.classList.remove("hidden");
+  passModal.classList.add("schedule-mode");
+  renderScheduleGrid();
+  renderScheduleTime();
+}
+
+/* Schedule step: month grid + time spinner */
+
+const schedGrid = document.getElementById("sched-grid");
+const schedMonthLabel = document.getElementById("sched-month-label");
+const schedHourEl = document.getElementById("sched-hour");
+const schedMinEl = document.getElementById("sched-min");
+const schedAmpmBtn = document.getElementById("sched-ampm");
+const schedError = document.getElementById("sched-error");
+
+let schedMonth = null;
+let schedDate = null;
+let schedHour = 5;
+let schedMin = 0;
+let schedPm = true;
+
+function initScheduleDefaults() {
+  // default to the next free 5-minute slot at least 10 minutes from now; weekends roll to Monday morning
+  let d = new Date(Date.now() + 10 * 60000);
+  d = new Date(Math.ceil(d.getTime() / 300000) * 300000);
+  if (d.getDay() === 0 || d.getDay() === 6) {
+    d = startOfDay(d);
+    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+    d.setHours(8, 0, 0, 0);
+  }
+  schedDate = startOfDay(d);
+  schedMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+  schedPm = d.getHours() >= 12;
+  schedHour = d.getHours() % 12 || 12;
+  schedMin = d.getMinutes();
+  schedError.classList.add("hidden");
+}
+
+function renderScheduleGrid() {
+  const today = startOfDay(new Date());
+  schedMonthLabel.textContent = schedMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  document.getElementById("sched-prev").disabled = schedMonth <= new Date(today.getFullYear(), today.getMonth(), 1);
+
+  schedGrid.innerHTML = monthWeeks(schedMonth)
+    .flat()
+    .map((d) => {
+      const past = d < today;
+      const other = d.getMonth() !== schedMonth.getMonth();
+      const selected = schedDate && sameDay(d, schedDate);
+      const cls = ["mini-day", past || other ? "muted" : "", selected ? "selected" : ""].join(" ");
+      return `<button type="button" class="${cls}" data-ts="${d.getTime()}" ${past ? "disabled" : ""}>${d.getDate()}</button>`;
+    })
+    .join("");
+
+  schedGrid.querySelectorAll(".mini-day:not(:disabled)").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      schedDate = new Date(Number(btn.dataset.ts));
+      renderScheduleGrid();
+    });
+  });
+}
+
+function renderScheduleTime() {
+  schedHourEl.textContent = String(schedHour).padStart(2, "0");
+  schedMinEl.textContent = String(schedMin).padStart(2, "0");
+  schedAmpmBtn.textContent = schedPm ? "PM" : "AM";
+}
+
+function scheduledTimestamp() {
+  const d = new Date(schedDate);
+  d.setHours((schedHour % 12) + (schedPm ? 12 : 0), schedMin, 0, 0);
+  return d.getTime();
+}
+
+document.getElementById("sched-prev").addEventListener("click", () => {
+  schedMonth = new Date(schedMonth.getFullYear(), schedMonth.getMonth() - 1, 1);
+  renderScheduleGrid();
+});
+document.getElementById("sched-next").addEventListener("click", () => {
+  schedMonth = new Date(schedMonth.getFullYear(), schedMonth.getMonth() + 1, 1);
+  renderScheduleGrid();
+});
+document.getElementById("sched-hour-up").addEventListener("click", () => {
+  schedHour = (schedHour % 12) + 1;
+  renderScheduleTime();
+});
+document.getElementById("sched-hour-down").addEventListener("click", () => {
+  schedHour = schedHour === 1 ? 12 : schedHour - 1;
+  renderScheduleTime();
+});
+document.getElementById("sched-min-up").addEventListener("click", () => {
+  schedMin = (schedMin + 5) % 60;
+  renderScheduleTime();
+});
+document.getElementById("sched-min-down").addEventListener("click", () => {
+  schedMin = (schedMin + 55) % 60;
+  renderScheduleTime();
+});
+schedAmpmBtn.addEventListener("click", () => {
+  schedPm = !schedPm;
+  renderScheduleTime();
+});
+
+document.getElementById("sched-continue").addEventListener("click", () => {
+  const ts = scheduledTimestamp();
+  if (ts < Date.now() + 60000) {
+    schedError.textContent = "Pick a time in the future.";
+    schedError.classList.remove("hidden");
+    return;
+  }
+  schedError.classList.add("hidden");
+  scheduledFor = ts;
+  showPickerView();
+  comingFromInput.focus();
+});
+
+document.getElementById("sched-back").addEventListener("click", () => {
+  goingToRoom = null;
+  showScheduleView();
+});
 
 function updateDurationValueText() {
   durationValue.textContent = `${durationSlider.value} min`;
@@ -335,7 +503,7 @@ function showDurationView(room) {
   durationDestIcon.innerHTML = roomIconMarkup(room.name, room.categoryKey);
   durationDestName.textContent = room.name;
   durationFrom.textContent = comingFromRoom ? comingFromRoom.name : "—";
-  document.getElementById("start-pass-label").textContent = rules.requestOnly ? "Send Request" : "Start Pass";
+  document.getElementById("start-pass-label").textContent = scheduleMode ? "Schedule Pass" : rules.requestOnly ? "Send Request" : "Start Pass";
   durationSlider.value = 5;
   updateDurationValueText();
 }
@@ -348,20 +516,31 @@ durationBack.addEventListener("click", () => {
   renderPicker("");
 });
 
-function openModal() {
+// centered: the big "Create Pass" button on the page opens it in the middle of the screen with a dimmed
+// backdrop; the top-bar buttons open it as a dropdown under the button instead
+function openModal({ centered = false, schedule = false } = {}) {
+  scheduleMode = schedule;
+  scheduledFor = null;
   activeField = "comingFrom";
   currentCategory = null;
   comingFromRoom = null;
   goingToRoom = null;
   comingFromInput.value = "";
   goingToInput.value = "";
-  showPickerView();
+  document.getElementById("duration-error").classList.add("hidden");
   setActiveField("comingFrom");
   renderPicker("");
+  overlay.classList.toggle("centered", centered);
+  if (schedule) {
+    initScheduleDefaults();
+    showScheduleView();
+  } else {
+    showPickerView();
+  }
   clearTimeout(closeTimer);
   overlay.classList.remove("closing");
   overlay.classList.remove("hidden");
-  comingFromInput.focus();
+  if (!schedule) comingFromInput.focus();
 }
 
 let closeTimer = null;
@@ -381,16 +560,20 @@ function passBlockedMessage() {
   return rules.usedToday >= rules.dailyLimit ? `You've used all ${rules.dailyLimit} of your passes for today.` : null;
 }
 
-function tryOpenModal() {
+function tryOpenModal(centered) {
   const blocked = passBlockedMessage();
   if (blocked) return showToast(blocked, "warn");
-  openModal();
+  openModal({ centered });
 }
 
-document.getElementById("create-pass-nav-btn").addEventListener("click", tryOpenModal);
-document.getElementById("create-pass-hero-btn").addEventListener("click", tryOpenModal);
+document.getElementById("create-pass-nav-btn").addEventListener("click", () => tryOpenModal(false));
+document.getElementById("create-pass-hero-btn").addEventListener("click", () => tryOpenModal(true));
+document.getElementById("schedule-pass-btn").addEventListener("click", () => openModal({ schedule: true }));
 overlay.addEventListener("click", (e) => {
   if (e.target === overlay) closeModal();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !overlay.classList.contains("hidden") && confirmOverlay.classList.contains("hidden")) closeModal();
 });
 
 modalBack.addEventListener("click", () => {
@@ -809,13 +992,15 @@ startPassBtn.addEventListener("click", async () => {
   startPassBtn.disabled = true;
   document.getElementById("duration-error").classList.add("hidden");
 
-  const asRequest = rules.requestOnly;
-  const res = await apiFetch(asRequest ? "/api/student/request" : "/api/student/pass", {
+  const scheduling = scheduleMode;
+  const asRequest = rules.requestOnly && !scheduling;
+  const res = await apiFetch(scheduling ? "/api/student/schedule" : asRequest ? "/api/student/request" : "/api/student/pass", {
     body: {
       name,
       dest: goingToRoom,
       from: comingFromRoom,
       minutes: parseInt(durationSlider.value, 10),
+      when: scheduling ? scheduledFor : undefined,
     },
   });
 
@@ -824,7 +1009,8 @@ startPassBtn.addEventListener("click", async () => {
 
   if (res.ok) {
     applyServerState(res.data);
-    if (asRequest) showToast("Request sent to your teacher.", "success");
+    if (scheduling) showToast(`Pass scheduled for ${formatWhen(scheduledFor)}.`, "success");
+    else if (asRequest) showToast("Request sent to your teacher.", "success");
     else sendBrowserNotification("Pass created", `Heading to ${goingToRoom.name}.`);
     closeModal();
     return;
@@ -872,6 +1058,16 @@ function updateRulesUI() {
   });
 }
 
+function updateScheduledNote() {
+  const note = document.getElementById("scheduled-note");
+  const next = scheduledCache[0];
+  note.classList.toggle("hidden", !next);
+  if (next) {
+    const more = scheduledCache.length > 1 ? ` (+${scheduledCache.length - 1} more)` : "";
+    note.textContent = `Scheduled: ${next.dest.name} · ${formatWhen(next.scheduledFor)}${more}`;
+  }
+}
+
 document.getElementById("request-cancel").addEventListener("click", async () => {
   const res = await apiFetch("/api/student/request/cancel", { body: { name } });
   if (res.ok) applyServerState(res.data);
@@ -907,11 +1103,21 @@ function applyServerState(state) {
   logCache = state.log || [];
   renderNotifications();
 
+  const previousScheduled = scheduledCache;
+  scheduledCache = state.scheduled || [];
+  updateScheduledNote();
+  if (typeof renderCalendar === "function") renderCalendar();
+
   const a = state.active;
   if (a) {
     if (!currentPass || currentPass.startTime !== a.startTime) {
       if (!overlay.classList.contains("hidden")) closeModal();
       startActivePass(a.room, a.endTime, a.from, a.startTime, a.message, a.createdBy);
+      if (typeof showMainPage === "function") showMainPage("home");
+      if (!firstSync && !a.createdBy && previousScheduled.some((s) => !scheduledCache.some((n) => n.id === s.id))) {
+        showToast(`Your scheduled pass to ${a.room.name} has started.`, "success");
+        sendBrowserNotification("Scheduled pass started", `Your pass to ${a.room.name} has started.`);
+      }
       if (a.createdBy && !firstSync) {
         sendBrowserNotification(
           "Pass created",

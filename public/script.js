@@ -5,9 +5,10 @@ const loadingText = document.getElementById("loading-text");
 const schoolView = document.getElementById("school-view");
 const codeForm = document.getElementById("code-form");
 const signupForm = document.getElementById("signup-form");
+const resetForm = document.getElementById("reset-form");
 const role = document.body.dataset.role || "student";
 
-const allViews = [loginForm, codeForm, signupForm, loadingView, schoolView].filter(Boolean);
+const allViews = [loginForm, codeForm, signupForm, resetForm, loadingView, schoolView].filter(Boolean);
 
 function showView(view) {
   allViews.forEach((v) => v.classList.add("hidden"));
@@ -59,16 +60,29 @@ loginForm.addEventListener("submit", async function (e) {
   }
 });
 
-/* Teacher "Create account": access code first, then the account form */
+/* Teacher "Create account" / "Forgot password?": access code first, then either form */
 let verifiedCode = "";
+let codeFlowMode = "signup";
 
 if (codeForm) {
   document.getElementById("create-account-link").addEventListener("click", (e) => {
     e.preventDefault();
+    codeFlowMode = "signup";
     clearError(codeForm);
     showView(codeForm);
     document.getElementById("access-code").focus();
   });
+
+  const forgotLink = document.getElementById("forgot-password-link");
+  if (forgotLink && resetForm) {
+    forgotLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      codeFlowMode = "reset";
+      clearError(codeForm);
+      showView(codeForm);
+      document.getElementById("access-code").focus();
+    });
+  }
 
   document.querySelectorAll("[data-back]").forEach((btn) =>
     btn.addEventListener("click", (e) => {
@@ -86,9 +100,15 @@ if (codeForm) {
     setBusy(codeForm, false);
     if (!res.ok) return showError(codeForm, res.data.error || "Incorrect access code.");
     verifiedCode = code;
-    clearError(signupForm);
-    showView(signupForm);
-    document.getElementById("new-username").focus();
+    if (codeFlowMode === "reset" && resetForm) {
+      clearError(resetForm);
+      showView(resetForm);
+      document.getElementById("reset-username").focus();
+    } else {
+      clearError(signupForm);
+      showView(signupForm);
+      document.getElementById("new-username").focus();
+    }
   });
 
   signupForm.addEventListener("submit", async (e) => {
@@ -106,6 +126,26 @@ if (codeForm) {
     localStorage.setItem("smartpass_teacher_token", res.data.token);
     finishSignIn(res.data.name);
   });
+
+  if (resetForm) {
+    resetForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearError(resetForm);
+      const username = document.getElementById("reset-username").value.trim();
+      const password = document.getElementById("reset-password").value;
+      if (password !== document.getElementById("reset-password2").value) {
+        return showError(resetForm, "Passwords don't match.");
+      }
+      setBusy(resetForm, true);
+      const res = await apiFetch("/api/teacher/reset-password", { body: { code: verifiedCode, username, password } });
+      setBusy(resetForm, false);
+      if (!res.ok) return showError(resetForm, res.data.error || "Couldn't reset that password.");
+      showView(loginForm);
+      const note = document.getElementById("auth-note");
+      note.textContent = "Password updated. Sign in with your new password.";
+      note.classList.remove("hidden");
+    });
+  }
 }
 
 document.querySelectorAll(".school-btn").forEach((btn) => {

@@ -8,8 +8,9 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#ffffff">
 <script src="pwa.js" defer></script>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="dashboard.css">
+<link rel="stylesheet" href="calendar.css">
 </head>
 <body>
 
@@ -17,18 +18,18 @@
     <div class="topbar-side"></div>
 
     <nav class="main-nav">
-      <a href="dashboard.html" class="nav-item active">
+      <a href="#" class="nav-item active" id="nav-home">
         <svg viewBox="0 0 24 24" class="nav-icon"><path d="M4 11 12 4l8 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v9a1 1 0 0 0 1 1h3v-5h4v5h3a1 1 0 0 0 1-1v-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <span>Home</span>
       </a>
-      <a href="#" class="nav-item">
+      <a href="#calendar" class="nav-item" id="nav-calendar">
         <svg viewBox="0 0 24 24" class="nav-icon"><rect x="4" y="5" width="16" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 9h16M8 3v3M16 3v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         <span>Calendar</span>
       </a>
     </nav>
 
     <div class="topbar-side right">
-      <button class="btn btn-outline">
+      <button class="btn btn-outline" id="schedule-pass-btn">
         <svg viewBox="0 0 24 24" class="btn-icon"><rect x="3" y="6" width="18" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 10h18" stroke="currentColor" stroke-width="2"/><path d="M8 14h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         Schedule Pass
       </button>
@@ -79,6 +80,7 @@
           Create Pass
         </button>
         <p class="pass-rules hidden" id="pass-rules"></p>
+        <p class="scheduled-note hidden" id="scheduled-note"></p>
       </div>
 
       <div class="request-card hidden" id="request-card">
@@ -171,9 +173,87 @@
     </aside>
   </main>
 
+  <main class="calendar-page hidden" id="calendar-page">
+    <aside class="cal-side">
+      <div class="mini-cal">
+        <div class="mini-cal-head">
+          <button type="button" class="cal-arrow" id="mini-prev" aria-label="Previous month"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <span class="mini-cal-title" id="mini-title"></span>
+          <button type="button" class="cal-arrow" id="mini-next" aria-label="Next month"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div>
+        <div class="mini-cal-weekdays"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span></div>
+        <div class="mini-cal-grid" id="mini-grid"></div>
+      </div>
+
+      <div class="cal-day-row">
+        <span class="cal-day-label" id="cal-day-label"></span>
+        <span class="cal-day-arrows">
+          <button type="button" class="cal-arrow" id="day-prev" aria-label="Previous day"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          <button type="button" class="cal-arrow" id="day-next" aria-label="Next day"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </span>
+      </div>
+      <div class="cal-day-list" id="cal-day-list"></div>
+    </aside>
+
+    <section class="cal-main">
+      <div class="cal-toolbar">
+        <button type="button" class="cal-today-btn" id="cal-today">Today</button>
+        <button type="button" class="cal-arrow" id="week-prev" aria-label="Previous week"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button type="button" class="cal-arrow" id="week-next" aria-label="Next week"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <h2 class="cal-title" id="cal-title"></h2>
+      </div>
+      <div class="cal-card">
+        <div class="cal-head" id="cal-head"></div>
+        <div class="cal-scroll" id="cal-scroll">
+          <div class="cal-body" id="cal-body"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
   <div class="modal-overlay hidden" id="pass-modal-overlay">
-    <div class="modal">
+    <div class="modal" id="pass-modal">
+      <div id="schedule-view" class="hidden">
+        <div class="sched-header">Select Schedule</div>
+        <div class="sched-body">
+          <div class="sched-month">
+            <button type="button" class="cal-arrow" id="sched-prev" aria-label="Previous month"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <span class="sched-month-label" id="sched-month-label"></span>
+            <button type="button" class="cal-arrow" id="sched-next" aria-label="Next month"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+          <div class="mini-cal-weekdays sched-weekdays"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span></div>
+          <div class="mini-cal-grid sched-grid" id="sched-grid"></div>
+
+          <div class="sched-time">
+            <div class="sched-spin">
+              <button type="button" id="sched-hour-up" aria-label="Later hour"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <span id="sched-hour">05</span>
+              <button type="button" id="sched-hour-down" aria-label="Earlier hour"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            </div>
+            <span class="sched-colon">:</span>
+            <div class="sched-spin">
+              <button type="button" id="sched-min-up" aria-label="Later minute"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <span id="sched-min">00</span>
+              <button type="button" id="sched-min-down" aria-label="Earlier minute"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            </div>
+            <button type="button" class="sched-ampm" id="sched-ampm">PM</button>
+          </div>
+
+          <p class="duration-error hidden" id="sched-error" role="alert"></p>
+          <button type="button" class="sched-continue" id="sched-continue">
+            Continue
+            <svg viewBox="0 0 24 24" class="btn-icon"><path d="M9 6l6 6-6 6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+
       <div id="picker-view">
+        <div class="sched-when hidden" id="sched-when">
+          <button type="button" class="modal-back" id="sched-back" aria-label="Back to date and time">
+            <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" fill="none" stroke="#1f195e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <span id="sched-when-text"></span>
+        </div>
         <div class="route">
           <div class="route-icons" aria-hidden="true">
             <span class="route-circle"></span>
@@ -250,5 +330,6 @@
 <script src="api.js"></script>
 <script src="rooms.js"></script>
 <script src="dashboard.js"></script>
+<script src="calendar.js"></script>
 </body>
 </html>

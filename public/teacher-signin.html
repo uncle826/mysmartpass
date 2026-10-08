@@ -39,7 +39,7 @@
       <button type="submit" class="next-btn">Sign In</button>
 
       <div class="auth-links">
-        <a href="#" class="auth-link" data-soon="Password reset is coming soon.">Forgot password?</a>
+        <a href="#" class="auth-link" id="forgot-password-link">Forgot password?</a>
         <a href="#" class="auth-link" id="create-account-link">Create account</a>
       </div>
       <p class="auth-note hidden" id="auth-note" role="status"></p>
@@ -66,6 +66,18 @@
       <input type="password" id="new-password2" class="text-input" placeholder="Confirm password" autocomplete="new-password" required>
       <p class="auth-error hidden" role="alert"></p>
       <button type="submit" class="next-btn">Create Account</button>
+      <a href="#" class="switch-link" data-back>Back to sign in</a>
+    </form>
+
+    <form id="reset-form" class="hidden">
+      <label for="reset-username" class="field-label">Username</label>
+      <input type="text" id="reset-username" class="text-input" placeholder="Username" autocomplete="username" required>
+      <label for="reset-password" class="field-label">New Password</label>
+      <input type="password" id="reset-password" class="text-input" placeholder="At least 6 characters" autocomplete="new-password" required>
+      <label for="reset-password2" class="field-label">Confirm New Password</label>
+      <input type="password" id="reset-password2" class="text-input" placeholder="Confirm new password" autocomplete="new-password" required>
+      <p class="auth-error hidden" role="alert"></p>
+      <button type="submit" class="next-btn">Reset Password</button>
       <a href="#" class="switch-link" data-back>Back to sign in</a>
     </form>
 
