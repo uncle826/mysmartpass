@@ -9,8 +9,8 @@
 <meta name="theme-color" content="#ffffff">
 <script src="pwa.js" defer></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="dashboard.css">
-<link rel="stylesheet" href="calendar.css">
+<link rel="stylesheet" href="dashboard.css?v=4">
+<link rel="stylesheet" href="calendar.css?v=4">
 </head>
 <body>
 
@@ -248,6 +248,7 @@
       </div>
 
       <div id="picker-view">
+        <div class="modal-top" aria-hidden="true"></div>
         <div class="sched-when hidden" id="sched-when">
           <button type="button" class="modal-back" id="sched-back" aria-label="Back to date and time">
             <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" fill="none" stroke="#1f195e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -327,9 +328,9 @@
     </div>
   </div>
 
-<script src="api.js"></script>
-<script src="rooms.js"></script>
-<script src="dashboard.js"></script>
-<script src="calendar.js"></script>
+<script src="api.js?v=4"></script>
+<script src="rooms.js?v=4"></script>
+<script src="dashboard.js?v=4"></script>
+<script src="calendar.js?v=4"></script>
 </body>
 </html>
