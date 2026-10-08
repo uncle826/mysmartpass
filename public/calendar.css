@@ -554,6 +554,144 @@
   background: #e0386b;
 }
 
+/* ---------- Compact pass box (same size as the real SmartPass) ---------- */
+
+.modal {
+  width: 340px;
+  max-height: min(400px, calc(100vh - 118px));
+  padding: 14px 16px 16px 16px;
+  border-radius: 12px;
+  overflow-y: auto;
+}
+
+.modal-overlay.centered .modal {
+  max-height: min(400px, calc(100vh - 48px));
+}
+
+.modal-overlay {
+  padding-top: 76px;
+}
+
+.route {
+  gap: 10px;
+}
+
+.route-fields {
+  gap: 8px;
+}
+
+.modal-field {
+  padding: 5px 16px;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid #e3e6ee;
+}
+
+.modal-field.active {
+  border-color: #4b55c9;
+  box-shadow: 0 0 0 3px rgba(99, 112, 235, 0.18);
+}
+
+.modal-input {
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.route-icons {
+  padding: 8px 0;
+}
+
+.route.from-only .route-dots,
+.route.from-only .route-pin,
+.route.from-only #going-to-field {
+  display: none;
+}
+
+.route.from-only .route-icons {
+  justify-content: center;
+}
+
+.modal-list-header {
+  margin: 12px 0 6px 0;
+}
+
+.modal-list-title {
+  font-size: 16px;
+}
+
+.modal-room-list {
+  margin: 0 -6px;
+}
+
+.room-row {
+  gap: 8px;
+  padding: 5px 6px;
+}
+
+.room-icon {
+  width: 29px;
+  height: 29px;
+}
+
+.room-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.room-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.room-code {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.category-grid {
+  gap: 8px;
+}
+
+.category-tile {
+  padding: 9px;
+  border-radius: 10px;
+}
+
+.category-tile-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.category-tile-label {
+  font-size: 12px;
+}
+
+.duration-slider {
+  height: 150px;
+}
+
+.duration-header-divider {
+  margin: 12px 0 16px 0;
+}
+
+.duration-dest-title {
+  font-size: 18px;
+}
+
+.duration-start-btn {
+  margin-top: 14px;
+  padding: 13px;
+  font-size: 15px;
+}
+
+.duration-question {
+  font-size: 16px;
+}
+
+.duration-value {
+  font-size: 22px;
+}
+
 @media (max-width: 760px) {
   .calendar-page {
     flex-direction: column;

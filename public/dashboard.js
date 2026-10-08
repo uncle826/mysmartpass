@@ -342,11 +342,17 @@ function renderPicker(filterText) {
   }
 }
 
+// like the real SmartPass, "Going to?" only appears once you've picked where you're coming from
+function updateRouteMode() {
+  document.getElementById("route").classList.toggle("from-only", !comingFromRoom);
+}
+
 function selectRoom(room) {
   if (activeField === "comingFrom") {
     comingFromRoom = room;
     comingFromInput.value = room.name;
     currentCategory = null;
+    updateRouteMode();
     setActiveField("goingTo");
     renderPicker("");
     goingToInput.focus();
@@ -528,6 +534,7 @@ function openModal({ centered = false, schedule = false } = {}) {
   comingFromInput.value = "";
   goingToInput.value = "";
   document.getElementById("duration-error").classList.add("hidden");
+  updateRouteMode();
   setActiveField("comingFrom");
   renderPicker("");
   overlay.classList.toggle("centered", centered);
