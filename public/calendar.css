@@ -557,15 +557,15 @@
 /* ---------- Compact pass box (same size as the real SmartPass) ---------- */
 
 .modal {
-  width: 340px;
-  max-height: min(400px, calc(100vh - 118px));
+  width: 380px;
+  max-height: min(450px, calc(100vh - 118px));
   padding: 14px 16px 16px 16px;
   border-radius: 12px;
   overflow-y: auto;
 }
 
 .modal-overlay.centered .modal {
-  max-height: min(400px, calc(100vh - 48px));
+  max-height: min(450px, calc(100vh - 48px));
 }
 
 .modal-overlay {
