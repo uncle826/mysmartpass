@@ -524,7 +524,9 @@ durationBack.addEventListener("click", () => {
 
 // centered: the big "Create Pass" button on the page opens it in the middle of the screen with a dimmed
 // backdrop; the top-bar buttons open it as a dropdown under the button instead
-function openModal({ centered = false, schedule = false } = {}) {
+function openModal({ centered = false, schedule = false, anchor = null } = {}) {
+  // a dropdown lines its right edge up with the button that opened it
+  overlay.style.paddingRight = !centered && anchor ? `${Math.max(8, window.innerWidth - anchor.getBoundingClientRect().right)}px` : "";
   scheduleMode = schedule;
   scheduledFor = null;
   activeField = "comingFrom";
@@ -567,15 +569,17 @@ function passBlockedMessage() {
   return rules.usedToday >= rules.dailyLimit ? `You've used all ${rules.dailyLimit} of your passes for today.` : null;
 }
 
-function tryOpenModal(centered) {
+function tryOpenModal(centered, anchor) {
   const blocked = passBlockedMessage();
   if (blocked) return showToast(blocked, "warn");
-  openModal({ centered });
+  openModal({ centered, anchor });
 }
 
-document.getElementById("create-pass-nav-btn").addEventListener("click", () => tryOpenModal(false));
+const navCreateBtn = document.getElementById("create-pass-nav-btn");
+const scheduleBtn = document.getElementById("schedule-pass-btn");
+navCreateBtn.addEventListener("click", () => tryOpenModal(false, navCreateBtn));
 document.getElementById("create-pass-hero-btn").addEventListener("click", () => tryOpenModal(true));
-document.getElementById("schedule-pass-btn").addEventListener("click", () => openModal({ schedule: true }));
+scheduleBtn.addEventListener("click", () => openModal({ schedule: true, anchor: scheduleBtn }));
 overlay.addEventListener("click", (e) => {
   if (e.target === overlay) closeModal();
 });

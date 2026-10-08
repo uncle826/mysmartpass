@@ -26,7 +26,22 @@
   padding: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  width: 340px;
+  width: 425px;
+  max-height: min(600px, calc(100vh - 100px));
+}
+
+.sched-grid .mini-day {
+  width: 34px;
+  height: 34px;
+  font-size: 14px;
+}
+
+.sched-weekdays {
+  font-size: 13px;
+}
+
+.sched-month-label {
+  font-size: 16px;
 }
 
 .sched-header {
@@ -554,35 +569,51 @@
   background: #e0386b;
 }
 
-/* ---------- Compact pass box (same size as the real SmartPass) ---------- */
+/* ---------- Pass box (sized to match the real SmartPass: about 425 x 445) ---------- */
 
 .modal {
-  width: 345px;
-  max-height: min(460px, calc(100vh - 118px));
-  padding: 14px 16px 16px 16px;
-  border-radius: 12px;
+  width: 425px;
+  max-height: min(445px, calc(100vh - 118px));
+  padding: 16px 16px 16px 16px;
+  border-radius: 14px;
   overflow-y: auto;
 }
 
 .modal-overlay.centered .modal {
-  max-height: min(460px, calc(100vh - 48px));
+  max-height: min(445px, calc(100vh - 48px));
 }
 
 .modal-overlay {
   padding-top: 76px;
 }
 
+/* the room-picking step is a fixed-size card, like the real one */
+.modal:has(#picker-view:not(.hidden)) {
+  height: min(445px, calc(100vh - 118px));
+}
+
+.modal-overlay.centered .modal:has(#picker-view:not(.hidden)) {
+  height: min(445px, calc(100vh - 48px));
+}
+
+.modal-top {
+  height: 57px;
+  margin: -16px -16px 16px -16px;
+  border-bottom: 1px solid #dde1ea;
+  flex-shrink: 0;
+}
+
 .route {
-  gap: 10px;
+  gap: 12px;
 }
 
 .route-fields {
-  gap: 8px;
+  gap: 10px;
 }
 
 .modal-field {
-  padding: 5px 16px;
-  border-radius: 20px;
+  padding: 9px 20px;
+  border-radius: 22px;
   background: #ffffff;
   border: 1px solid #e3e6ee;
 }
@@ -593,12 +624,12 @@
 }
 
 .modal-input {
-  font-size: 15px;
+  font-size: 16px;
   line-height: 20px;
 }
 
 .route-icons {
-  padding: 8px 0;
+  padding: 10px 0;
 }
 
 .route.from-only .route-dots,
@@ -612,7 +643,7 @@
 }
 
 .modal-list-header {
-  margin: 12px 0 6px 0;
+  margin: 14px 0 6px 0;
 }
 
 .modal-list-title {
@@ -624,34 +655,18 @@
 }
 
 .room-row {
-  gap: 8px;
-  padding: 8px 6px;
-}
-
-/* the picker step is a fixed-size card, like the real one: blank top strip, then the search pill and list */
-.modal:has(#picker-view:not(.hidden)) {
-  height: min(360px, calc(100vh - 118px));
-}
-
-.modal-overlay.centered .modal:has(#picker-view:not(.hidden)) {
-  height: min(360px, calc(100vh - 48px));
-}
-
-.modal-top {
-  height: 38px;
-  margin: -14px -16px 12px -16px;
-  border-bottom: 1px solid #dde1ea;
-  flex-shrink: 0;
+  gap: 10px;
+  padding: 10px 8px;
 }
 
 .room-icon {
-  width: 29px;
-  height: 29px;
+  width: 36px;
+  height: 36px;
 }
 
 .room-icon svg {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
 }
 
 .room-name {
@@ -664,48 +679,16 @@
   font-weight: 500;
 }
 
-.category-grid {
-  gap: 8px;
-}
-
-.category-tile {
-  padding: 9px;
-  border-radius: 10px;
-}
-
-.category-tile-icon {
-  width: 24px;
-  height: 24px;
-}
-
-.category-tile-label {
-  font-size: 12px;
-}
-
-.duration-slider {
-  height: 150px;
-}
-
-.duration-header-divider {
-  margin: 12px 0 16px 0;
-}
-
 .duration-dest-title {
-  font-size: 18px;
+  font-size: 20px;
 }
 
 .duration-start-btn {
-  margin-top: 14px;
-  padding: 13px;
-  font-size: 15px;
+  margin-top: 16px;
 }
 
-.duration-question {
-  font-size: 16px;
-}
-
-.duration-value {
-  font-size: 22px;
+.sched-when {
+  margin: 0 0 14px 0;
 }
 
 @media (max-width: 760px) {
