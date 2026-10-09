@@ -10,8 +10,8 @@
 <script src="pwa.js" defer></script>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="dashboard.css">
-<link rel="stylesheet" href="teacher.css?v=12">
-<link rel="stylesheet" href="teacher-extra.css?v=12">
+<link rel="stylesheet" href="teacher.css?v=13">
+<link rel="stylesheet" href="teacher-extra.css?v=13">
 </head>
 <body>
 
@@ -242,6 +242,19 @@
     </div>
   </div>
 
+  <div class="confirm-overlay hidden" id="pw-overlay">
+    <div class="confirm-box pw-box" role="dialog" aria-modal="true" aria-labelledby="pw-title">
+      <h3 id="pw-title"></h3>
+      <div class="pw-value" id="pw-value"></div>
+      <p class="pw-hint" id="pw-hint"></p>
+      <div class="pw-actions">
+        <button type="button" class="btn pw-copy" id="pw-copy">Copy</button>
+        <button type="button" class="btn btn-danger-outline" id="pw-reset">Reset password</button>
+      </div>
+      <button type="button" class="pw-close" id="pw-close">Close</button>
+    </div>
+  </div>
+
   <div class="confirm-overlay hidden" id="reset-pw-overlay">
     <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="reset-pw-title">
       <h3 id="reset-pw-title">Reset password?</h3>
@@ -253,8 +266,8 @@
     </div>
   </div>
 
-<script src="api.js?v=12"></script>
-<script src="rooms.js?v=12"></script>
-<script src="teacher-dashboard.js?v=12"></script>
+<script src="api.js?v=13"></script>
+<script src="rooms.js?v=13"></script>
+<script src="teacher-dashboard.js?v=13"></script>
 </body>
 </html>

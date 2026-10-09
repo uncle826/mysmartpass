@@ -240,33 +240,8 @@ function selectStudent(key) {
 
 /* ---------- student detail ---------- */
 
-// the little "i" next to a student's name reveals their Learn password in case they forget it
-let passwordShownKey = null;
-const passwordCache = new Map();
-
-function passwordPillHtml(s) {
-  if (passwordShownKey !== s.key) return "";
-  if (!passwordCache.has(s.key)) return `<div class="t-password-pill">Loading…</div>`;
-  const pw = passwordCache.get(s.key);
-  return pw
-    ? `<div class="t-password-pill">Password: <b>${escapeHtml(pw)}</b></div>`
-    : `<div class="t-password-pill muted">No password yet — they'll pick one next time they sign in.</div>`;
-}
-
-// showing a password takes the 4-digit code on a keypad; hiding it forgets it again
-function togglePassword(s) {
-  if (passwordShownKey === s.key) {
-    hidePassword(s.key);
-    renderDetail(false);
-    return;
-  }
-  openPin(s);
-}
-
-function hidePassword(key) {
-  if (passwordShownKey === key) passwordShownKey = null;
-  passwordCache.delete(key);
-}
+// A student's Learn password sits behind a 4-digit code. "Show student password" asks for the code and then opens a
+// box with the password (copy it, or reset it from there). "Reset password" asks for the code too, then confirms.
 
 /* keypad popup */
 
@@ -276,19 +251,24 @@ const pinError = document.getElementById("pin-error");
 const pinDots = document.querySelectorAll("#pin-dots span");
 const pinBox = pinOverlay.querySelector(".pin-box");
 let pinStudent = null;
+let pinPurpose = "show";
 let pinValue = "";
 let pinBusy = false;
+// the code that was just accepted — kept only while the password box or the reset confirmation is open
+let unlockedPin = "";
 
 function renderPin() {
   pinDots.forEach((dot, i) => dot.classList.toggle("on", i < pinValue.length));
 }
 
-function openPin(s) {
+function openPin(s, purpose) {
   pinStudent = s;
+  pinPurpose = purpose;
   pinValue = "";
   pinBusy = false;
   pinError.textContent = "";
-  pinSub.textContent = `Enter the code to see ${s.name}'s password.`;
+  pinSub.textContent =
+    purpose === "reset" ? `Enter the code to reset ${s.name}'s password.` : `Enter the code to see ${s.name}'s password.`;
   renderPin();
   openOverlay(pinOverlay);
 }
@@ -301,9 +281,11 @@ function closePin() {
 
 async function submitPin() {
   const s = pinStudent;
+  const purpose = pinPurpose;
+  const entered = pinValue;
   if (!s || pinBusy) return;
   pinBusy = true;
-  const res = await teacherApi("/api/teacher/student/password", { key: s.key, pin: pinValue });
+  const res = await teacherApi("/api/teacher/student/password", { key: s.key, pin: entered });
   pinBusy = false;
   if (res.status === 401) return kickToSignIn();
   if (!res.ok) {
@@ -315,10 +297,10 @@ async function submitPin() {
     renderPin();
     return;
   }
-  passwordCache.set(s.key, res.data.password);
-  passwordShownKey = s.key;
   closePin();
-  renderDetail(false);
+  unlockedPin = entered;
+  if (purpose === "reset") openResetPassword(s);
+  else openPasswordBox(s, res.data.password);
 }
 
 function pressPinKey(key) {
@@ -337,11 +319,81 @@ document.getElementById("pin-cancel").addEventListener("click", closePin);
 pinOverlay.addEventListener("click", (e) => {
   if (e.target === pinOverlay) closePin();
 });
-document.addEventListener("keydown", (e) => {
-  if (pinOverlay.classList.contains("hidden")) return;
-  if (/^[0-9]$/.test(e.key)) pressPinKey(e.key);
-  else if (e.key === "Backspace") pressPinKey("back");
-  else if (e.key === "Escape") closePin();
+
+/* the password box: copy it, or reset it */
+
+const pwOverlay = document.getElementById("pw-overlay");
+const pwTitle = document.getElementById("pw-title");
+const pwValue = document.getElementById("pw-value");
+const pwHint = document.getElementById("pw-hint");
+const pwCopyBtn = document.getElementById("pw-copy");
+let pwStudent = null;
+let pwCurrent = null;
+let pwCopyTimer = null;
+
+function openPasswordBox(s, password) {
+  pwStudent = s;
+  pwCurrent = password || null;
+  pwTitle.textContent = `${s.name}'s password`;
+  pwValue.textContent = password || "No password yet";
+  pwValue.classList.toggle("empty", !password);
+  pwHint.textContent = password
+    ? "Give this to them if they forget it."
+    : "They'll pick one the next time they sign in.";
+  pwCopyBtn.classList.toggle("hidden", !password);
+  clearTimeout(pwCopyTimer);
+  pwCopyBtn.textContent = "Copy";
+  openOverlay(pwOverlay);
+}
+
+function closePasswordBox() {
+  closeOverlay(pwOverlay);
+  pwStudent = null;
+  pwCurrent = null;
+  unlockedPin = "";
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // older browsers / blocked clipboard: select a hidden field and copy from it
+    const field = document.createElement("textarea");
+    field.value = text;
+    field.style.position = "fixed";
+    field.style.opacity = "0";
+    document.body.appendChild(field);
+    field.select();
+    let ok = false;
+    try {
+      ok = document.execCommand("copy");
+    } catch {
+      ok = false;
+    }
+    field.remove();
+    return ok;
+  }
+}
+
+pwCopyBtn.addEventListener("click", async () => {
+  if (!pwCurrent) return;
+  const ok = await copyText(pwCurrent);
+  pwCopyBtn.textContent = ok ? "Copied!" : "Press Ctrl+C";
+  clearTimeout(pwCopyTimer);
+  pwCopyTimer = setTimeout(() => (pwCopyBtn.textContent = "Copy"), 1600);
+});
+document.getElementById("pw-close").addEventListener("click", closePasswordBox);
+document.getElementById("pw-reset").addEventListener("click", () => {
+  const s = pwStudent;
+  if (!s) return;
+  closeOverlay(pwOverlay);
+  pwStudent = null;
+  pwCurrent = null;
+  openResetPassword(s); // the code was already accepted for this box, so it goes straight to the confirmation
+});
+pwOverlay.addEventListener("click", (e) => {
+  if (e.target === pwOverlay) closePasswordBox();
 });
 
 /* reset password */
@@ -358,6 +410,8 @@ function openResetPassword(s) {
 
 function closeResetPassword() {
   closeOverlay(resetOverlay);
+  resetStudent = null;
+  unlockedPin = "";
 }
 
 document.getElementById("reset-pw-cancel").addEventListener("click", closeResetPassword);
@@ -368,14 +422,23 @@ document.getElementById("reset-pw-confirm").addEventListener("click", async (e) 
   const s = resetStudent;
   if (!s) return;
   e.target.disabled = true;
-  const res = await teacherApi("/api/teacher/student/reset-password", { key: s.key });
+  const res = await teacherApi("/api/teacher/student/reset-password", { key: s.key, pin: unlockedPin });
   e.target.disabled = false;
   if (res.status === 401) return kickToSignIn();
   closeResetPassword();
   if (!res.ok) return showToast(res.data.error || "Couldn't reset the password.", "warn");
-  hidePassword(s.key);
-  renderDetail(false);
   showToast(`${s.name}'s password was reset. They'll pick a new one at their next sign in.`, "success");
+});
+
+document.addEventListener("keydown", (e) => {
+  if (!pinOverlay.classList.contains("hidden")) {
+    if (/^[0-9]$/.test(e.key)) pressPinKey(e.key);
+    else if (e.key === "Backspace") pressPinKey("back");
+    else if (e.key === "Escape") closePin();
+  } else if (e.key === "Escape") {
+    if (!resetOverlay.classList.contains("hidden")) closeResetPassword();
+    else if (!pwOverlay.classList.contains("hidden")) closePasswordBox();
+  }
 });
 
 function renderRules(s) {
@@ -528,11 +591,8 @@ function renderDetail(animate = true) {
         <span class="t-avatar-cam"><svg viewBox="0 0 24 24"><path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="2.2"/></svg></span>
       </button>
       <div class="t-detail-title">
-        <h2>${escapeHtml(s.name)}
-          <button type="button" class="t-info-btn ${passwordShownKey === s.key ? "on" : ""}" id="t-info-btn" title="Show password" aria-label="Show ${escapeHtml(s.name)}'s password">i</button>
-        </h2>
+        <h2>${escapeHtml(s.name)}</h2>
         <div class="t-status" id="t-status"></div>
-        ${passwordPillHtml(s)}
       </div>
       <div class="t-actions">${actions}</div>
     </div>
@@ -553,7 +613,7 @@ function renderDetail(animate = true) {
     ${historyHtml}
 
     <div class="t-pw-actions">
-      <button type="button" class="t-show-pw-btn" id="t-show-pw-btn">${passwordShownKey === s.key ? "Hide student password" : "Show student password"}</button>
+      <button type="button" class="t-show-pw-btn" id="t-show-pw-btn">Show student password</button>
       <button type="button" class="btn btn-outline t-reset-pw-btn" id="t-reset-pw-btn">Reset password</button>
     </div>
 
@@ -568,9 +628,8 @@ function renderDetail(animate = true) {
   const endBtn = document.getElementById("t-end-btn");
   if (endBtn) endBtn.addEventListener("click", () => endStudentPass(s));
   document.getElementById("t-photo-btn").addEventListener("click", () => openPhotoDialog({ type: "student", key: s.key, name: s.name }));
-  document.getElementById("t-info-btn").addEventListener("click", () => togglePassword(s));
-  document.getElementById("t-show-pw-btn").addEventListener("click", () => togglePassword(s));
-  document.getElementById("t-reset-pw-btn").addEventListener("click", () => openResetPassword(s));
+  document.getElementById("t-show-pw-btn").addEventListener("click", () => openPin(s, "show"));
+  document.getElementById("t-reset-pw-btn").addEventListener("click", () => openPin(s, "reset"));
   const unhideBtn = document.getElementById("t-unhide-btn");
   if (unhideBtn) unhideBtn.addEventListener("click", () => setHidden(s, false));
   const deleteStudentBtn = document.getElementById("t-delete-student-btn");
