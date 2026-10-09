@@ -691,6 +691,122 @@
   margin: 0 0 14px 0;
 }
 
+/* ---------- Active pass screen (glassy card + stats, like the real SmartPass) ---------- */
+
+.pass-card {
+  max-width: 380px;
+  padding: 22px 22px 22px 22px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.pass-dest-icon {
+  width: 34px;
+  height: 34px;
+}
+
+.pass-card-title {
+  font-size: 28px;
+}
+
+.pass-card-subtitle {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pass-from-row {
+  margin: 10px 0 18px 0;
+}
+
+.pass-from-line {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.pass-from {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pass-from-badge {
+  padding: 3px 10px;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.pass-ring {
+  width: 200px;
+  height: 200px;
+  margin: 0 auto 28px auto;
+}
+
+.pass-ring-track,
+.pass-ring-progress {
+  stroke-width: 16;
+}
+
+.pass-ring-track {
+  stroke: rgba(255, 255, 255, 0.28);
+}
+
+.pass-ring-timer {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.pass-end-btn {
+  padding: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.22);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.pass-end-btn:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.pass-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: 100%;
+  max-width: 380px;
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);
+  animation: passCardIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s both;
+}
+
+.pass-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 6px;
+  border-radius: 8px;
+  background: #f4f5f8;
+}
+
+.pass-stat b {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f195e;
+}
+
+.pass-stat span {
+  font-size: 14px;
+  font-weight: 500;
+  color: #7083a0;
+}
+
+/* while the pass is bouncing around the screen the stats card steps out of the way */
+.pass-card.bouncing ~ .pass-stats {
+  display: none;
+}
+
+
 @media (max-width: 760px) {
   .calendar-page {
     flex-direction: column;

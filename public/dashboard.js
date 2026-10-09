@@ -634,7 +634,7 @@ function formatRemaining(endTime) {
   const totalSeconds = Math.max(0, Math.ceil((endTime - serverTime()) / 1000));
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 function formatOvertime(endTime) {
@@ -651,6 +651,40 @@ function shadeColor(hex, amount) {
   const g = clamp(((num >> 8) & 0xff) + amount);
   const b = clamp((num & 0xff) + amount);
   return `#${(0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1)}`;
+}
+
+// blend a hex color toward another by t (0 = unchanged, 1 = fully the target)
+function mixColor(hex, target, t) {
+  const a = parseInt(hex.slice(1), 16);
+  const b = parseInt(target.slice(1), 16);
+  const ch = (shift) => Math.round(((a >> shift) & 0xff) * (1 - t) + ((b >> shift) & 0xff) * t);
+  return `rgb(${ch(16)}, ${ch(8)}, ${ch(0)})`;
+}
+
+// the pass card is the destination's color with a soft glassy lift; the page behind it is a deeper wash of the same color
+function passCardBg(hex) {
+  return `linear-gradient(160deg, ${mixColor(hex, "#ffffff", 0.14)}, ${mixColor(hex, "#000000", 0.04)})`;
+}
+
+function passPageBg(hex) {
+  return `linear-gradient(160deg, ${mixColor(hex, "#000000", 0.34)}, ${mixColor(hex, "#000000", 0.5)})`;
+}
+
+/* Stats card under the pass: how many passes today, this week (from Monday) and this month */
+
+function updatePassStats() {
+  const now = new Date();
+  const today = startOfDay(now).getTime();
+  const weekStart = new Date(today);
+  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+  const starts = logCache.map((p) => p.startTime);
+  if (currentPass) starts.push(currentPass.startTime);
+
+  document.getElementById("stat-today").textContent = starts.filter((t) => t >= today).length;
+  document.getElementById("stat-week").textContent = starts.filter((t) => t >= weekStart.getTime()).length;
+  document.getElementById("stat-month").textContent = starts.filter((t) => t >= monthStart).length;
 }
 
 function enterOvertime() {
@@ -707,8 +741,8 @@ function startActivePass(room, endTime, fromRoom, startTime, message, createdBy)
   activePassMessage.classList.toggle("hidden", !message);
 
   const category = categoryByKey(room.categoryKey);
-  activePass.style.background = `linear-gradient(160deg, ${shadeColor(category.color, -110)}, ${shadeColor(category.color, -155)})`;
-  passCard.style.background = `linear-gradient(160deg, ${shadeColor(category.color, 25)}, ${shadeColor(category.color, -20)})`;
+  activePass.style.background = passPageBg(category.color);
+  passCard.style.background = passCardBg(category.color);
   activePassDestination.textContent = room.name;
   activePassDestIcon.innerHTML = roomIconMarkup(room.name, room.categoryKey);
   if (fromRoom) {
@@ -744,8 +778,8 @@ function startChaos() {
   if (chaosColorTimer) return;
   chaosColorTimer = setInterval(() => {
     const c = BOUNCE_COLORS[Math.floor(Math.random() * BOUNCE_COLORS.length)];
-    passCard.style.background = "linear-gradient(160deg, " + shadeColor(c, 25) + ", " + shadeColor(c, -20) + ")";
-    activePass.style.background = "linear-gradient(160deg, " + shadeColor(c, -110) + ", " + shadeColor(c, -155) + ")";
+    passCard.style.background = passCardBg(c);
+    activePass.style.background = passPageBg(c);
   }, 80);
   chaosNotifTimer = setInterval(() => {
     // real OS notifications only — stacks up in Windows/macOS/ChromeOS's own
@@ -811,9 +845,9 @@ function startBounce(speed) {
     if (bounced) {
       colorIdx = (colorIdx + 1) % BOUNCE_COLORS.length;
       const c = BOUNCE_COLORS[colorIdx];
-      passCard.style.background = "linear-gradient(160deg, " + shadeColor(c, 25) + ", " + shadeColor(c, -20) + ")";
+      passCard.style.background = passCardBg(c);
       // a faded, dark version of the same color washes over the full background, in sync
-      activePass.style.background = "linear-gradient(160deg, " + shadeColor(c, -110) + ", " + shadeColor(c, -155) + ")";
+      activePass.style.background = passPageBg(c);
     }
     passCard.style.transform = "translate(" + x + "px, " + y + "px)";
     bounceLoop = requestAnimationFrame(step);
@@ -835,8 +869,8 @@ function stopBounce() {
   passCard.style.top = "";
   if (currentPass) {
     const category = categoryByKey(currentPass.room.categoryKey);
-    passCard.style.background = "linear-gradient(160deg, " + shadeColor(category.color, 25) + ", " + shadeColor(category.color, -20) + ")";
-    activePass.style.background = "linear-gradient(160deg, " + shadeColor(category.color, -110) + ", " + shadeColor(category.color, -155) + ")";
+    passCard.style.background = passCardBg(category.color);
+    activePass.style.background = passPageBg(category.color);
   }
 }
 
@@ -1150,6 +1184,7 @@ function applyServerState(state) {
     resetActivePassUI();
     currentPass = null;
   }
+  updatePassStats();
   updateRulesUI();
   handleDecision(state);
   firstSync = false;
