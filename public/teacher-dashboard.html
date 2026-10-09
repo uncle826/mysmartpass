@@ -10,8 +10,8 @@
 <script src="pwa.js" defer></script>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="dashboard.css">
-<link rel="stylesheet" href="teacher.css?v=10">
-<link rel="stylesheet" href="teacher-extra.css?v=10">
+<link rel="stylesheet" href="teacher.css?v=12">
+<link rel="stylesheet" href="teacher-extra.css?v=12">
 </head>
 <body>
 
@@ -217,8 +217,44 @@
     </div>
   </div>
 
-<script src="api.js?v=10"></script>
-<script src="rooms.js?v=10"></script>
-<script src="teacher-dashboard.js?v=10"></script>
+  <div class="confirm-overlay hidden" id="pin-overlay">
+    <div class="confirm-box pin-box" role="dialog" aria-modal="true" aria-labelledby="pin-title">
+      <h3 id="pin-title">Enter code</h3>
+      <p class="pin-sub" id="pin-sub"></p>
+      <div class="pin-dots" id="pin-dots" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+      <p class="pin-error" id="pin-error" role="alert"></p>
+      <div class="pin-pad">
+        <button type="button" data-pin-key="1">1</button>
+        <button type="button" data-pin-key="2">2</button>
+        <button type="button" data-pin-key="3">3</button>
+        <button type="button" data-pin-key="4">4</button>
+        <button type="button" data-pin-key="5">5</button>
+        <button type="button" data-pin-key="6">6</button>
+        <button type="button" data-pin-key="7">7</button>
+        <button type="button" data-pin-key="8">8</button>
+        <button type="button" data-pin-key="9">9</button>
+        <button type="button" class="pin-cancel" id="pin-cancel">Cancel</button>
+        <button type="button" data-pin-key="0">0</button>
+        <button type="button" class="pin-back" data-pin-key="back" aria-label="Delete last digit">
+          <svg viewBox="0 0 24 24"><path d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 9.5l5 5M17 9.5l-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="confirm-overlay hidden" id="reset-pw-overlay">
+    <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="reset-pw-title">
+      <h3 id="reset-pw-title">Reset password?</h3>
+      <p id="reset-pw-sub"></p>
+      <div class="confirm-actions">
+        <button type="button" class="confirm-btn confirm-cancel" id="reset-pw-cancel">Cancel</button>
+        <button type="button" class="confirm-btn confirm-delete" id="reset-pw-confirm">Reset password</button>
+      </div>
+    </div>
+  </div>
+
+<script src="api.js?v=12"></script>
+<script src="rooms.js?v=12"></script>
+<script src="teacher-dashboard.js?v=12"></script>
 </body>
 </html>

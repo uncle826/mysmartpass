@@ -560,7 +560,7 @@ async function handleApi(request, env, url) {
         .bind(password, now, tz, key)
         .run();
     } else if (!safeEqual(existing.password, password)) {
-      return fail("That password isn't right. Ask your teacher if you forgot it.", 401);
+      return fail("That password isn't right. Try again.", 401);
     } else {
       await env.DB.prepare("UPDATE students SET last_seen = ?, tz_offset = COALESCE(?, tz_offset) WHERE key = ?")
         .bind(now, tz, key)
@@ -852,13 +852,32 @@ async function handleApi(request, env, url) {
       return json({ ok: true });
     }
 
+    // seeing a student's password takes a 4-digit code (the PASSWORD_PIN variable, 2012 unless changed)
     if (pathname === "/api/teacher/student/password" && method === "POST") {
       const body = await readBody(request);
       const key = String(body.key || "");
       if (!key || key.length > 80) return fail("Invalid request.");
+
+      const bucket = `pin:${teacher.username}`;
+      if (!(await allowAttempt(env, bucket, 8, 15 * 60000))) return fail("Too many wrong codes. Please wait a few minutes.", 429);
+      if (!safeEqual(String(body.pin || ""), String(env.PASSWORD_PIN || "2012"))) return fail("Wrong code.", 403);
+      await clearAttempts(env, bucket);
+
       const row = await env.DB.prepare("SELECT password FROM students WHERE key = ?").bind(key).first();
       if (!row) return fail("Student not found.", 404);
       return json({ password: row.password || null });
+    }
+
+    // clears a student's password so they pick a new one the next time they sign in (and signs them out everywhere)
+    if (pathname === "/api/teacher/student/reset-password" && method === "POST") {
+      const body = await readBody(request);
+      const key = String(body.key || "");
+      if (!key || key.length > 80) return fail("Invalid request.");
+      const row = await env.DB.prepare("SELECT key FROM students WHERE key = ?").bind(key).first();
+      if (!row) return fail("Student not found.", 404);
+      await env.DB.prepare("UPDATE students SET password = NULL WHERE key = ?").bind(key).run();
+      await env.DB.prepare("DELETE FROM student_sessions WHERE student_key = ?").bind(key).run();
+      return json({ ok: true });
     }
 
     if (pathname === "/api/teacher/students" && method === "GET") {

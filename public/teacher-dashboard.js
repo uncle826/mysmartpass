@@ -253,26 +253,130 @@ function passwordPillHtml(s) {
     : `<div class="t-password-pill muted">No password yet — they'll pick one next time they sign in.</div>`;
 }
 
-async function togglePassword(s) {
+// showing a password takes the 4-digit code on a keypad; hiding it forgets it again
+function togglePassword(s) {
   if (passwordShownKey === s.key) {
-    passwordShownKey = null;
+    hidePassword(s.key);
     renderDetail(false);
     return;
   }
-  passwordShownKey = s.key;
-  renderDetail(false);
-  if (!passwordCache.has(s.key)) {
-    const res = await teacherApi("/api/teacher/student/password", { key: s.key });
-    if (res.status === 401) return kickToSignIn();
-    if (!res.ok) {
-      passwordShownKey = null;
-      renderDetail(false);
-      return showToast(res.data.error || "Couldn't load the password.", "warn");
-    }
-    passwordCache.set(s.key, res.data.password);
-    if (passwordShownKey === s.key) renderDetail(false);
-  }
+  openPin(s);
 }
+
+function hidePassword(key) {
+  if (passwordShownKey === key) passwordShownKey = null;
+  passwordCache.delete(key);
+}
+
+/* keypad popup */
+
+const pinOverlay = document.getElementById("pin-overlay");
+const pinSub = document.getElementById("pin-sub");
+const pinError = document.getElementById("pin-error");
+const pinDots = document.querySelectorAll("#pin-dots span");
+const pinBox = pinOverlay.querySelector(".pin-box");
+let pinStudent = null;
+let pinValue = "";
+let pinBusy = false;
+
+function renderPin() {
+  pinDots.forEach((dot, i) => dot.classList.toggle("on", i < pinValue.length));
+}
+
+function openPin(s) {
+  pinStudent = s;
+  pinValue = "";
+  pinBusy = false;
+  pinError.textContent = "";
+  pinSub.textContent = `Enter the code to see ${s.name}'s password.`;
+  renderPin();
+  openOverlay(pinOverlay);
+}
+
+function closePin() {
+  closeOverlay(pinOverlay);
+  pinStudent = null;
+  pinValue = "";
+}
+
+async function submitPin() {
+  const s = pinStudent;
+  if (!s || pinBusy) return;
+  pinBusy = true;
+  const res = await teacherApi("/api/teacher/student/password", { key: s.key, pin: pinValue });
+  pinBusy = false;
+  if (res.status === 401) return kickToSignIn();
+  if (!res.ok) {
+    pinError.textContent = res.data.error || "Couldn't check the code.";
+    pinBox.classList.remove("shake");
+    void pinBox.offsetWidth;
+    pinBox.classList.add("shake");
+    pinValue = "";
+    renderPin();
+    return;
+  }
+  passwordCache.set(s.key, res.data.password);
+  passwordShownKey = s.key;
+  closePin();
+  renderDetail(false);
+}
+
+function pressPinKey(key) {
+  if (pinBusy || !pinStudent) return;
+  pinError.textContent = "";
+  if (key === "back") pinValue = pinValue.slice(0, -1);
+  else if (pinValue.length < 4) pinValue += key;
+  renderPin();
+  if (pinValue.length === 4) submitPin();
+}
+
+pinOverlay.querySelectorAll("[data-pin-key]").forEach((btn) => {
+  btn.addEventListener("click", () => pressPinKey(btn.dataset.pinKey));
+});
+document.getElementById("pin-cancel").addEventListener("click", closePin);
+pinOverlay.addEventListener("click", (e) => {
+  if (e.target === pinOverlay) closePin();
+});
+document.addEventListener("keydown", (e) => {
+  if (pinOverlay.classList.contains("hidden")) return;
+  if (/^[0-9]$/.test(e.key)) pressPinKey(e.key);
+  else if (e.key === "Backspace") pressPinKey("back");
+  else if (e.key === "Escape") closePin();
+});
+
+/* reset password */
+
+const resetOverlay = document.getElementById("reset-pw-overlay");
+const resetSub = document.getElementById("reset-pw-sub");
+let resetStudent = null;
+
+function openResetPassword(s) {
+  resetStudent = s;
+  resetSub.textContent = `${s.name} will pick a new password the next time they sign in, and will be signed out on their other devices.`;
+  openOverlay(resetOverlay);
+}
+
+function closeResetPassword() {
+  closeOverlay(resetOverlay);
+}
+
+document.getElementById("reset-pw-cancel").addEventListener("click", closeResetPassword);
+resetOverlay.addEventListener("click", (e) => {
+  if (e.target === resetOverlay) closeResetPassword();
+});
+document.getElementById("reset-pw-confirm").addEventListener("click", async (e) => {
+  const s = resetStudent;
+  if (!s) return;
+  e.target.disabled = true;
+  const res = await teacherApi("/api/teacher/student/reset-password", { key: s.key });
+  e.target.disabled = false;
+  if (res.status === 401) return kickToSignIn();
+  closeResetPassword();
+  if (!res.ok) return showToast(res.data.error || "Couldn't reset the password.", "warn");
+  hidePassword(s.key);
+  renderDetail(false);
+  showToast(`${s.name}'s password was reset. They'll pick a new one at their next sign in.`, "success");
+});
 
 function renderRules(s) {
   const options = LIMIT_OPTIONS.map((o) => {
@@ -448,6 +552,11 @@ function renderDetail(animate = true) {
     <h3 class="t-history-title">Where ${escapeHtml(s.name)} has been</h3>
     ${historyHtml}
 
+    <div class="t-pw-actions">
+      <button type="button" class="t-show-pw-btn" id="t-show-pw-btn">${passwordShownKey === s.key ? "Hide student password" : "Show student password"}</button>
+      <button type="button" class="btn btn-outline t-reset-pw-btn" id="t-reset-pw-btn">Reset password</button>
+    </div>
+
     ${s.hidden ? "" : `
     <button type="button" class="btn btn-danger-outline t-delete-student-btn" id="t-delete-student-btn">
       <svg viewBox="0 0 24 24"><path d="M4 7h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -460,6 +569,8 @@ function renderDetail(animate = true) {
   if (endBtn) endBtn.addEventListener("click", () => endStudentPass(s));
   document.getElementById("t-photo-btn").addEventListener("click", () => openPhotoDialog({ type: "student", key: s.key, name: s.name }));
   document.getElementById("t-info-btn").addEventListener("click", () => togglePassword(s));
+  document.getElementById("t-show-pw-btn").addEventListener("click", () => togglePassword(s));
+  document.getElementById("t-reset-pw-btn").addEventListener("click", () => openResetPassword(s));
   const unhideBtn = document.getElementById("t-unhide-btn");
   if (unhideBtn) unhideBtn.addEventListener("click", () => setHidden(s, false));
   const deleteStudentBtn = document.getElementById("t-delete-student-btn");
