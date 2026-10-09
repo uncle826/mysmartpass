@@ -74,6 +74,13 @@ if (passwordForm) {
     nameInput.focus();
   });
 
+  // there's no email to send a reset to, so a forgotten password is looked up by the teacher
+  const forgotNote = document.getElementById("forgot-note");
+  document.getElementById("forgot-password").addEventListener("click", (e) => {
+    e.preventDefault();
+    forgotNote.classList.toggle("hidden");
+  });
+
   passwordForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     clearError(passwordForm);

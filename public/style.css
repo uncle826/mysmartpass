@@ -381,3 +381,13 @@ body.fade-out {
   line-height: 1.45;
   text-align: center;
 }
+
+#password-form .forgot-link {
+  margin-top: 16px;
+  color: #1d4e77;
+  font-weight: 600;
+}
+
+#password-form .back-link {
+  margin-top: 12px;
+}
