@@ -21,7 +21,11 @@ const MIGRATIONS = [
   "ALTER TABLE passes ADD COLUMN bounce INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE students ADD COLUMN always_bounce INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE passes ADD COLUMN bounce_speed INTEGER NOT NULL DEFAULT 42",
+  "ALTER TABLE students ADD COLUMN password TEXT",
 ];
+
+// "Learn" followed by exactly five digits (the word itself can be typed in any case)
+const STUDENT_PASSWORD_RE = /^learn\d{5}$/i;
 
 const MIN_BOUNCE_SPEED = 10;
 const MAX_BOUNCE_SPEED = 60000;
@@ -188,6 +192,12 @@ function ensureSchema(env) {
           "CREATE TABLE IF NOT EXISTS classes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, room TEXT, logo TEXT, created_by TEXT, created_at INTEGER NOT NULL)"
         ),
         db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS classes_name ON classes (name COLLATE NOCASE)"),
+        db.prepare(
+          "CREATE TABLE IF NOT EXISTS scheduled_passes (id INTEGER PRIMARY KEY AUTOINCREMENT, student_key TEXT NOT NULL, dest_name TEXT NOT NULL, dest_room TEXT, dest_category TEXT NOT NULL, from_name TEXT, from_room TEXT, from_category TEXT, minutes INTEGER NOT NULL, scheduled_for INTEGER NOT NULL, created_at INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'scheduled')"
+        ),
+        db.prepare("CREATE INDEX IF NOT EXISTS scheduled_student ON scheduled_passes (student_key, status, scheduled_for)"),
+        db.prepare("CREATE TABLE IF NOT EXISTS app_meta (k TEXT PRIMARY KEY, v TEXT NOT NULL)"),
+        db.prepare("CREATE TABLE IF NOT EXISTS student_sessions (token_hash TEXT PRIMARY KEY, student_key TEXT NOT NULL, expires_at INTEGER NOT NULL)"),
       ])
       .then(async () => {
         for (const sql of MIGRATIONS) {
@@ -204,6 +214,34 @@ function ensureSchema(env) {
       });
   }
   return schemaReady;
+}
+
+// If the ADMIN_PASSWORD variable is set in wrangler.jsonc, the "admin" teacher account's password is set to it
+// once per value: changing the variable applies the new password, while resetting it from the sign-in page
+// afterwards sticks (the stored fingerprint only changes when the variable does).
+let adminPasswordChecked = false;
+
+async function applyAdminPassword(env) {
+  const wanted = env.ADMIN_PASSWORD;
+  if (!wanted || adminPasswordChecked) return;
+
+  const fingerprint = await sha256Hex(`admin-password:${wanted}`);
+  const done = await env.DB.prepare("SELECT v FROM app_meta WHERE k = 'admin_password_applied'").first();
+  if (!done || done.v !== fingerprint) {
+    const salt = randomHex(16);
+    const hash = await hashPassword(wanted, salt);
+    const existing = await env.DB.prepare("SELECT username FROM teachers WHERE username = 'admin'").first();
+    if (existing) {
+      await env.DB.prepare("UPDATE teachers SET salt = ?, hash = ? WHERE username = 'admin'").bind(salt, hash).run();
+      await env.DB.prepare("DELETE FROM sessions WHERE username = 'admin'").run();
+    } else {
+      await env.DB.prepare("INSERT INTO teachers (username, display, salt, hash, created_at) VALUES ('admin', 'admin', ?, ?, ?)")
+        .bind(salt, hash, Date.now())
+        .run();
+    }
+    await env.DB.prepare("INSERT OR REPLACE INTO app_meta (k, v) VALUES ('admin_password_applied', ?)").bind(fingerprint).run();
+  }
+  adminPasswordChecked = true;
 }
 
 async function allowAttempt(env, bucket, limit, windowMs) {
@@ -263,6 +301,58 @@ function requestFromRow(row) {
   };
 }
 
+function scheduledFromRow(row) {
+  return {
+    id: row.id,
+    dest: { name: row.dest_name, room: row.dest_room || "", categoryKey: row.dest_category },
+    from: row.from_name ? { name: row.from_name, room: row.from_room || "", categoryKey: row.from_category } : null,
+    minutes: row.minutes,
+    scheduledFor: row.scheduled_for,
+  };
+}
+
+const MAX_SCHEDULED = 20;
+const SCHEDULE_AHEAD_MS = 60 * DAY_MS;
+const SCHEDULE_GRACE_MS = 30 * 60000;
+
+// a scheduled pass starts by itself once its time arrives and the student is free (checked whenever
+// the student's page syncs); one that's more than 30 minutes late is dropped
+async function activateDueScheduled(env, key, student) {
+  const now = Date.now();
+  const due = await env.DB
+    .prepare("SELECT * FROM scheduled_passes WHERE student_key = ? AND status = 'scheduled' AND scheduled_for <= ? ORDER BY scheduled_for ASC LIMIT 1")
+    .bind(key, now)
+    .first();
+  if (!due) return;
+
+  const setStatus = (status) =>
+    env.DB.prepare("UPDATE scheduled_passes SET status = ? WHERE id = ?").bind(status, due.id).run();
+
+  if (now - due.scheduled_for > SCHEDULE_GRACE_MS) return void (await setStatus("missed"));
+  const busy = await env.DB.prepare("SELECT id FROM passes WHERE student_key = ? AND finished_at IS NULL").bind(key).first();
+  if (busy) return;
+  if (await limitMessage(env, key, student)) return void (await setStatus("cancelled"));
+
+  const dest = { name: due.dest_name, room: due.dest_room || "", categoryKey: due.dest_category };
+  const from = due.from_name ? { name: due.from_name, room: due.from_room || "", categoryKey: due.from_category } : null;
+
+  if (student.request_only) {
+    try {
+      await env.DB.prepare(
+        "INSERT INTO pass_requests (student_key, dest_name, dest_room, dest_category, from_name, from_room, from_category, minutes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      )
+        .bind(key, dest.name, dest.room, dest.categoryKey, from ? from.name : null, from ? from.room : null, from ? from.categoryKey : null, due.minutes, now)
+        .run();
+    } catch (err) {
+      if (String(err && err.message).includes("UNIQUE")) return;
+      throw err;
+    }
+    return void (await setStatus("started"));
+  }
+
+  if (await createPass(env, key, dest, from, due.minutes, null)) await setStatus("started");
+}
+
 async function passesToday(env, key, tzOffset) {
   const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM passes WHERE student_key = ? AND start_time >= ?")
     .bind(key, dayStart(Date.now(), tzOffset))
@@ -284,6 +374,12 @@ async function studentState(env, key) {
     .bind(key)
     .first();
   if (!student) return null;
+
+  await activateDueScheduled(env, key, student);
+  const scheduledRows = await env.DB
+    .prepare("SELECT * FROM scheduled_passes WHERE student_key = ? AND status = 'scheduled' ORDER BY scheduled_for ASC")
+    .bind(key)
+    .all();
 
   const now = Date.now();
   const activeRow = await env.DB.prepare("SELECT * FROM passes WHERE student_key = ? AND finished_at IS NULL").bind(key).first();
@@ -312,6 +408,7 @@ async function studentState(env, key) {
     request: pending ? requestFromRow(pending) : null,
     decision: decided ? { id: decided.id, status: decided.status, destName: decided.dest_name } : null,
     active: activeRow ? activeFromRow(activeRow) : null,
+    scheduled: scheduledRows.results.map(scheduledFromRow),
     log: logRows.results.map(logFromRow),
     serverNow: now,
   };
@@ -377,6 +474,36 @@ async function newSession(env, username) {
   return token;
 }
 
+/* ---------------- student sessions ---------------- */
+
+async function newStudentSession(env, key) {
+  const token = randomHex(32);
+  const now = Date.now();
+  await env.DB.prepare("DELETE FROM student_sessions WHERE expires_at < ?").bind(now).run();
+  await env.DB.prepare("INSERT INTO student_sessions (token_hash, student_key, expires_at) VALUES (?, ?, ?)")
+    .bind(await sha256Hex(token), key, now + SESSION_MS)
+    .run();
+  return token;
+}
+
+// returns a 401 response unless the request carries a valid token for the student it names
+async function requireStudentSession(request, env, url) {
+  const header = request.headers.get("authorization") || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  const signInAgain = () => fail("Please sign in again.", 401);
+  if (!token) return signInAgain();
+
+  const session = await env.DB.prepare("SELECT student_key, expires_at FROM student_sessions WHERE token_hash = ?")
+    .bind(await sha256Hex(token))
+    .first();
+  if (!session || session.expires_at < Date.now()) return signInAgain();
+
+  const rawName = request.method === "GET" ? url.searchParams.get("name") : (await readBody(request.clone())).name;
+  const name = cleanName(rawName);
+  if (!name || keyOf(name) !== session.student_key) return signInAgain();
+  return null;
+}
+
 async function requireTeacher(request, env) {
   const header = request.headers.get("authorization") || "";
   const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
@@ -402,7 +529,7 @@ async function handleApi(request, env, url) {
   const { pathname } = url;
   const method = request.method;
 
-  /* ----- students (name only, no password) ----- */
+  /* ----- students (name + "Learn" password) ----- */
 
   if (pathname === "/api/student/login" && method === "POST") {
     const body = await readBody(request);
@@ -410,19 +537,45 @@ async function handleApi(request, env, url) {
     const key = name && keyOf(name);
     if (!key) return fail("Please enter a valid name.");
 
+    // the password is "Learn" followed by exactly 5 numbers — anything else is refused
+    const typed = String(body.password || "").trim();
+    if (!STUDENT_PASSWORD_RE.test(typed)) return fail("Your password is Learn followed by 5 numbers, like Learn12345.");
+    const password = `Learn${typed.slice(5)}`;
+
+    const ip = clientIp(request);
+    const bucket = `slogin:${ip}:${key}`;
+    if (!(await allowAttempt(env, bucket, 10, 15 * 60000))) return fail("Too many tries. Please wait a few minutes and try again.", 429);
+
     const now = Date.now();
     const tz = cleanTz(body.tz);
-    const existing = await env.DB.prepare("SELECT key FROM students WHERE key = ?").bind(key).first();
-    if (existing) {
+    const existing = await env.DB.prepare("SELECT key, password FROM students WHERE key = ?").bind(key).first();
+    if (!existing) {
+      // first time this name signs in: the password they type becomes theirs
+      await env.DB.prepare("INSERT INTO students (key, name, created_at, last_seen, tz_offset, password) VALUES (?, ?, ?, ?, ?, ?)")
+        .bind(key, name, now, now, tz === null ? 0 : tz, password)
+        .run();
+    } else if (!existing.password) {
+      // a student from before passwords existed picks theirs the next time they sign in
+      await env.DB.prepare("UPDATE students SET password = ?, last_seen = ?, tz_offset = COALESCE(?, tz_offset) WHERE key = ?")
+        .bind(password, now, tz, key)
+        .run();
+    } else if (!safeEqual(existing.password, password)) {
+      return fail("That password isn't right. Ask your teacher if you forgot it.", 401);
+    } else {
       await env.DB.prepare("UPDATE students SET last_seen = ?, tz_offset = COALESCE(?, tz_offset) WHERE key = ?")
         .bind(now, tz, key)
         .run();
-    } else {
-      await env.DB.prepare("INSERT INTO students (key, name, created_at, last_seen, tz_offset) VALUES (?, ?, ?, ?, ?)")
-        .bind(key, name, now, now, tz === null ? 0 : tz)
-        .run();
     }
-    return json(await studentState(env, key));
+    await clearAttempts(env, bucket);
+
+    const state = await studentState(env, key);
+    return json({ ...state, token: await newStudentSession(env, key) });
+  }
+
+  // everything else a student does needs the session token they got when they signed in
+  if (pathname.startsWith("/api/student/")) {
+    const denied = await requireStudentSession(request, env, url);
+    if (denied) return denied;
   }
 
   if (pathname === "/api/student/state" && method === "GET") {
@@ -510,6 +663,51 @@ async function handleApi(request, env, url) {
     return json(await studentState(env, key));
   }
 
+  if (pathname === "/api/student/schedule" && method === "POST") {
+    const body = await readBody(request);
+    const name = cleanName(body.name);
+    const key = name && keyOf(name);
+    const dest = cleanDest(body.dest);
+    if (!key || !dest) return fail("Invalid pass.");
+
+    let from = null;
+    if (body.from) {
+      from = cleanDest(body.from);
+      if (!from) return fail("Invalid pass.");
+    }
+    const when = Math.round(Number(body.when));
+    const now = Date.now();
+    if (!Number.isFinite(when) || when < now + 60000) return fail("Pick a time in the future.");
+    if (when > now + SCHEDULE_AHEAD_MS) return fail("You can schedule up to 60 days ahead.");
+
+    const student = await env.DB.prepare("SELECT key FROM students WHERE key = ?").bind(key).first();
+    if (!student) return fail("Student not found.", 404);
+    const count = await env.DB
+      .prepare("SELECT COUNT(*) AS n FROM scheduled_passes WHERE student_key = ? AND status = 'scheduled'")
+      .bind(key)
+      .first();
+    if (count && count.n >= MAX_SCHEDULED) return fail("You have too many scheduled passes. Cancel one first.", 403);
+
+    await env.DB.prepare(
+      "INSERT INTO scheduled_passes (student_key, dest_name, dest_room, dest_category, from_name, from_room, from_category, minutes, scheduled_for, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    )
+      .bind(key, dest.name, dest.room, dest.categoryKey, from ? from.name : null, from ? from.room : null, from ? from.categoryKey : null, clampMinutes(body.minutes), when, now)
+      .run();
+    return json(await studentState(env, key));
+  }
+
+  if (pathname === "/api/student/schedule/cancel" && method === "POST") {
+    const body = await readBody(request);
+    const name = cleanName(body.name);
+    const key = name && keyOf(name);
+    const id = Math.round(Number(body.id));
+    if (!key || !Number.isFinite(id)) return fail("Invalid request.");
+    await env.DB.prepare("UPDATE scheduled_passes SET status = 'cancelled' WHERE id = ? AND student_key = ? AND status = 'scheduled'")
+      .bind(id, key)
+      .run();
+    return json(await studentState(env, key));
+  }
+
   if (pathname === "/api/student/pass/end" && method === "POST") {
     const body = await readBody(request);
     const name = cleanName(body.name);
@@ -582,6 +780,32 @@ async function handleApi(request, env, url) {
     return json({ token: await newSession(env, username), name: display });
   }
 
+  if (pathname === "/api/teacher/reset-password" && method === "POST") {
+    const body = await readBody(request);
+    const ip = clientIp(request);
+    if (!(await allowAttempt(env, `code:${ip}`, 8, 15 * 60000))) {
+      return fail("Too many attempts. Please wait a few minutes and try again.", 429);
+    }
+    if (!(await codeIsValid(env, body.code))) return fail("Incorrect access code.", 403);
+
+    const username = String(body.username || "").replace(/\s+/g, " ").trim().toLowerCase();
+    const password = String(body.password || "");
+    if (!username) return fail("Enter the username.");
+    if (password.length < 6 || password.length > 100) return fail("Passwords need at least 6 characters.");
+
+    const existing = await env.DB.prepare("SELECT username FROM teachers WHERE username = ?").bind(username).first();
+    if (!existing) return fail("No account with that username.", 404);
+
+    const salt = randomHex(16);
+    await env.DB.prepare("UPDATE teachers SET salt = ?, hash = ? WHERE username = ?")
+      .bind(salt, await hashPassword(password, salt), username)
+      .run();
+    await env.DB.prepare("DELETE FROM sessions WHERE username = ?").bind(username).run();
+    await clearAttempts(env, `code:${ip}`);
+
+    return json({ ok: true });
+  }
+
   if (pathname === "/api/teacher/login" && method === "POST") {
     const body = await readBody(request);
     const ip = clientIp(request);
@@ -626,6 +850,15 @@ async function handleApi(request, env, url) {
       const token = (request.headers.get("authorization") || "").slice(7).trim();
       await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(await sha256Hex(token)).run();
       return json({ ok: true });
+    }
+
+    if (pathname === "/api/teacher/student/password" && method === "POST") {
+      const body = await readBody(request);
+      const key = String(body.key || "");
+      if (!key || key.length > 80) return fail("Invalid request.");
+      const row = await env.DB.prepare("SELECT password FROM students WHERE key = ?").bind(key).first();
+      if (!row) return fail("Student not found.", 404);
+      return json({ password: row.password || null });
     }
 
     if (pathname === "/api/teacher/students" && method === "GET") {
@@ -838,6 +1071,7 @@ export default {
 
     try {
       await ensureSchema(env);
+      await applyAdminPassword(env);
       return await handleApi(request, env, url);
     } catch (err) {
       console.error("API error", err && err.message);

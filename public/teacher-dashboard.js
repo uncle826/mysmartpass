@@ -240,6 +240,40 @@ function selectStudent(key) {
 
 /* ---------- student detail ---------- */
 
+// the little "i" next to a student's name reveals their Learn password in case they forget it
+let passwordShownKey = null;
+const passwordCache = new Map();
+
+function passwordPillHtml(s) {
+  if (passwordShownKey !== s.key) return "";
+  if (!passwordCache.has(s.key)) return `<div class="t-password-pill">Loading…</div>`;
+  const pw = passwordCache.get(s.key);
+  return pw
+    ? `<div class="t-password-pill">Password: <b>${escapeHtml(pw)}</b></div>`
+    : `<div class="t-password-pill muted">No password yet — they'll pick one next time they sign in.</div>`;
+}
+
+async function togglePassword(s) {
+  if (passwordShownKey === s.key) {
+    passwordShownKey = null;
+    renderDetail(false);
+    return;
+  }
+  passwordShownKey = s.key;
+  renderDetail(false);
+  if (!passwordCache.has(s.key)) {
+    const res = await teacherApi("/api/teacher/student/password", { key: s.key });
+    if (res.status === 401) return kickToSignIn();
+    if (!res.ok) {
+      passwordShownKey = null;
+      renderDetail(false);
+      return showToast(res.data.error || "Couldn't load the password.", "warn");
+    }
+    passwordCache.set(s.key, res.data.password);
+    if (passwordShownKey === s.key) renderDetail(false);
+  }
+}
+
 function renderRules(s) {
   const options = LIMIT_OPTIONS.map((o) => {
     const active = o.value === s.dailyLimit ? "active" : "";
@@ -390,8 +424,11 @@ function renderDetail(animate = true) {
         <span class="t-avatar-cam"><svg viewBox="0 0 24 24"><path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="2.2"/></svg></span>
       </button>
       <div class="t-detail-title">
-        <h2>${escapeHtml(s.name)}</h2>
+        <h2>${escapeHtml(s.name)}
+          <button type="button" class="t-info-btn ${passwordShownKey === s.key ? "on" : ""}" id="t-info-btn" title="Show password" aria-label="Show ${escapeHtml(s.name)}'s password">i</button>
+        </h2>
         <div class="t-status" id="t-status"></div>
+        ${passwordPillHtml(s)}
       </div>
       <div class="t-actions">${actions}</div>
     </div>
@@ -422,6 +459,7 @@ function renderDetail(animate = true) {
   const endBtn = document.getElementById("t-end-btn");
   if (endBtn) endBtn.addEventListener("click", () => endStudentPass(s));
   document.getElementById("t-photo-btn").addEventListener("click", () => openPhotoDialog({ type: "student", key: s.key, name: s.name }));
+  document.getElementById("t-info-btn").addEventListener("click", () => togglePassword(s));
   const unhideBtn = document.getElementById("t-unhide-btn");
   if (unhideBtn) unhideBtn.addEventListener("click", () => setHidden(s, false));
   const deleteStudentBtn = document.getElementById("t-delete-student-btn");

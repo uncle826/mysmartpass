@@ -8,8 +8,19 @@ function serverTime() {
   return Date.now() + serverClockOffset;
 }
 
+// students prove who they are with the token they got at sign-in; if it's missing or expired they go back to sign in
+function isStudentCall(path) {
+  return path.startsWith("/api/student/") && !path.startsWith("/api/student/login");
+}
+
+function signOutStudent() {
+  ["smartpass_name", "smartpass_role", "smartpass_school", "smartpass_student_token"].forEach((k) => localStorage.removeItem(k));
+  location.replace("/student-signin");
+}
+
 async function apiFetch(path, options = {}) {
-  const { method, body, token } = options;
+  const { method, body } = options;
+  const token = options.token || (isStudentCall(path) ? localStorage.getItem("smartpass_student_token") : null);
   try {
     const res = await fetch(path, {
       method: method || (body ? "POST" : "GET"),
@@ -28,6 +39,7 @@ async function apiFetch(path, options = {}) {
       data = null;
     }
     if (data && data.serverNow) syncServerClock(data.serverNow);
+    if (res.status === 401 && isStudentCall(path)) signOutStudent();
     return { ok: res.ok, status: res.status, data: data || {} };
   } catch {
     return {

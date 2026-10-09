@@ -1068,3 +1068,48 @@
   background: #4b55c9;
   color: #ffffff;
 }
+
+/* "i" button + password reveal next to the student name */
+.t-info-btn {
+  width: 20px;
+  height: 20px;
+  margin-left: 6px;
+  padding: 0;
+  vertical-align: middle;
+  border: 1.5px solid #b3bbd0;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #7083a0;
+  font: italic 700 12px/1 Georgia, "Times New Roman", serif;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.t-info-btn:hover,
+.t-info-btn.on {
+  background: #2b2560;
+  border-color: #2b2560;
+  color: #ffffff;
+}
+
+.t-password-pill {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 5px 12px;
+  border-radius: 14px;
+  background: #eef0fb;
+  color: #4b55c9;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.t-password-pill b {
+  font-size: 14.5px;
+  letter-spacing: 0.3px;
+  user-select: all;
+}
+
+.t-password-pill.muted {
+  background: #f4f6f9;
+  color: #6b7484;
+}

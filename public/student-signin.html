@@ -36,6 +36,15 @@
       <a href="/teacher-signin" class="switch-link">Are you a teacher? Sign in here</a>
     </form>
 
+    <form id="password-form" class="hidden" autocomplete="off">
+      <label for="learn-password" class="field-label">Enter Learn password</label>
+      <input type="password" id="learn-password" name="learn-password" class="text-input" placeholder="Learn password" maxlength="10" autocomplete="off" autocapitalize="off" spellcheck="false" required>
+      <p class="password-hint">Learn followed by 5 numbers, like Learn12345.<br>First time? Pick one in that style and remember it.</p>
+      <p class="auth-error hidden" role="alert"></p>
+      <button type="submit" class="next-btn">Next</button>
+      <a href="#" class="switch-link" id="password-back">Not you? Go back</a>
+    </form>
+
     <div class="loading-view hidden" id="loading-view">
       <div class="spinner"></div>
       <p class="loading-text" id="loading-text">Setting things up&hellip;</p>
@@ -54,7 +63,7 @@
     </div>
   </div>
 
-<script src="api.js"></script>
-<script src="script.js"></script>
+<script src="api.js?v=10"></script>
+<script src="script.js?v=10"></script>
 </body>
 </html>

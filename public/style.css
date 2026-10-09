@@ -373,3 +373,11 @@ body.fade-out {
   opacity: 1;
   animation: none;
 }
+
+.password-hint {
+  margin: -4px 0 16px 0;
+  color: #6b7484;
+  font-size: 13.5px;
+  line-height: 1.45;
+  text-align: center;
+}

@@ -69,6 +69,7 @@ document.getElementById("sign-out-btn").addEventListener("click", () => {
   localStorage.removeItem("smartpass_role");
   localStorage.removeItem("smartpass_name");
   localStorage.removeItem("smartpass_school");
+  localStorage.removeItem("smartpass_student_token");
   document.body.classList.add("fade-out");
   setTimeout(() => {
     window.location.href = signInPage;
@@ -1279,7 +1280,7 @@ function applyServerState(state) {
 async function loadState() {
   if (busy) return;
   let res = await apiFetch(`/api/student/state?name=${encodeURIComponent(name)}&tz=${tzOffset()}`);
-  if (res.status === 404) res = await apiFetch("/api/student/login", { body: { name, tz: tzOffset() } });
+  if (res.status === 404) return signOutStudent();
   if (res.ok && !busy) applyServerState(res.data);
 }
 
