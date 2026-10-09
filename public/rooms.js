@@ -33,7 +33,7 @@ const CATEGORIES = [
   {
     key: "mediaCenter",
     label: "Media Center",
-    color: "#e08a1e",
+    color: "#f59300",
     icon: "img:https://storage.googleapis.com/sp-img-cdn/icons8-ios/book-shelf/FFFFFF.png",
     leaf: { name: "Media Center", room: "Media" },
   },
@@ -53,7 +53,7 @@ const CATEGORIES = [
   {
     key: "attendance",
     label: "Attendance",
-    color: "#7ed321",
+    color: "#6dcf1b",
     icon: "svg:status",
     rooms: [
       { name: "Early Dismissal", room: "ED1" },
@@ -63,7 +63,7 @@ const CATEGORIES = [
   {
     key: "studentServices",
     label: "Student Services",
-    color: "#7b68ee",
+    color: "#6a58f2",
     icon: "img:https://storage.googleapis.com/sp-img-cdn/icons8-ios/welfare/FFFFFF.png",
     rooms: [
       { name: "Levick", room: "" },
@@ -77,7 +77,7 @@ const CATEGORIES = [
   {
     key: "classrooms",
     label: "Classrooms",
-    color: "#18c98f",
+    color: "#12c29f",
     icon: "img:https://storage.googleapis.com/sp-img-cdn/icons8-ios/classroom/FFFFFF.png",
     rooms: [
       { name: "Albert", room: "307" },
@@ -130,14 +130,14 @@ const CATEGORIES = [
   {
     key: "locker",
     label: "Locker",
-    color: "#98a2b3",
+    color: "#7f89a3",
     icon: "svg:locker",
     leaf: { name: "Locker", room: "" },
   },
   {
     key: "cafeteria",
     label: "Cafeteria",
-    color: "#b21cc4",
+    color: "#b00ee0",
     icon: "img:https://storage.googleapis.com/sp-img-cdn/icons8-ios/restaurant/FFFFFF.png",
     leaf: { name: "Cafeteria", room: "Cafe" },
   },

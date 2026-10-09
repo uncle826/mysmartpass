@@ -691,6 +691,53 @@
   margin: 0 0 14px 0;
 }
 
+/* ---------- Category tiles in the pass box (icon centered over the name, like the real one) ---------- */
+
+.category-grid {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.category-tile {
+  aspect-ratio: auto;
+  height: 78px;
+  padding: 8px 6px;
+  border-radius: 8px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 1px 3px rgba(16, 20, 24, 0.12);
+}
+
+.category-tile-icon {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+}
+
+.category-tile-footer {
+  width: auto;
+  max-width: 100%;
+  justify-content: center;
+  gap: 5px;
+}
+
+.category-tile-label {
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.category-tile-chevron {
+  width: 13px;
+  height: 13px;
+}
+
+.category-tile-chevron path {
+  stroke-width: 1.7;
+}
+
 /* ---------- Active pass screen (glassy card + stats, like the real SmartPass) ---------- */
 
 .pass-card {
