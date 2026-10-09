@@ -9,10 +9,22 @@
 <meta name="theme-color" content="#ffffff">
 <script src="pwa.js" defer></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="dashboard.css?v=8">
-<link rel="stylesheet" href="calendar.css?v=8">
+<link rel="stylesheet" href="dashboard.css?v=9">
+<link rel="stylesheet" href="calendar.css?v=9">
 </head>
 <body>
+
+  <!-- colorizes the (white) room icons: the destination icon takes its category color, the "from" icon turns gray -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <filter id="dest-tint" color-interpolation-filters="sRGB">
+        <feColorMatrix id="dest-tint-matrix" type="matrix" values="0 0 0 0 0.2  0 0 0 0 0.6  0 0 0 0 0.9  0 0 0 1 0"/>
+      </filter>
+      <filter id="gray-tint" color-interpolation-filters="sRGB">
+        <feColorMatrix type="matrix" values="0 0 0 0 0.44  0 0 0 0 0.51  0 0 0 0 0.63  0 0 0 1 0"/>
+      </filter>
+    </defs>
+  </svg>
 
   <header class="topbar">
     <div class="topbar-side"></div>
@@ -288,24 +300,31 @@
       </div>
 
       <div id="duration-view" class="hidden">
-        <button class="modal-back" id="duration-back" aria-label="Back">
-          <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" fill="none" stroke="#2b2560" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-
-        <div class="duration-dest-row">
-          <div class="duration-dest-title">
-            <span class="duration-dest-icon" id="duration-dest-icon"></span>
-            <span id="duration-dest-name"></span>
-          </div>
-          <div class="duration-from">
-            from <span class="duration-from-badge" id="duration-from"></span>
-          </div>
+        <div class="modal-top">
+          <button type="button" class="modal-top-back" id="duration-back" aria-label="Back">
+            <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
         </div>
-        <div class="duration-header-divider"></div>
+
+        <div class="duration-dest-title">
+          <span class="duration-dest-icon" id="duration-dest-icon"></span>
+          <span id="duration-dest-name"></span>
+        </div>
+        <div class="duration-from-row">
+          <span class="duration-from-line"></span>
+          <span class="duration-from">
+            from
+            <span class="duration-from-badge"><span class="duration-from-icon" id="duration-from-icon"></span><span id="duration-from"></span></span>
+          </span>
+        </div>
 
         <div class="duration-body">
           <div class="duration-slider-col">
-            <input type="range" id="duration-slider" class="duration-slider" min="1" max="15" step="1" value="5">
+            <div class="dur-track" id="dur-track" role="slider" tabindex="0" aria-label="Minutes" aria-valuemin="1" aria-valuemax="15" aria-valuenow="5">
+              <div class="dur-fill" id="dur-fill"></div>
+              <div class="dur-thumb" id="dur-thumb"></div>
+            </div>
+            <input type="range" id="duration-slider" class="hidden" min="1" max="15" step="1" value="5" tabindex="-1">
           </div>
           <div class="duration-info">
             <span class="round-trip-pill">Round-trip</span>
@@ -335,9 +354,9 @@
     </div>
   </div>
 
-<script src="api.js?v=8"></script>
-<script src="rooms.js?v=8"></script>
-<script src="dashboard.js?v=8"></script>
-<script src="calendar.js?v=8"></script>
+<script src="api.js?v=9"></script>
+<script src="rooms.js?v=9"></script>
+<script src="dashboard.js?v=9"></script>
+<script src="calendar.js?v=9"></script>
 </body>
 </html>

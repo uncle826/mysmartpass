@@ -514,18 +514,87 @@ document.getElementById("modal-top-back").addEventListener("click", () => {
   }
 });
 
+/* Time slider: a vertical track (up = more time) with a dark fill from the bottom to the thumb.
+   The hidden range input just holds the value so the rest of the code can read durationSlider.value. */
+
+const DURATION_MIN = 1;
+const DURATION_MAX = 15;
+const durTrack = document.getElementById("dur-track");
+const durFill = document.getElementById("dur-fill");
+const durThumb = document.getElementById("dur-thumb");
+
+function paintDurationSlider() {
+  const value = Number(durationSlider.value);
+  const frac = (value - DURATION_MIN) / (DURATION_MAX - DURATION_MIN);
+  durFill.style.height = `${frac * 100}%`;
+  durThumb.style.top = `${(1 - frac) * 100}%`;
+  durTrack.setAttribute("aria-valuenow", value);
+}
+
+function setDuration(value) {
+  durationSlider.value = Math.min(DURATION_MAX, Math.max(DURATION_MIN, Math.round(value)));
+  updateDurationValueText();
+}
+
+function durationFromPointer(e) {
+  const rect = durTrack.getBoundingClientRect();
+  const frac = 1 - (e.clientY - rect.top) / rect.height;
+  setDuration(DURATION_MIN + Math.min(1, Math.max(0, frac)) * (DURATION_MAX - DURATION_MIN));
+}
+
+durTrack.addEventListener("pointerdown", (e) => {
+  e.preventDefault();
+  durTrack.setPointerCapture(e.pointerId);
+  durationFromPointer(e);
+  const move = (ev) => durationFromPointer(ev);
+  const up = () => {
+    durTrack.removeEventListener("pointermove", move);
+    durTrack.removeEventListener("pointerup", up);
+    durTrack.removeEventListener("pointercancel", up);
+  };
+  durTrack.addEventListener("pointermove", move);
+  durTrack.addEventListener("pointerup", up);
+  durTrack.addEventListener("pointercancel", up);
+});
+
+durTrack.addEventListener("keydown", (e) => {
+  const step = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1 }[e.key];
+  if (!step) return;
+  e.preventDefault();
+  setDuration(Number(durationSlider.value) + step);
+});
+
 function updateDurationValueText() {
   durationValue.textContent = `${durationSlider.value} min`;
+  paintDurationSlider();
+}
+
+// "#rrggbb" -> the feColorMatrix that paints every pixel that color while keeping its transparency
+function tintFilterValues(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => (v / 255).toFixed(3));
+  return `0 0 0 0 ${c[0]}  0 0 0 0 ${c[1]}  0 0 0 0 ${c[2]}  0 0 0 1 0`;
+}
+
+function setIconMarkup(el, markup) {
+  el.innerHTML = markup;
+  // an uploaded photo logo stays a photo; everything else is a flat icon that gets tinted
+  el.classList.toggle("photo", markup.includes("room-logo-img"));
 }
 
 function showDurationView(room) {
   const category = categoryByKey(room.categoryKey);
   pickerView.classList.add("hidden");
   durationView.classList.remove("hidden");
-  durationDestIcon.style.background = category.color;
-  durationDestIcon.innerHTML = roomIconMarkup(room.name, room.categoryKey);
+  durationView.style.setProperty("--dest-color", category.color);
+  document.getElementById("dest-tint-matrix").setAttribute("values", tintFilterValues(category.color));
+  setIconMarkup(durationDestIcon, roomIconMarkup(room.name, room.categoryKey));
   durationDestName.textContent = room.name;
   durationFrom.textContent = comingFromRoom ? comingFromRoom.name : "—";
+  setIconMarkup(
+    document.getElementById("duration-from-icon"),
+    comingFromRoom ? roomIconMarkup(comingFromRoom.name, comingFromRoom.categoryKey) : ""
+  );
   document.getElementById("start-pass-label").textContent = scheduleMode ? "Schedule Pass" : rules.requestOnly ? "Send Request" : "Start Pass";
   durationSlider.value = 5;
   updateDurationValueText();

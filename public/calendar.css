@@ -691,6 +691,192 @@
   margin: 0 0 14px 0;
 }
 
+/* ---------- Time step (destination in its own color, vertical slider, colored Start Pass) ---------- */
+
+#duration-view {
+  --dest-color: #4a90e2;
+}
+
+.duration-dest-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 8px 2px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--dest-color);
+}
+
+.duration-dest-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 0;
+  background: none;
+  overflow: visible;
+  flex-shrink: 0;
+  filter: url(#dest-tint);
+}
+
+.duration-dest-icon img,
+.duration-dest-icon svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.duration-dest-icon.photo {
+  filter: none;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.duration-from-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.duration-from-line {
+  flex: 1;
+  height: 1px;
+  background: #e7eaee;
+}
+
+.duration-from {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #7083a0;
+}
+
+.duration-from-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 14px;
+  background: #eef0f4;
+  font-size: 14px;
+  font-weight: 500;
+  color: #4e5d74;
+}
+
+.duration-from-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  filter: url(#gray-tint);
+}
+
+.duration-from-icon:empty {
+  display: none;
+}
+
+.duration-from-icon.photo {
+  filter: none;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.duration-from-icon img,
+.duration-from-icon svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.duration-body {
+  margin-top: 16px;
+  gap: 8px;
+}
+
+.duration-slider-col {
+  width: 100px;
+  padding: 12px 0 12px 66px;
+  justify-content: flex-start;
+}
+
+.dur-track {
+  position: relative;
+  width: 36px;
+  height: 172px;
+  flex-shrink: 0;
+  cursor: pointer;
+  touch-action: none;
+  outline: none;
+}
+
+.dur-track::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: #e3e6ee;
+}
+
+.dur-fill {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: #4a5568;
+}
+
+.dur-thumb {
+  position: absolute;
+  left: 50%;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  border-radius: 50%;
+  background: #4a5568;
+  box-shadow: 0 1px 4px rgba(16, 20, 24, 0.3);
+  transition: box-shadow 0.15s ease;
+}
+
+.dur-track:hover .dur-thumb,
+.dur-track:focus-visible .dur-thumb {
+  box-shadow: 0 0 0 5px rgba(74, 85, 104, 0.18), 0 1px 4px rgba(16, 20, 24, 0.3);
+}
+
+.round-trip-pill {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #f4f5f8;
+  box-shadow: 0 1px 4px rgba(16, 20, 24, 0.1);
+  font-size: 13px;
+  font-weight: 600;
+  color: #b7c1cf;
+}
+
+.duration-question {
+  font-size: 18px;
+  font-weight: 500;
+  color: #4e5d74;
+}
+
+.duration-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #4e5d74;
+}
+
+.duration-start-btn {
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 8px;
+  background: var(--dest-color);
+  box-shadow: 0 2px 8px rgba(16, 20, 24, 0.18);
+  font-size: 18px;
+}
+
 /* ---------- Route: back arrow, green "from" dot, filled "from" pill, navy pin ---------- */
 
 .modal-top {

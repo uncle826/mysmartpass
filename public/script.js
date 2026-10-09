@@ -34,7 +34,7 @@ function finishSignIn(displayName) {
   localStorage.setItem("smartpass_role", role);
   loadingText.textContent = `Welcome, ${displayName}!`;
   showView(loadingView);
-  setTimeout(() => showView(schoolView), 1000 + Math.random() * 4000);
+  setTimeout(() => showView(schoolView), 350);
 }
 
 loginForm.addEventListener("submit", async function (e) {
@@ -156,13 +156,12 @@ document.querySelectorAll(".school-btn").forEach((btn) => {
     loadingText.textContent = "Taking you to your school…";
     showView(loadingView);
 
-    const delay = 800 + Math.random() * 1700;
     setTimeout(() => {
       document.body.classList.add("fade-out");
       setTimeout(() => {
         window.location.href = school.toLowerCase() + ".html";
-      }, 400);
-    }, delay);
+      }, 250);
+    }, 300);
   });
 });
 
