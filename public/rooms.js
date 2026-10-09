@@ -9,7 +9,7 @@ const CATEGORIES = [
   {
     key: "restrooms",
     label: "Restrooms",
-    color: "#2599d6",
+    color: "#4a90e2",
     icon: "img:https://storage.googleapis.com/sp-img-cdn/icons8-ios/toilet-paper/FFFFFF.png",
     rooms: [
       { name: "100's Restroom", room: "" },

@@ -344,7 +344,11 @@ function renderPicker(filterText) {
 
 // like the real SmartPass, "Going to?" only appears once you've picked where you're coming from
 function updateRouteMode() {
-  document.getElementById("route").classList.toggle("from-only", !comingFromRoom);
+  const route = document.getElementById("route");
+  route.classList.toggle("from-only", !comingFromRoom);
+  route.classList.toggle("has-from", !!comingFromRoom);
+  comingFromField.classList.toggle("filled", !!comingFromRoom);
+  document.getElementById("modal-top-back").classList.toggle("hidden", !(comingFromRoom || scheduleMode));
 }
 
 function selectRoom(room) {
@@ -371,6 +375,7 @@ function showPickerView() {
   pickerView.classList.remove("hidden");
   schedWhen.classList.toggle("hidden", !scheduleMode);
   if (scheduleMode && scheduledFor) schedWhenText.textContent = formatWhen(scheduledFor);
+  updateRouteMode();
 }
 
 function showScheduleView() {
@@ -492,9 +497,21 @@ document.getElementById("sched-continue").addEventListener("click", () => {
   comingFromInput.focus();
 });
 
-document.getElementById("sched-back").addEventListener("click", () => {
-  goingToRoom = null;
-  showScheduleView();
+// the arrow in the popup's top strip steps back one stage: clear the "from" room, or return to the date + time
+document.getElementById("modal-top-back").addEventListener("click", () => {
+  if (comingFromRoom) {
+    comingFromRoom = null;
+    goingToRoom = null;
+    comingFromInput.value = "";
+    goingToInput.value = "";
+    currentCategory = null;
+    updateRouteMode();
+    setActiveField("comingFrom");
+    renderPicker("");
+    comingFromInput.focus();
+  } else if (scheduleMode) {
+    showScheduleView();
+  }
 });
 
 function updateDurationValueText() {

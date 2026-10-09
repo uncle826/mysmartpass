@@ -691,6 +691,61 @@
   margin: 0 0 14px 0;
 }
 
+/* ---------- Route: back arrow, green "from" dot, filled "from" pill, navy pin ---------- */
+
+.modal-top {
+  display: flex;
+  align-items: center;
+  padding-left: 12px;
+}
+
+.modal-top-back {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: #1f195e;
+  cursor: pointer;
+}
+
+.modal-top-back:hover {
+  background: #f0f2f6;
+}
+
+.modal-top-back svg {
+  width: 18px;
+  height: 18px;
+}
+
+.route-circle {
+  width: 14px;
+  height: 14px;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.route.has-from .route-circle {
+  background: #00b476;
+  border-color: #00b476;
+}
+
+.route.has-from .route-dots span {
+  background: #d3d8e2;
+}
+
+.route.has-from .route-pin {
+  color: #1f195e;
+}
+
+.modal-field.filled:not(.active) {
+  background: #f4f5f8;
+  border-color: transparent;
+}
+
 /* ---------- Category tiles in the pass box (icon centered over the name, like the real one) ---------- */
 
 .category-grid {
@@ -788,7 +843,7 @@
 
 .pass-ring-track,
 .pass-ring-progress {
-  stroke-width: 16;
+  stroke-width: 12;
 }
 
 .pass-ring-track {
@@ -796,8 +851,17 @@
 }
 
 .pass-ring-timer {
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 600;
+}
+
+.pass-ring-icon {
+  height: 44px;
+  opacity: 0.65;
+}
+
+.pass-ring-content {
+  gap: 6px;
 }
 
 .pass-end-btn {
