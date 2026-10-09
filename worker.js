@@ -504,6 +504,16 @@ async function requireStudentSession(request, env, url) {
   return null;
 }
 
+// seeing or resetting a student's password takes a 4-digit code (the PASSWORD_PIN variable, 2012 unless changed);
+// returns an error response when the code is wrong or tried too many times, otherwise null
+async function checkStudentPin(env, teacher, pin) {
+  const bucket = `pin:${teacher.username}`;
+  if (!(await allowAttempt(env, bucket, 8, 15 * 60000))) return fail("Too many wrong codes. Please wait a few minutes.", 429);
+  if (!safeEqual(String(pin || ""), String(env.PASSWORD_PIN || "2012"))) return fail("Wrong code.", 403);
+  await clearAttempts(env, bucket);
+  return null;
+}
+
 async function requireTeacher(request, env) {
   const header = request.headers.get("authorization") || "";
   const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
@@ -857,11 +867,8 @@ async function handleApi(request, env, url) {
       const body = await readBody(request);
       const key = String(body.key || "");
       if (!key || key.length > 80) return fail("Invalid request.");
-
-      const bucket = `pin:${teacher.username}`;
-      if (!(await allowAttempt(env, bucket, 8, 15 * 60000))) return fail("Too many wrong codes. Please wait a few minutes.", 429);
-      if (!safeEqual(String(body.pin || ""), String(env.PASSWORD_PIN || "2012"))) return fail("Wrong code.", 403);
-      await clearAttempts(env, bucket);
+      const badPin = await checkStudentPin(env, teacher, body.pin);
+      if (badPin) return badPin;
 
       const row = await env.DB.prepare("SELECT password FROM students WHERE key = ?").bind(key).first();
       if (!row) return fail("Student not found.", 404);
@@ -873,6 +880,8 @@ async function handleApi(request, env, url) {
       const body = await readBody(request);
       const key = String(body.key || "");
       if (!key || key.length > 80) return fail("Invalid request.");
+      const badPin = await checkStudentPin(env, teacher, body.pin);
+      if (badPin) return badPin;
       const row = await env.DB.prepare("SELECT key FROM students WHERE key = ?").bind(key).first();
       if (!row) return fail("Student not found.", 404);
       await env.DB.prepare("UPDATE students SET password = NULL WHERE key = ?").bind(key).run();
