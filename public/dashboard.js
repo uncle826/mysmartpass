@@ -519,28 +519,30 @@ document.getElementById("modal-top-back").addEventListener("click", () => {
    The hidden range input just holds the value so the rest of the code can read durationSlider.value. */
 
 const DURATION_MIN = 1;
-const DURATION_MAX = 15;
+const DEFAULT_DURATION_MAX = 15;
+// the top of the slider: 15 minutes, or the maximum time a teacher set on the class being visited
+let durationMax = DEFAULT_DURATION_MAX;
 const durTrack = document.getElementById("dur-track");
 const durFill = document.getElementById("dur-fill");
 const durThumb = document.getElementById("dur-thumb");
 
 function paintDurationSlider() {
   const value = Number(durationSlider.value);
-  const frac = (value - DURATION_MIN) / (DURATION_MAX - DURATION_MIN);
+  const frac = durationMax > DURATION_MIN ? (value - DURATION_MIN) / (durationMax - DURATION_MIN) : 1;
   durFill.style.height = `${frac * 100}%`;
   durThumb.style.top = `${(1 - frac) * 100}%`;
   durTrack.setAttribute("aria-valuenow", value);
 }
 
 function setDuration(value) {
-  durationSlider.value = Math.min(DURATION_MAX, Math.max(DURATION_MIN, Math.round(value)));
+  durationSlider.value = Math.min(durationMax, Math.max(DURATION_MIN, Math.round(value)));
   updateDurationValueText();
 }
 
 function durationFromPointer(e) {
   const rect = durTrack.getBoundingClientRect();
   const frac = 1 - (e.clientY - rect.top) / rect.height;
-  setDuration(DURATION_MIN + Math.min(1, Math.max(0, frac)) * (DURATION_MAX - DURATION_MIN));
+  setDuration(DURATION_MIN + Math.min(1, Math.max(0, frac)) * (durationMax - DURATION_MIN));
 }
 
 durTrack.addEventListener("pointerdown", (e) => {
@@ -597,7 +599,16 @@ function showDurationView(room) {
     comingFromRoom ? roomIconMarkup(comingFromRoom.name, comingFromRoom.categoryKey) : ""
   );
   document.getElementById("start-pass-label").textContent = scheduleMode ? "Schedule Pass" : rules.requestOnly ? "Send Request" : "Start Pass";
-  durationSlider.value = 5;
+  // a class can have its own maximum time; everywhere else the slider tops out at 15 minutes
+  const meta = FLAT_ROOMS.find((r) => r.categoryKey === room.categoryKey && r.name === room.name);
+  const classMax = meta && meta.maxMinutes ? meta.maxMinutes : null;
+  durationMax = classMax || DEFAULT_DURATION_MAX;
+  durationSlider.max = durationMax;
+  durTrack.setAttribute("aria-valuemax", durationMax);
+  const maxNote = document.getElementById("duration-max");
+  maxNote.textContent = classMax ? `Up to ${classMax} min here` : "";
+  maxNote.classList.toggle("hidden", !classMax);
+  durationSlider.value = Math.min(5, durationMax);
   updateDurationValueText();
 }
 

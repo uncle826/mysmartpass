@@ -1266,3 +1266,60 @@
 .pw-close:hover {
   color: #1f195e;
 }
+
+/* class maximum time */
+.class-max-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.class-max-chips {
+  display: flex;
+  gap: 6px;
+}
+
+.class-max-chips button {
+  min-width: 38px;
+  padding: 8px 10px;
+  border: 1px solid #d4d9e2;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #4e5d74;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.class-max-chips button:hover {
+  background: #f5f6f8;
+}
+
+.class-max-chips button.active {
+  background: #00b476;
+  border-color: #00b476;
+  color: #ffffff;
+}
+
+.class-max-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #7083a0;
+  font-size: 13.5px;
+}
+
+.class-max-field input {
+  width: 76px !important;
+  margin: 0 !important;
+}
+
+.class-max-hint {
+  margin: 8px 0 14px 0;
+  color: #7083a0;
+  font-size: 12.5px;
+  line-height: 1.4;
+}

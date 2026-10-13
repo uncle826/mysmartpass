@@ -1150,7 +1150,7 @@ function renderClassSettings() {
         <span class="t-class-icon" style="background:${classIconColor(c)}">${classLogoIconMarkup(c.logo)}</span>
         <div class="t-class-info">
           <div class="t-class-name">${escapeHtml(c.name)}</div>
-          <div class="t-class-room">${c.room ? escapeHtml(c.room) : "No room set"}</div>
+          <div class="t-class-room">${c.room ? escapeHtml(c.room) : "No room set"}${c.maxMinutes ? ` · Max ${c.maxMinutes} min` : ""}</div>
         </div>
         <span class="t-class-actions">
           <button type="button" class="t-class-edit-btn" data-edit-id="${c.id}" title="Edit ${escapeHtml(c.name)}" aria-label="Edit ${escapeHtml(c.name)}">
@@ -1193,7 +1193,7 @@ async function deleteClass(c) {
   showToast(`Removed ${c.name}`, "info", {
     label: "Undo",
     onClick: async () => {
-      const r = await teacherApi("/api/teacher/class", { name: c.name, room: c.room, logo: c.logo });
+      const r = await teacherApi("/api/teacher/class", { name: c.name, room: c.room, logo: c.logo, maxMinutes: c.maxMinutes || null });
       if (!r.ok) return showToast(r.data.error || "Couldn't bring that class back.", "warn");
       customClasses.push({ ...c, id: r.data.id });
       applyCustomClasses(customClasses);
@@ -1204,12 +1204,30 @@ async function deleteClass(c) {
 
 let editingClassId = null;
 
+/* maximum time for a class: quick picks + a typed number, both feed the same field */
+const classMaxInput = document.getElementById("class-max");
+const classMaxChips = document.querySelectorAll("#class-max-chips button");
+
+function syncClassMaxChips() {
+  classMaxChips.forEach((b) => b.classList.toggle("active", b.dataset.min === classMaxInput.value.trim()));
+}
+
+classMaxChips.forEach((b) =>
+  b.addEventListener("click", () => {
+    classMaxInput.value = classMaxInput.value.trim() === b.dataset.min ? "" : b.dataset.min;
+    syncClassMaxChips();
+  })
+);
+classMaxInput.addEventListener("input", syncClassMaxChips);
+
 function openClassDialog(existing) {
   editingClassId = existing ? existing.id : null;
   document.getElementById("class-title").textContent = existing ? "Edit class" : "Add a class";
   classSave.textContent = existing ? "Save changes" : "Add class";
   classNameInput.value = existing ? existing.name : "";
   classRoomInput.value = existing ? existing.room || "" : "";
+  classMaxInput.value = existing && existing.maxMinutes ? existing.maxMinutes : "";
+  syncClassMaxChips();
   classError.classList.add("hidden");
   classSave.disabled = !existing;
   renderClassPresets();
@@ -1250,6 +1268,14 @@ classSave.addEventListener("click", async () => {
   if (!name) return;
   const isEdit = editingClassId !== null;
 
+  const maxText = classMaxInput.value.trim();
+  const maxMinutes = maxText === "" ? null : Number(maxText);
+  if (maxMinutes !== null && (!Number.isInteger(maxMinutes) || maxMinutes < 1 || maxMinutes > 60)) {
+    classError.textContent = "The maximum time has to be a whole number from 1 to 60 minutes.";
+    classError.classList.remove("hidden");
+    return;
+  }
+
   // a name that already belongs to another room never shows up as its own entry in the
   // picker — it saves fine but silently does nothing, which looks like a broken delete later
   const collision = FLAT_ROOMS.find(
@@ -1268,6 +1294,7 @@ classSave.addEventListener("click", async () => {
     name,
     room,
     logo: classLogo,
+    maxMinutes,
   });
   if (res.status === 401) return kickToSignIn();
   if (!res.ok) {
@@ -1278,9 +1305,9 @@ classSave.addEventListener("click", async () => {
   }
   if (isEdit) {
     const existing = customClasses.find((c) => c.id === editingClassId);
-    if (existing) Object.assign(existing, { name, room, logo: classLogo });
+    if (existing) Object.assign(existing, { name, room, logo: classLogo, maxMinutes });
   } else {
-    customClasses.push({ id: res.data.id, name, room, logo: classLogo });
+    customClasses.push({ id: res.data.id, name, room, logo: classLogo, maxMinutes });
   }
   applyCustomClasses(customClasses);
   renderClassSettings();

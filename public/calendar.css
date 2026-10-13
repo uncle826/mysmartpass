@@ -1114,3 +1114,10 @@
     border-bottom: 1px solid #e7eaee;
   }
 }
+
+.duration-max {
+  margin: -6px 0 0 0;
+  color: #7083a0;
+  font-size: 13px;
+  font-weight: 500;
+}

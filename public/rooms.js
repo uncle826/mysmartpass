@@ -189,7 +189,7 @@ function rebuildFlatRooms() {
   FLAT_ROOMS = CATEGORIES.flatMap((c) =>
     c.leaf
       ? [{ name: c.leaf.name, room: c.leaf.room, categoryKey: c.key }]
-      : c.rooms.map((r) => ({ name: r.name, room: r.room, categoryKey: c.key, logo: r.logo || null, custom: !!r.custom }))
+      : c.rooms.map((r) => ({ name: r.name, room: r.room, categoryKey: c.key, logo: r.logo || null, custom: !!r.custom, maxMinutes: r.maxMinutes || null }))
   );
   FLAT_ROOMS.sort(byName);
 }
@@ -204,7 +204,7 @@ function applyCustomClasses(list) {
   const existingNames = new Set(category.rooms.map((r) => r.name));
   list.forEach((cls) => {
     if (!cls || !cls.name || existingNames.has(cls.name)) return;
-    category.rooms.push({ name: cls.name, room: cls.room || "", logo: cls.logo || null, custom: true });
+    category.rooms.push({ name: cls.name, room: cls.room || "", logo: cls.logo || null, custom: true, maxMinutes: cls.maxMinutes || null });
     existingNames.add(cls.name);
   });
   category.rooms.sort(byName);

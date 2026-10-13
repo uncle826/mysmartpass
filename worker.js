@@ -22,6 +22,7 @@ const MIGRATIONS = [
   "ALTER TABLE students ADD COLUMN always_bounce INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE passes ADD COLUMN bounce_speed INTEGER NOT NULL DEFAULT 42",
   "ALTER TABLE students ADD COLUMN password TEXT",
+  "ALTER TABLE classes ADD COLUMN max_minutes INTEGER",
 ];
 
 // "Learn" followed by exactly five digits (the word itself can be typed in any case)
@@ -135,6 +136,14 @@ function cleanLogo(raw) {
   if (LOGO_PRESET_RE.test(raw)) return { ok: true, value: raw };
   if (raw.length <= MAX_PHOTO_CHARS && PHOTO_RE.test(raw)) return { ok: true, value: raw };
   return { ok: false };
+}
+
+// a class's maximum pass time in minutes (1-60); empty means "no special limit"
+function cleanMaxMinutes(raw) {
+  if (raw === null || raw === undefined || raw === "") return { ok: true, value: null };
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1 || n > 60) return { ok: false };
+  return { ok: true, value: n };
 }
 
 // null = invalid, "" only allowed when a field isn't required
@@ -459,6 +468,14 @@ function clampMinutes(value) {
   return Number.isFinite(n) ? Math.min(60, Math.max(1, n)) : 5;
 }
 
+// a student's requested minutes, also capped by the maximum time set on the class they're going to
+async function studentMinutes(env, dest, raw) {
+  const minutes = clampMinutes(raw);
+  if (dest.categoryKey !== "classrooms") return minutes;
+  const row = await env.DB.prepare("SELECT max_minutes FROM classes WHERE name = ? COLLATE NOCASE").bind(dest.name).first();
+  return row && row.max_minutes ? Math.min(minutes, row.max_minutes) : minutes;
+}
+
 function clampMinutesTeacher(value) {
   const n = Math.round(Number(value));
   return Number.isFinite(n) ? Math.min(480, Math.max(1, n)) : 5;
@@ -616,7 +633,7 @@ async function handleApi(request, env, url) {
     const blocked = await limitMessage(env, key, student);
     if (blocked) return fail(blocked, 403);
 
-    const created = await createPass(env, key, dest, from, clampMinutes(body.minutes), null);
+    const created = await createPass(env, key, dest, from, await studentMinutes(env, dest, body.minutes), null);
     if (!created) return fail("You're already on a pass.", 409);
     await env.DB.prepare("UPDATE pass_requests SET status = 'cancelled' WHERE student_key = ? AND status = 'pending'").bind(key).run();
     return json(await studentState(env, key));
@@ -653,7 +670,7 @@ async function handleApi(request, env, url) {
           from ? from.name : null,
           from ? from.room : null,
           from ? from.categoryKey : null,
-          clampMinutes(body.minutes),
+          await studentMinutes(env, dest, body.minutes),
           Date.now()
         )
         .run();
@@ -701,7 +718,7 @@ async function handleApi(request, env, url) {
     await env.DB.prepare(
       "INSERT INTO scheduled_passes (student_key, dest_name, dest_room, dest_category, from_name, from_room, from_category, minutes, scheduled_for, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
-      .bind(key, dest.name, dest.room, dest.categoryKey, from ? from.name : null, from ? from.room : null, from ? from.categoryKey : null, clampMinutes(body.minutes), when, now)
+      .bind(key, dest.name, dest.room, dest.categoryKey, from ? from.name : null, from ? from.room : null, from ? from.categoryKey : null, await studentMinutes(env, dest, body.minutes), when, now)
       .run();
     return json(await studentState(env, key));
   }
@@ -747,8 +764,10 @@ async function handleApi(request, env, url) {
   }
 
   if (pathname === "/api/classes" && method === "GET") {
-    const rows = await env.DB.prepare("SELECT id, name, room, logo FROM classes ORDER BY name COLLATE NOCASE").all();
-    return json({ classes: rows.results });
+    const rows = await env.DB.prepare("SELECT id, name, room, logo, max_minutes FROM classes ORDER BY name COLLATE NOCASE").all();
+    return json({
+      classes: rows.results.map((r) => ({ id: r.id, name: r.name, room: r.room, logo: r.logo, maxMinutes: r.max_minutes || null })),
+    });
   }
 
   /* ----- teacher accounts ----- */
@@ -976,11 +995,13 @@ async function handleApi(request, env, url) {
       const name = cleanClassField(body.name, true);
       const room = cleanClassField(body.room, false);
       const logo = cleanLogo(body.logo);
+      const max = cleanMaxMinutes(body.maxMinutes);
       if (!name || room === null || !logo.ok) return fail("Invalid class.");
+      if (!max.ok) return fail("The maximum time has to be between 1 and 60 minutes.");
       let id;
       try {
-        const res = await env.DB.prepare("INSERT INTO classes (name, room, logo, created_by, created_at) VALUES (?, ?, ?, ?, ?)")
-          .bind(name, room, logo.value, teacher.display, Date.now())
+        const res = await env.DB.prepare("INSERT INTO classes (name, room, logo, max_minutes, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?)")
+          .bind(name, room, logo.value, max.value, teacher.display, Date.now())
           .run();
         id = res.meta.last_row_id;
       } catch (err) {
@@ -996,10 +1017,12 @@ async function handleApi(request, env, url) {
       const name = cleanClassField(body.name, true);
       const room = cleanClassField(body.room, false);
       const logo = cleanLogo(body.logo);
+      const max = cleanMaxMinutes(body.maxMinutes);
       if (!Number.isInteger(id) || !name || room === null || !logo.ok) return fail("Invalid class.");
+      if (!max.ok) return fail("The maximum time has to be between 1 and 60 minutes.");
       try {
-        await env.DB.prepare("UPDATE classes SET name = ?, room = ?, logo = ? WHERE id = ?")
-          .bind(name, room, logo.value, id)
+        await env.DB.prepare("UPDATE classes SET name = ?, room = ?, logo = ?, max_minutes = ? WHERE id = ?")
+          .bind(name, room, logo.value, max.value, id)
           .run();
       } catch (err) {
         if (String(err && err.message).includes("UNIQUE")) return fail("A class with that name already exists.", 409);

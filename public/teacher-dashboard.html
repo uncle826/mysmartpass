@@ -10,8 +10,8 @@
 <script src="pwa.js" defer></script>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="dashboard.css">
-<link rel="stylesheet" href="teacher.css?v=13">
-<link rel="stylesheet" href="teacher-extra.css?v=13">
+<link rel="stylesheet" href="teacher.css?v=14">
+<link rel="stylesheet" href="teacher-extra.css?v=14">
 </head>
 <body>
 
@@ -197,6 +197,22 @@
       <label for="class-room" class="t-message-label">Room number <span>(optional)</span></label>
       <input type="text" id="class-room" class="t-search" placeholder="e.g. 214" maxlength="60" autocomplete="off">
 
+      <label for="class-max" class="t-message-label">Maximum time <span>(optional)</span></label>
+      <div class="class-max-row">
+        <div class="class-max-chips" id="class-max-chips">
+          <button type="button" data-min="5">5</button>
+          <button type="button" data-min="10">10</button>
+          <button type="button" data-min="15">15</button>
+          <button type="button" data-min="20">20</button>
+          <button type="button" data-min="30">30</button>
+        </div>
+        <div class="class-max-field">
+          <input type="number" id="class-max" class="t-search" min="1" max="60" step="1" placeholder="15" inputmode="numeric">
+          <span>min</span>
+        </div>
+      </div>
+      <p class="class-max-hint">The most time a student can ask for when going to this class. Leave it blank for the usual 15 minutes.</p>
+
       <p class="photo-label">Logo</p>
       <div class="photo-preview-row">
         <span class="t-avatar photo-preview class-logo-preview" id="class-logo-preview"></span>
@@ -266,8 +282,8 @@
     </div>
   </div>
 
-<script src="api.js?v=13"></script>
-<script src="rooms.js?v=13"></script>
-<script src="teacher-dashboard.js?v=13"></script>
+<script src="api.js?v=14"></script>
+<script src="rooms.js?v=14"></script>
+<script src="teacher-dashboard.js?v=14"></script>
 </body>
 </html>
