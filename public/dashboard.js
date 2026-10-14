@@ -231,7 +231,7 @@ function recommendedRooms(from) {
     ["waterFountain", "Fountain"],
   ]
     .map(([key, word]) => {
-      const match = categoryByKey(key).rooms.find((room) => room.name === `${prefix} ${word}`);
+      const match = categoryByKey(key).rooms.find((room) => (room.origName || room.name) === `${prefix} ${word}`);
       return match ? { name: match.name, room: match.room, categoryKey: key } : null;
     })
     .filter(Boolean);
@@ -243,8 +243,9 @@ function renderCategoryGrid(categories, recommended = []) {
     return;
   }
 
+  // suggested places (like the 300's restroom) are boxes too, the same as Admins and the Main Office
   const recMarkup = recommended.length
-    ? `<div class="rec-block">${recommended.map((r) => roomRowMarkup(r, "recommended")).join("")}</div><h3 class="modal-list-title rec-sub">All Rooms</h3>`
+    ? `<div class="category-grid rec-grid">${recommended.map((r, idx) => roomTileMarkup(r, idx)).join("")}</div><h3 class="modal-list-title rec-sub">All Rooms</h3>`
     : "";
 
   roomList.innerHTML = `${recMarkup}<div class="category-grid">${categories
@@ -252,22 +253,23 @@ function renderCategoryGrid(categories, recommended = []) {
       const chevron = c.leaf
         ? ""
         : '<svg class="category-tile-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      // a single-place category (Main Office, Locker…) shows that place's own name and picture
+      const label = c.leaf ? c.leaf.name : c.label;
+      const icon = c.leaf ? roomIconMarkup(c.leaf.name, c.key) : categoryIconMarkup(c);
       return `
         <button type="button" class="category-tile" style="background:${c.color}; --i:${idx}" data-key="${c.key}">
-          <span class="category-tile-icon">${categoryIconMarkup(c)}</span>
+          <span class="category-tile-icon">${icon}</span>
           <span class="category-tile-footer">
-            <span class="category-tile-label">${c.label}</span>
+            <span class="category-tile-label">${escapeHtml(label)}</span>
             ${chevron}
           </span>
         </button>`;
     })
     .join("")}</div>`;
 
-  roomList.querySelectorAll(".room-row.recommended").forEach((row) => {
-    row.addEventListener("click", () => selectRoom(recommended.find((r) => r.name === row.dataset.name)));
-  });
+  bindRoomTiles(recommended);
 
-  roomList.querySelectorAll(".category-tile").forEach((tile) => {
+  roomList.querySelectorAll(".category-tile:not(.room-tile)").forEach((tile) => {
     tile.addEventListener("click", () => {
       const cat = categoryByKey(tile.dataset.key);
       if (cat.leaf) {
@@ -279,6 +281,37 @@ function renderCategoryGrid(categories, recommended = []) {
     });
   });
 }
+
+// a destination shown as a colored box (icon over the name), like the category boxes
+function roomTileMarkup(r, idx) {
+  const category = categoryByKey(r.categoryKey);
+  return `
+        <button type="button" class="category-tile room-tile" style="background:${category.color}; --i:${idx}" data-name="${escapeHtml(r.name)}" data-cat="${r.categoryKey}">
+          <span class="category-tile-icon">${roomIconMarkup(r.name, r.categoryKey)}</span>
+          <span class="category-tile-footer"><span class="category-tile-label">${escapeHtml(r.name)}</span></span>
+        </button>`;
+}
+
+function bindRoomTiles(rooms) {
+  roomList.querySelectorAll(".room-tile").forEach((tile) => {
+    tile.addEventListener("click", () => {
+      const room = rooms.find((r) => r.name === tile.dataset.name && r.categoryKey === tile.dataset.cat);
+      if (room) selectRoom(room);
+    });
+  });
+}
+
+function renderRoomTiles(rooms) {
+  if (rooms.length === 0) {
+    roomList.innerHTML = `<div class="no-results">No matches</div>`;
+    return;
+  }
+  roomList.innerHTML = `<div class="category-grid">${rooms.map((r, idx) => roomTileMarkup(r, idx)).join("")}</div>`;
+  bindRoomTiles(rooms);
+}
+
+// short lists (restrooms, fountains, admins…) are boxes; a long list (all the classrooms) stays a scrolling list
+const MAX_TILE_ROOMS = 12;
 
 function renderFlatList(rooms) {
   if (rooms.length === 0) {
@@ -334,7 +367,8 @@ function renderPicker(filterText) {
       room: r.room,
       categoryKey: currentCategory.key,
     }));
-    renderFlatList(rooms);
+    if (rooms.length <= MAX_TILE_ROOMS) renderRoomTiles(rooms);
+    else renderFlatList(rooms);
   } else {
     modalBack.classList.add("hidden");
     const recommended = recommendedRooms(comingFromRoom);
@@ -1297,7 +1331,10 @@ async function loadState() {
 
 async function loadClasses() {
   const res = await apiFetch("/api/classes");
-  if (res.ok) applyCustomClasses(res.data.classes || []);
+  if (res.ok) {
+    applyRoomOverrides(res.data.overrides || []);
+    applyCustomClasses(res.data.classes || []);
+  }
 }
 
 loadClasses();

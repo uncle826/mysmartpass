@@ -1121,3 +1121,18 @@
   font-size: 13px;
   font-weight: 500;
 }
+
+/* destination boxes (restrooms, admins…): the name can wrap to two lines, photo logos stay round */
+.room-tile .category-tile-label {
+  white-space: normal;
+  line-height: 1.15;
+  overflow: visible;
+}
+
+.category-tile-icon .room-logo-img {
+  border-radius: 50%;
+}
+
+.rec-grid {
+  margin-bottom: 4px;
+}

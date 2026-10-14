@@ -181,35 +181,84 @@ function roomIconMarkup(name, categoryKey) {
 
 const byName = (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
 
-CATEGORIES.forEach((c) => {
-  if (c.rooms) c.rooms.sort(byName);
-});
+// The untouched defaults, kept so a teacher's edits can be layered on top of them (and undone) at any time.
+const BASE_ROOMS = CATEGORIES.map((c) => ({
+  key: c.key,
+  rooms: c.rooms ? c.rooms.map((r) => ({ ...r })) : null,
+  leaf: c.leaf ? { ...c.leaf } : null,
+}));
+
+let ROOM_OVERRIDES = []; // teacher edits to built-in places: {categoryKey, origName, name, room, logo, maxMinutes}
+let CUSTOM_CLASS_LIST = []; // classes a teacher added: {name, room, logo, maxMinutes}
+let FLAT_ROOMS = [];
 
 function rebuildFlatRooms() {
-  FLAT_ROOMS = CATEGORIES.flatMap((c) =>
-    c.leaf
-      ? [{ name: c.leaf.name, room: c.leaf.room, categoryKey: c.key }]
-      : c.rooms.map((r) => ({ name: r.name, room: r.room, categoryKey: c.key, logo: r.logo || null, custom: !!r.custom, maxMinutes: r.maxMinutes || null }))
-  );
+  FLAT_ROOMS = CATEGORIES.flatMap((c) => {
+    const entry = (r) => ({
+      name: r.name,
+      room: r.room,
+      categoryKey: c.key,
+      logo: r.logo || null,
+      custom: !!r.custom,
+      builtin: !!r.builtin,
+      overridden: !!r.overridden,
+      origName: r.origName || r.name,
+      maxMinutes: r.maxMinutes || null,
+    });
+    return c.leaf ? [entry(c.leaf)] : c.rooms.map(entry);
+  });
   FLAT_ROOMS.sort(byName);
+}
+
+// Rebuilds every category from: the defaults + the teacher's edits to them + the classes the teacher added.
+function rebuildRooms() {
+  CATEGORIES.forEach((c, i) => {
+    const base = BASE_ROOMS[i];
+    const withEdits = (r) => {
+      const edit = ROOM_OVERRIDES.find((o) => o.categoryKey === c.key && o.origName === r.name);
+      return {
+        ...r,
+        origName: r.name,
+        builtin: true,
+        overridden: !!edit,
+        name: edit ? edit.name : r.name,
+        room: edit ? edit.room || "" : r.room,
+        logo: edit && edit.logo ? edit.logo : null,
+        maxMinutes: edit && edit.maxMinutes ? edit.maxMinutes : null,
+      };
+    };
+    if (base.rooms) c.rooms = base.rooms.map(withEdits);
+    if (base.leaf) c.leaf = withEdits(base.leaf);
+  });
+
+  const classrooms = CATEGORIES.find((c) => c.key === "classrooms");
+  const taken = new Set(classrooms.rooms.map((r) => r.name));
+  CUSTOM_CLASS_LIST.forEach((cls) => {
+    if (!cls || !cls.name || taken.has(cls.name)) return;
+    classrooms.rooms.push({ name: cls.name, room: cls.room || "", logo: cls.logo || null, custom: true, maxMinutes: cls.maxMinutes || null });
+    taken.add(cls.name);
+  });
+
+  CATEGORIES.forEach((c) => {
+    if (c.rooms) c.rooms.sort(byName);
+  });
+  rebuildFlatRooms();
 }
 
 // replaces the classes a teacher has added on top of the built-in Classrooms list —
 // pass the full current list every time (after adding, editing or deleting one),
 // never just the one that changed
 function applyCustomClasses(list) {
-  const category = CATEGORIES.find((c) => c.key === "classrooms");
-  if (!category || !Array.isArray(list)) return;
-  category.rooms = category.rooms.filter((r) => !r.custom);
-  const existingNames = new Set(category.rooms.map((r) => r.name));
-  list.forEach((cls) => {
-    if (!cls || !cls.name || existingNames.has(cls.name)) return;
-    category.rooms.push({ name: cls.name, room: cls.room || "", logo: cls.logo || null, custom: true, maxMinutes: cls.maxMinutes || null });
-    existingNames.add(cls.name);
-  });
-  category.rooms.sort(byName);
-  rebuildFlatRooms();
+  if (!Array.isArray(list)) return;
+  CUSTOM_CLASS_LIST = list;
+  rebuildRooms();
 }
 
-let FLAT_ROOMS = [];
-rebuildFlatRooms();
+// replaces the teacher's edits to built-in places (full current list every time)
+function applyRoomOverrides(list) {
+  if (!Array.isArray(list)) return;
+  ROOM_OVERRIDES = list;
+  rebuildRooms();
+}
+
+rebuildRooms();

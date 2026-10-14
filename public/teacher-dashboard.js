@@ -1094,6 +1094,7 @@ const classError = document.getElementById("class-error");
 const classSave = document.getElementById("class-save");
 const classFile = document.getElementById("class-logo-file");
 let classLogo = null;
+let roomOverrides = []; // the teacher's saved edits to built-in places (kept in step with the server)
 
 function classLogoIconMarkup(value) {
   if (value && value.startsWith("preset:")) {
@@ -1101,11 +1102,14 @@ function classLogoIconMarkup(value) {
     return cat ? categoryIconMarkup(cat) : "";
   }
   if (value) return `<img src="${value}" alt="" class="room-logo-img">`;
-  return categoryIconMarkup(categoryByKey("classrooms"));
+  return categoryIconMarkup(categoryByKey(classTargetKey()));
 }
 
 function renderClassPresets() {
-  const options = CATEGORIES.filter((c) => c.key !== "classrooms");
+  // a built-in place can use any category's picture (including its own, to undo a change); a new class skips Classrooms,
+  // since that's already what "no picture" shows
+  const editingBuiltin = classTarget && classTarget.builtin;
+  const options = CATEGORIES.filter((c) => editingBuiltin || c.key !== "classrooms");
   classPresetsEl.innerHTML = options
     .map(
       (c) =>
@@ -1122,7 +1126,7 @@ function setClassLogo(value) {
   const isImage = value && !value.startsWith("preset:");
   classLogoPreview.style.backgroundImage = isImage ? `url("${value}")` : "";
   classLogoPreview.classList.toggle("has-photo", !!isImage);
-  const cat = value && value.startsWith("preset:") ? CATEGORIES.find((c) => c.key === value.slice(7)) : categoryByKey("classrooms");
+  const cat = value && value.startsWith("preset:") ? CATEGORIES.find((c) => c.key === value.slice(7)) : categoryByKey(classTargetKey());
   classLogoPreview.style.backgroundColor = isImage ? "" : cat.color;
   classLogoPreview.innerHTML = isImage ? "" : classLogoIconMarkup(value);
   classPresetsEl.querySelectorAll(".class-preset").forEach((b) => {
@@ -1130,45 +1134,79 @@ function setClassLogo(value) {
   });
 }
 
-function classIconColor(c) {
-  if (c.logo && c.logo.startsWith("preset:")) {
-    const cat = CATEGORIES.find((x) => x.key === c.logo.slice(7));
+function entryIconColor(e) {
+  if (e.logo && e.logo.startsWith("preset:")) {
+    const cat = CATEGORIES.find((x) => x.key === e.logo.slice(7));
     if (cat) return cat.color;
   }
-  return categoryByKey("classrooms").color;
+  return categoryByKey(e.categoryKey).color;
 }
 
+function entryIconMarkup(e) {
+  if (e.logo && e.logo.startsWith("preset:")) {
+    const cat = CATEGORIES.find((x) => x.key === e.logo.slice(7));
+    return cat ? categoryIconMarkup(cat) : "";
+  }
+  if (e.logo) return `<img src="${e.logo}" alt="" class="room-logo-img">`;
+  return categoryIconMarkup(categoryByKey(e.categoryKey));
+}
+
+const PENCIL_ICON = '<svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>';
+const TRASH_ICON = '<svg viewBox="0 0 24 24"><path d="M4 7h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+
+// every place students can pick (built-in and teacher-added), grouped by category and filtered by the search box
 function renderClassSettings() {
   const listEl = document.getElementById("settings-class-list");
   const emptyEl = document.getElementById("settings-class-empty");
-  const sorted = customClasses.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
-  emptyEl.classList.toggle("hidden", sorted.length > 0);
-  listEl.innerHTML = sorted
-    .map(
-      (c) => `
-      <div class="t-class-card">
-        <span class="t-class-icon" style="background:${classIconColor(c)}">${classLogoIconMarkup(c.logo)}</span>
-        <div class="t-class-info">
-          <div class="t-class-name">${escapeHtml(c.name)}</div>
-          <div class="t-class-room">${c.room ? escapeHtml(c.room) : "No room set"}${c.maxMinutes ? ` · Max ${c.maxMinutes} min` : ""}</div>
-        </div>
-        <span class="t-class-actions">
-          <button type="button" class="t-class-edit-btn" data-edit-id="${c.id}" title="Edit ${escapeHtml(c.name)}" aria-label="Edit ${escapeHtml(c.name)}">
-            <svg viewBox="0 0 24 24"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
-          </button>
-          <button type="button" class="t-delete-btn" data-delete-class-id="${c.id}" title="Delete ${escapeHtml(c.name)}" aria-label="Delete ${escapeHtml(c.name)}">
-            <svg viewBox="0 0 24 24"><path d="M4 7h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-          </button>
-        </span>
-      </div>`
-    )
+  const term = document.getElementById("settings-class-search").value.trim().toLowerCase();
+
+  const toEntry = (r, c) => ({
+    ...r,
+    categoryKey: c.key,
+    id: r.custom ? (customClasses.find((x) => x.name === r.name) || {}).id : undefined,
+  });
+  const matches = (e, c) => !term || `${e.name} ${e.room || ""} ${c.label}`.toLowerCase().includes(term);
+
+  const groups = [];
+  const other = [];
+  CATEGORIES.forEach((c) => {
+    const entries = (c.leaf ? [c.leaf] : c.rooms).map((r) => toEntry(r, c)).filter((e) => matches(e, c));
+    if (c.leaf) other.push(...entries);
+    else if (entries.length) groups.push({ label: c.label, entries });
+  });
+  if (other.length) groups.push({ label: "Other places", entries: other });
+
+  const all = [];
+  emptyEl.classList.toggle("hidden", groups.length > 0);
+  listEl.innerHTML = groups
+    .map((g) => {
+      const cards = g.entries
+        .map((e) => {
+          const i = all.push(e) - 1;
+          const sub = `${e.room ? escapeHtml(e.room) : "No room set"}${e.maxMinutes ? ` · Max ${e.maxMinutes} min` : ""}`;
+          const del = e.custom
+            ? `<button type="button" class="t-delete-btn" data-delete-class-id="${e.id}" title="Delete ${escapeHtml(e.name)}" aria-label="Delete ${escapeHtml(e.name)}">${TRASH_ICON}</button>`
+            : "";
+          return `
+          <div class="t-class-card">
+            <span class="t-class-icon" style="background:${entryIconColor(e)}">${entryIconMarkup(e)}</span>
+            <div class="t-class-info">
+              <div class="t-class-name">${escapeHtml(e.name)}${e.overridden ? '<span class="t-class-edited">Edited</span>' : ""}</div>
+              <div class="t-class-room">${sub}</div>
+            </div>
+            <span class="t-class-actions">
+              <button type="button" class="t-class-edit-btn" data-edit-i="${i}" title="Edit ${escapeHtml(e.name)}" aria-label="Edit ${escapeHtml(e.name)}">${PENCIL_ICON}</button>
+              ${del}
+            </span>
+          </div>`;
+        })
+        .join("");
+      return `<h3 class="t-group-title">${escapeHtml(g.label)}<span>${g.entries.length}</span></h3><div class="t-class-grid">${cards}</div>`;
+    })
     .join("");
 
-  listEl.querySelectorAll("[data-edit-id]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const c = customClasses.find((x) => String(x.id) === btn.dataset.editId);
-      if (c) openClassDialog(c);
-    });
+  listEl.querySelectorAll("[data-edit-i]").forEach((btn) => {
+    btn.addEventListener("click", () => openClassDialog(all[Number(btn.dataset.editI)]));
   });
   listEl.querySelectorAll("[data-delete-class-id]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -1177,6 +1215,8 @@ function renderClassSettings() {
     });
   });
 }
+
+document.getElementById("settings-class-search").addEventListener("input", renderClassSettings);
 
 async function deleteClass(c) {
   customClasses = customClasses.filter((x) => x.id !== c.id);
@@ -1203,10 +1243,17 @@ async function deleteClass(c) {
 }
 
 let editingClassId = null;
+// what the dialog is editing: null = a brand-new class, or a settings entry (a teacher-added class, or a built-in place)
+let classTarget = null;
+
+function classTargetKey() {
+  return classTarget && classTarget.builtin ? classTarget.categoryKey : "classrooms";
+}
 
 /* maximum time for a class: quick picks + a typed number, both feed the same field */
 const classMaxInput = document.getElementById("class-max");
 const classMaxChips = document.querySelectorAll("#class-max-chips button");
+const classResetBtn = document.getElementById("class-reset");
 
 function syncClassMaxChips() {
   classMaxChips.forEach((b) => b.classList.toggle("active", b.dataset.min === classMaxInput.value.trim()));
@@ -1220,10 +1267,18 @@ classMaxChips.forEach((b) =>
 );
 classMaxInput.addEventListener("input", syncClassMaxChips);
 
+// existing = a settings entry to edit, or nothing to add a new class
 function openClassDialog(existing) {
-  editingClassId = existing ? existing.id : null;
-  document.getElementById("class-title").textContent = existing ? "Edit class" : "Add a class";
+  classTarget = existing || null;
+  editingClassId = existing && existing.custom ? existing.id : null;
+  const builtin = !!(existing && existing.builtin);
+
+  document.getElementById("class-title").textContent = !existing ? "Add a class" : builtin ? "Edit place" : "Edit class";
+  document.getElementById("class-sub").textContent = builtin
+    ? "Change how this place looks to students and the most time they can take going there."
+    : "Add a teacher or class so students can pick it as a destination.";
   classSave.textContent = existing ? "Save changes" : "Add class";
+  classResetBtn.classList.toggle("hidden", !(builtin && existing.overridden));
   classNameInput.value = existing ? existing.name : "";
   classRoomInput.value = existing ? existing.room || "" : "";
   classMaxInput.value = existing && existing.maxMinutes ? existing.maxMinutes : "";
@@ -1267,6 +1322,7 @@ classSave.addEventListener("click", async () => {
   const room = classRoomInput.value.trim();
   if (!name) return;
   const isEdit = editingClassId !== null;
+  const builtin = !!(classTarget && classTarget.builtin);
 
   const maxText = classMaxInput.value.trim();
   const maxMinutes = maxText === "" ? null : Number(maxText);
@@ -1276,19 +1332,48 @@ classSave.addEventListener("click", async () => {
     return;
   }
 
-  // a name that already belongs to another room never shows up as its own entry in the
+  // a name that already belongs to another place in the same group never shows up as its own entry in the
   // picker — it saves fine but silently does nothing, which looks like a broken delete later
-  const collision = FLAT_ROOMS.find(
-    (r) => r.categoryKey === "classrooms" && r.name.toLowerCase() === name.toLowerCase()
-  );
-  const editingThisOne = isEdit && collision && collision.custom && customClasses.some((c) => c.id === editingClassId && c.name.toLowerCase() === name.toLowerCase());
+  const collision = FLAT_ROOMS.find((r) => r.categoryKey === classTargetKey() && r.name.toLowerCase() === name.toLowerCase());
+  let editingThisOne = false;
+  if (collision && builtin) {
+    editingThisOne = collision.builtin && collision.origName === classTarget.origName;
+  } else if (collision && isEdit) {
+    editingThisOne = collision.custom && customClasses.some((c) => c.id === editingClassId && c.name.toLowerCase() === name.toLowerCase());
+  }
   if (collision && !editingThisOne) {
-    classError.textContent = "A room with that name already exists. Choose a different name.";
+    classError.textContent = "A place with that name already exists. Choose a different name.";
     classError.classList.remove("hidden");
     return;
   }
 
   classSave.disabled = true;
+
+  if (builtin) {
+    const res = await teacherApi("/api/teacher/room/override", {
+      categoryKey: classTarget.categoryKey,
+      origName: classTarget.origName,
+      name,
+      room,
+      logo: classLogo,
+      maxMinutes,
+    });
+    if (res.status === 401) return kickToSignIn();
+    if (!res.ok) {
+      classError.textContent = res.data.error || "Couldn't save that place.";
+      classError.classList.remove("hidden");
+      classSave.disabled = false;
+      return;
+    }
+    roomOverrides = roomOverrides.filter((o) => !(o.categoryKey === classTarget.categoryKey && o.origName === classTarget.origName));
+    roomOverrides.push({ categoryKey: classTarget.categoryKey, origName: classTarget.origName, name, room, logo: classLogo, maxMinutes });
+    applyRoomOverrides(roomOverrides);
+    renderClassSettings();
+    closeOverlay(classOverlay);
+    showToast(`Saved changes to ${name}`, "success");
+    return;
+  }
+
   const res = await teacherApi(isEdit ? "/api/teacher/class/update" : "/api/teacher/class", {
     ...(isEdit ? { id: editingClassId } : {}),
     name,
@@ -1313,6 +1398,27 @@ classSave.addEventListener("click", async () => {
   renderClassSettings();
   closeOverlay(classOverlay);
   showToast(isEdit ? `Saved changes to ${name}` : `Added ${name} to Classrooms`, "success");
+});
+
+// put an edited built-in place back to its original name, room, picture and time
+classResetBtn.addEventListener("click", async () => {
+  if (!classTarget || !classTarget.builtin) return;
+  classResetBtn.disabled = true;
+  const res = await teacherApi("/api/teacher/room/override/reset", {
+    categoryKey: classTarget.categoryKey,
+    origName: classTarget.origName,
+  });
+  classResetBtn.disabled = false;
+  if (res.status === 401) return kickToSignIn();
+  if (!res.ok) {
+    classError.textContent = res.data.error || "Couldn't reset that place.";
+    return classError.classList.remove("hidden");
+  }
+  roomOverrides = roomOverrides.filter((o) => !(o.categoryKey === classTarget.categoryKey && o.origName === classTarget.origName));
+  applyRoomOverrides(roomOverrides);
+  renderClassSettings();
+  closeOverlay(classOverlay);
+  showToast(`${classTarget.origName} is back to its defaults`, "info");
 });
 
 document.addEventListener("keydown", (e) => {
@@ -1520,6 +1626,8 @@ async function loadClasses() {
   const res = await apiFetch("/api/classes");
   if (res.ok) {
     customClasses = res.data.classes || [];
+    roomOverrides = res.data.overrides || [];
+    applyRoomOverrides(roomOverrides);
     applyCustomClasses(customClasses);
     if (currentView === "settings") renderClassSettings();
   }

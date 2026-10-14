@@ -10,8 +10,8 @@
 <script src="pwa.js" defer></script>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="dashboard.css">
-<link rel="stylesheet" href="teacher.css?v=14">
-<link rel="stylesheet" href="teacher-extra.css?v=14">
+<link rel="stylesheet" href="teacher.css?v=15">
+<link rel="stylesheet" href="teacher-extra.css?v=15">
 </head>
 <body>
 
@@ -114,15 +114,16 @@
 
       <section class="t-hall-section">
         <div class="t-settings-section-head">
-          <h2 class="t-section-title">Classes</h2>
+          <h2 class="t-section-title">Classes &amp; places</h2>
           <button type="button" class="btn btn-primary" id="settings-add-class-btn">
             <svg viewBox="0 0 24 24" class="btn-icon"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
             Add a class
           </button>
         </div>
-        <p class="t-settings-sub">Classes and teachers students can pick as a destination when creating a pass.</p>
-        <div class="t-class-grid" id="settings-class-list"></div>
-        <p class="t-no-history hidden" id="settings-class-empty">No classes added yet.</p>
+        <p class="t-settings-sub">Every place students can pick when creating a pass. Click the pencil on any of them to change its name, room, picture or maximum time.</p>
+        <input type="text" class="t-search t-settings-search" id="settings-class-search" placeholder="Search classes and places" autocomplete="off">
+        <div id="settings-class-list"></div>
+        <p class="t-no-history hidden" id="settings-class-empty">Nothing matches that search.</p>
       </section>
     </div>
   </main>
@@ -189,7 +190,7 @@
   <div class="confirm-overlay hidden" id="class-overlay">
     <div class="confirm-box t-modal photo-modal" role="dialog" aria-modal="true" aria-labelledby="class-title">
       <h3 id="class-title">Add a class</h3>
-      <p class="t-modal-sub">Add a teacher or class so students can pick it as a destination.</p>
+      <p class="t-modal-sub" id="class-sub">Add a teacher or class so students can pick it as a destination.</p>
 
       <label for="class-name" class="t-message-label">Class name</label>
       <input type="text" id="class-name" class="t-search" placeholder="e.g. Mr. Reynolds" maxlength="60" autocomplete="off">
@@ -227,6 +228,7 @@
       <p class="photo-error hidden" id="class-error" role="alert"></p>
 
       <div class="confirm-actions">
+        <button type="button" class="confirm-btn class-reset hidden" id="class-reset">Reset to default</button>
         <button type="button" class="confirm-btn confirm-cancel" id="class-cancel">Cancel</button>
         <button type="button" class="confirm-btn confirm-primary" id="class-save" disabled>Add class</button>
       </div>
@@ -282,8 +284,8 @@
     </div>
   </div>
 
-<script src="api.js?v=14"></script>
-<script src="rooms.js?v=14"></script>
-<script src="teacher-dashboard.js?v=14"></script>
+<script src="api.js?v=15"></script>
+<script src="rooms.js?v=15"></script>
+<script src="teacher-dashboard.js?v=15"></script>
 </body>
 </html>

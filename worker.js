@@ -138,6 +138,12 @@ function cleanLogo(raw) {
   return { ok: false };
 }
 
+// the built-in place categories a teacher can edit (matches rooms.js)
+const ROOM_CATEGORY_KEYS = new Set([
+  "mainOffice", "restrooms", "waterFountain", "mediaCenter", "admins",
+  "attendance", "studentServices", "classrooms", "locker", "cafeteria",
+]);
+
 // a class's maximum pass time in minutes (1-60); empty means "no special limit"
 function cleanMaxMinutes(raw) {
   if (raw === null || raw === undefined || raw === "") return { ok: true, value: null };
@@ -206,6 +212,10 @@ function ensureSchema(env) {
         ),
         db.prepare("CREATE INDEX IF NOT EXISTS scheduled_student ON scheduled_passes (student_key, status, scheduled_for)"),
         db.prepare("CREATE TABLE IF NOT EXISTS app_meta (k TEXT PRIMARY KEY, v TEXT NOT NULL)"),
+        // teacher edits to the built-in places (restrooms, classrooms, offices…), layered on top of the defaults in rooms.js
+        db.prepare(
+          "CREATE TABLE IF NOT EXISTS room_overrides (category_key TEXT NOT NULL, orig_name TEXT NOT NULL, name TEXT NOT NULL, room TEXT, logo TEXT, max_minutes INTEGER, PRIMARY KEY (category_key, orig_name))"
+        ),
         db.prepare("CREATE TABLE IF NOT EXISTS student_sessions (token_hash TEXT PRIMARY KEY, student_key TEXT NOT NULL, expires_at INTEGER NOT NULL)"),
       ])
       .then(async () => {
@@ -471,9 +481,17 @@ function clampMinutes(value) {
 // a student's requested minutes, also capped by the maximum time set on the class they're going to
 async function studentMinutes(env, dest, raw) {
   const minutes = clampMinutes(raw);
-  if (dest.categoryKey !== "classrooms") return minutes;
-  const row = await env.DB.prepare("SELECT max_minutes FROM classes WHERE name = ? COLLATE NOCASE").bind(dest.name).first();
-  return row && row.max_minutes ? Math.min(minutes, row.max_minutes) : minutes;
+  // a teacher's edit of a built-in place wins; otherwise a teacher-added class can carry its own maximum
+  const edited = await env.DB
+    .prepare("SELECT max_minutes FROM room_overrides WHERE category_key = ? AND name = ? COLLATE NOCASE")
+    .bind(dest.categoryKey, dest.name)
+    .first();
+  let max = edited && edited.max_minutes ? edited.max_minutes : null;
+  if (max === null && dest.categoryKey === "classrooms") {
+    const row = await env.DB.prepare("SELECT max_minutes FROM classes WHERE name = ? COLLATE NOCASE").bind(dest.name).first();
+    max = row && row.max_minutes ? row.max_minutes : null;
+  }
+  return max ? Math.min(minutes, max) : minutes;
 }
 
 function clampMinutesTeacher(value) {
@@ -765,8 +783,17 @@ async function handleApi(request, env, url) {
 
   if (pathname === "/api/classes" && method === "GET") {
     const rows = await env.DB.prepare("SELECT id, name, room, logo, max_minutes FROM classes ORDER BY name COLLATE NOCASE").all();
+    const edits = await env.DB.prepare("SELECT category_key, orig_name, name, room, logo, max_minutes FROM room_overrides").all();
     return json({
       classes: rows.results.map((r) => ({ id: r.id, name: r.name, room: r.room, logo: r.logo, maxMinutes: r.max_minutes || null })),
+      overrides: edits.results.map((r) => ({
+        categoryKey: r.category_key,
+        origName: r.orig_name,
+        name: r.name,
+        room: r.room || "",
+        logo: r.logo,
+        maxMinutes: r.max_minutes || null,
+      })),
     });
   }
 
@@ -1028,6 +1055,36 @@ async function handleApi(request, env, url) {
         if (String(err && err.message).includes("UNIQUE")) return fail("A class with that name already exists.", 409);
         throw err;
       }
+      return json({ ok: true });
+    }
+
+    // edit a built-in place (name, room, picture, maximum time); the defaults in rooms.js are never changed
+    if (pathname === "/api/teacher/room/override" && method === "POST") {
+      const body = await readBody(request);
+      const categoryKey = String(body.categoryKey || "");
+      const origName = cleanClassField(body.origName, true);
+      const name = cleanClassField(body.name, true);
+      const room = cleanClassField(body.room, false);
+      const logo = cleanLogo(body.logo);
+      const max = cleanMaxMinutes(body.maxMinutes);
+      if (!ROOM_CATEGORY_KEYS.has(categoryKey) || !origName || !name || room === null || !logo.ok) return fail("Invalid place.");
+      if (!max.ok) return fail("The maximum time has to be between 1 and 60 minutes.");
+      await env.DB.prepare(
+        "INSERT INTO room_overrides (category_key, orig_name, name, room, logo, max_minutes) VALUES (?, ?, ?, ?, ?, ?) " +
+          "ON CONFLICT (category_key, orig_name) DO UPDATE SET name = excluded.name, room = excluded.room, logo = excluded.logo, max_minutes = excluded.max_minutes"
+      )
+        .bind(categoryKey, origName, name, room, logo.value, max.value)
+        .run();
+      return json({ ok: true });
+    }
+
+    // put a built-in place back to its defaults
+    if (pathname === "/api/teacher/room/override/reset" && method === "POST") {
+      const body = await readBody(request);
+      const categoryKey = String(body.categoryKey || "");
+      const origName = cleanClassField(body.origName, true);
+      if (!ROOM_CATEGORY_KEYS.has(categoryKey) || !origName) return fail("Invalid place.");
+      await env.DB.prepare("DELETE FROM room_overrides WHERE category_key = ? AND orig_name = ?").bind(categoryKey, origName).run();
       return json({ ok: true });
     }
 
