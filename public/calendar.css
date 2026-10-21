@@ -868,13 +868,29 @@
   color: #4e5d74;
 }
 
+/* the time step is a little taller than the room list, so it gets more room and doesn't scroll */
+.modal:has(#duration-view:not(.hidden)) {
+  max-height: min(580px, calc(100vh - 118px));
+}
+
+.modal-overlay.centered .modal:has(#duration-view:not(.hidden)) {
+  max-height: min(580px, calc(100vh - 48px));
+}
+
+/* a big Start Pass button, like the real one */
 .duration-start-btn {
-  margin-top: 20px;
-  padding: 15px;
+  margin-top: 22px;
+  padding: 21px 16px;
   border-radius: 8px;
   background: var(--dest-color);
   box-shadow: 0 2px 8px rgba(16, 20, 24, 0.18);
-  font-size: 18px;
+  font-size: 22px;
+  gap: 10px;
+}
+
+.duration-start-btn .btn-icon {
+  width: 20px;
+  height: 20px;
 }
 
 /* ---------- Route: back arrow, green "from" dot, filled "from" pill, navy pin ---------- */
@@ -979,32 +995,40 @@
   stroke-width: 1.7;
 }
 
-/* ---------- Active pass screen (glassy card + stats, like the real SmartPass) ---------- */
+/* ---------- Active pass screen (glassy card + stats, like the real SmartPass) ----------
+   Everything here is sized in em off one font-size on .active-pass, so the card and the stats under it grow together:
+   as big as the window allows (about 35 "em" of height for both, 24 "em" wide) without ever running past the top or bottom. */
+
+.active-pass {
+  font-size: max(12px, min(calc((100vh - 70px) / 35), calc(94vw / 24), 26px));
+  padding: 16px 12px;
+}
 
 .pass-card {
-  max-width: 380px;
-  padding: 22px 22px 22px 22px;
-  border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  max-width: 24em;
+  padding: 1.4em;
+  border-radius: 0.75em;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0.75em 2.5em rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
 .pass-dest-icon {
-  width: 34px;
-  height: 34px;
+  width: 2.1em;
+  height: 2.1em;
 }
 
 .pass-card-title {
-  font-size: 28px;
+  font-size: 1.75em;
 }
 
 .pass-card-subtitle {
-  font-size: 14px;
+  font-size: 0.875em;
   font-weight: 600;
 }
 
+/* the line under the title runs right out to the card's left edge */
 .pass-from-row {
-  margin: 10px 0 18px 0;
+  margin: 0.65em 0 1.1em -1.4em;
 }
 
 .pass-from-line {
@@ -1012,19 +1036,25 @@
 }
 
 .pass-from {
-  font-size: 13px;
+  font-size: 0.8em;
   font-weight: 600;
 }
 
 .pass-from-badge {
-  padding: 3px 10px;
-  background: rgba(255, 255, 255, 0.28);
+  padding: 0.25em 0.75em;
+  border-radius: 0.5em;
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.pass-message {
+  font-size: 0.9em;
+  border-radius: 0.5em;
 }
 
 .pass-ring {
-  width: 200px;
-  height: 200px;
-  margin: 0 auto 28px auto;
+  width: 12.5em;
+  height: 12.5em;
+  margin: 0 auto 1.75em auto;
 }
 
 .pass-ring-track,
@@ -1033,47 +1063,47 @@
 }
 
 .pass-ring-track {
-  stroke: rgba(255, 255, 255, 0.28);
+  stroke: rgba(255, 255, 255, 0.26);
 }
 
 .pass-ring-timer {
-  font-size: 22px;
+  font-size: 1.4em;
   font-weight: 600;
 }
 
 .pass-ring-icon {
-  height: 44px;
+  height: 2.75em;
   opacity: 0.65;
 }
 
 .pass-ring-content {
-  gap: 6px;
+  gap: 0.4em;
 }
 
 .pass-end-btn {
-  padding: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.22);
-  font-size: 22px;
+  padding: 0.95em;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 0.45em;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 1.4em;
   font-weight: 700;
 }
 
 .pass-end-btn:hover {
-  background: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .pass-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  gap: 0.6em;
   width: 100%;
-  max-width: 380px;
-  margin-top: 14px;
-  padding: 12px;
-  border-radius: 14px;
+  max-width: 24em;
+  margin-top: 0.9em;
+  padding: 0.75em;
+  border-radius: 0.5em;
   background: #ffffff;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0.5em 1.75em rgba(0, 0, 0, 0.2);
   animation: passCardIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s both;
 }
 
@@ -1081,19 +1111,19 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px 6px;
-  border-radius: 8px;
+  padding: 0.75em 0.4em;
+  border-radius: 0.4em;
   background: #f4f5f8;
 }
 
 .pass-stat b {
-  font-size: 24px;
+  font-size: 1.5em;
   font-weight: 700;
   color: #1f195e;
 }
 
 .pass-stat span {
-  font-size: 14px;
+  font-size: 0.875em;
   font-weight: 500;
   color: #7083a0;
 }
@@ -1102,7 +1132,6 @@
 .pass-card.bouncing ~ .pass-stats {
   display: none;
 }
-
 
 @media (max-width: 760px) {
   .calendar-page {

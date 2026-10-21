@@ -642,7 +642,10 @@ function showDurationView(room) {
   const maxNote = document.getElementById("duration-max");
   maxNote.textContent = classMax ? `Up to ${classMax} min here` : "";
   maxNote.classList.toggle("hidden", !classMax);
-  durationSlider.value = Math.min(5, durationMax);
+  // a class with its own maximum starts the slider halfway (10 -> 5 min, 20 -> 10 min), but never below 5 minutes
+  // (so a short maximum starts at 5, or at the maximum itself when that's under 5); everywhere else it starts at 5
+  const startMinutes = classMax ? Math.min(classMax, Math.max(5, Math.round(classMax / 2))) : 5;
+  durationSlider.value = startMinutes;
   updateDurationValueText();
 }
 
@@ -795,11 +798,11 @@ function mixColor(hex, target, t) {
 
 // the pass card is the destination's color with a soft glassy lift; the page behind it is a deeper wash of the same color
 function passCardBg(hex) {
-  return `linear-gradient(160deg, ${mixColor(hex, "#ffffff", 0.14)}, ${mixColor(hex, "#000000", 0.04)})`;
+  return `linear-gradient(160deg, ${mixColor(hex, "#000000", 0.14)}, ${mixColor(hex, "#000000", 0.28)})`;
 }
 
 function passPageBg(hex) {
-  return `linear-gradient(160deg, ${mixColor(hex, "#000000", 0.34)}, ${mixColor(hex, "#000000", 0.5)})`;
+  return `linear-gradient(160deg, ${mixColor(hex, "#000000", 0.44)}, ${mixColor(hex, "#000000", 0.6)})`;
 }
 
 /* Stats card under the pass: how many passes today, this week (from Monday) and this month */
