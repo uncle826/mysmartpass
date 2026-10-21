@@ -1,0 +1,1167 @@
+/* Centered Create Pass popup, Schedule Pass step and the Calendar page */
+
+/* ---------- Centered Create Pass popup ---------- */
+
+.modal-overlay.centered {
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(20, 20, 40, 0.29);
+  animation: confirmBackdropIn 0.2s ease both;
+}
+
+.modal-overlay.centered .modal {
+  transform-origin: 50% 50%;
+  max-height: min(560px, calc(100vh - 48px));
+}
+
+.modal-overlay.centered.closing {
+  opacity: 0;
+  transition: opacity 0.16s ease;
+}
+
+/* ---------- Schedule Pass ---------- */
+
+.modal.schedule-mode {
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  width: 425px;
+  max-height: min(600px, calc(100vh - 100px));
+}
+
+.sched-grid .mini-day {
+  width: 34px;
+  height: 34px;
+  font-size: 14px;
+}
+
+.sched-weekdays {
+  font-size: 13px;
+}
+
+.sched-month-label {
+  font-size: 16px;
+}
+
+.sched-header {
+  background: #00b476;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  padding: 14px 0;
+}
+
+.sched-body {
+  padding: 20px 22px 22px 22px;
+}
+
+.sched-month {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.sched-month-label,
+.mini-cal-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f195e;
+}
+
+.cal-arrow {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: #4e5d74;
+  cursor: pointer;
+}
+
+.cal-arrow svg {
+  width: 16px;
+  height: 16px;
+}
+
+.cal-arrow:hover:not(:disabled) {
+  background: #f0f2f6;
+}
+
+.cal-arrow:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.mini-cal-weekdays,
+.mini-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  justify-items: center;
+}
+
+.mini-cal-weekdays {
+  width: 100%;
+  font-size: 11px;
+  font-weight: 700;
+  color: #1f195e;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e7eaee;
+  margin-bottom: 6px;
+}
+
+.mini-cal-grid {
+  row-gap: 4px;
+}
+
+.mini-day {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: #1f195e;
+  cursor: pointer;
+}
+
+.mini-day:hover:not(:disabled):not(.today):not(.selected) {
+  background: #f0f2f6;
+}
+
+.mini-day.muted {
+  color: #b7c1cf;
+}
+
+.mini-day:disabled {
+  cursor: default;
+}
+
+.mini-day.selected {
+  background: #00b476;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.mini-day.today:not(.selected) {
+  color: #00b476;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1.5px #00b476;
+}
+
+.mini-day.has-events::after {
+  content: "";
+  position: absolute;
+  bottom: 1px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: #00b476;
+}
+
+.mini-day.selected.has-events::after {
+  background: #ffffff;
+}
+
+.sched-time {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 16px 0 14px 0;
+  border-top: 1px solid #e7eaee;
+  padding-top: 14px;
+}
+
+.sched-spin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sched-spin button {
+  width: 30px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #b7c1cf;
+  cursor: pointer;
+}
+
+.sched-spin button:hover {
+  color: #00b476;
+}
+
+.sched-spin button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sched-spin span {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f195e;
+  font-variant-numeric: tabular-nums;
+}
+
+.sched-colon {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f195e;
+}
+
+.sched-ampm {
+  margin-left: 4px;
+  padding: 6px 10px;
+  border: 1px solid #d4d9e2;
+  border-radius: 8px;
+  background: #ffffff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  color: #4e5d74;
+  cursor: pointer;
+}
+
+.sched-ampm:hover {
+  background: #f5f6f8;
+}
+
+.sched-continue {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 13px;
+  border: none;
+  border-radius: 8px;
+  background: #00b476;
+  color: #ffffff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sched-continue:hover {
+  background: #009a65;
+}
+
+.sched-continue .btn-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.sched-when {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -6px 0 14px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4e5d74;
+}
+
+.scheduled-note {
+  margin: 12px 0 0 0;
+  padding: 6px 14px;
+  border-radius: 14px;
+  background: #e6f7f0;
+  color: #00875a;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ---------- Calendar page ---------- */
+
+.calendar-page {
+  display: flex;
+  align-items: flex-start;
+  min-height: calc(100vh - 74px);
+}
+
+.cal-side {
+  width: 196px;
+  flex-shrink: 0;
+  align-self: stretch;
+  background: #ffffff;
+  border-right: 1px solid #e7eaee;
+  padding: 18px 14px;
+  animation: riseIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.mini-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.mini-cal .mini-day {
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
+}
+
+.cal-day-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 18px -14px 0 -14px;
+  padding: 14px 14px 0 14px;
+  border-top: 1px solid #e7eaee;
+}
+
+.cal-day-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f195e;
+}
+
+.cal-day-label.is-today {
+  color: #00b476;
+}
+
+.cal-day-arrows {
+  display: flex;
+}
+
+.cal-day-arrows .cal-arrow {
+  width: 22px;
+  height: 22px;
+}
+
+.cal-empty {
+  text-align: center;
+  padding: 36px 6px 0 6px;
+  color: #b7c1cf;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.cal-empty-emoji {
+  display: block;
+  font-size: 18px;
+  margin-bottom: 6px;
+}
+
+.cal-empty p {
+  margin: 0;
+}
+
+.cal-day-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 10px;
+}
+
+.cal-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 2px;
+  border-bottom: 1px solid #f5f6f8;
+}
+
+.cal-item .notif-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.cal-item .notif-info {
+  flex: 1;
+}
+
+.cal-item .notif-name {
+  font-size: 12.5px;
+}
+
+.cal-item .notif-meta {
+  font-size: 11px;
+}
+
+.cal-cancel {
+  padding: 3px 8px;
+  border: 1px solid #f1c4c0;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #e2574c;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cal-cancel:hover {
+  background: #fdf1f0;
+}
+
+.cal-main {
+  flex: 1;
+  min-width: 0;
+  padding: 16px 20px 24px 14px;
+}
+
+.cal-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.cal-today-btn {
+  margin-right: 8px;
+  padding: 9px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 2px 10px rgba(16, 20, 24, 0.08);
+  font: inherit;
+  font-size: 13px;
+  color: #7083a0;
+  cursor: pointer;
+}
+
+.cal-today-btn:hover {
+  color: #1f195e;
+}
+
+.cal-title {
+  margin: 0 0 0 10px;
+  font-size: 20px;
+  font-weight: 500;
+  color: #4e5d74;
+}
+
+.cal-card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(16, 20, 24, 0.08);
+  overflow: hidden;
+}
+
+.cal-head {
+  display: grid;
+  padding: 12px 8px 8px 0;
+  border-bottom: 1px solid #eef0f4;
+}
+
+.cal-head-day {
+  padding-left: 8px;
+  font-size: 15px;
+  color: #7083a0;
+}
+
+.cal-head-day b {
+  font-weight: 700;
+  color: #4e5d74;
+}
+
+.cal-head-day.is-today,
+.cal-head-day.is-today b {
+  color: #00b476;
+}
+
+.cal-scroll {
+  max-height: calc(100vh - 230px);
+  min-height: 300px;
+  overflow-y: auto;
+}
+
+.cal-body {
+  position: relative;
+  display: grid;
+}
+
+.cal-hours {
+  position: relative;
+}
+
+.cal-hour {
+  position: absolute;
+  right: 8px;
+  transform: translateY(-50%);
+  font-size: 11px;
+  color: #7083a0;
+}
+
+.cal-col {
+  position: relative;
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 61px, #eef0f4 61px, #eef0f4 62px);
+  border-left: 1px solid #f0f2f5;
+}
+
+.cal-event {
+  position: absolute;
+  left: 3px;
+  right: 6px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  overflow: hidden;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: var(--c);
+  color: #ffffff;
+  font-size: 11px;
+  line-height: 1.25;
+  box-shadow: 0 1px 4px rgba(16, 20, 24, 0.15);
+}
+
+.cal-event b {
+  min-width: 0;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-event span {
+  flex-shrink: 0;
+  white-space: nowrap;
+  opacity: 0.9;
+}
+
+.cal-event.scheduled {
+  background: #ffffff;
+  color: var(--c);
+  border: 1.5px dashed var(--c);
+  box-shadow: none;
+}
+
+.cal-event.active {
+  outline: 2px solid #1f195e;
+}
+
+.cal-now {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #e0386b;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.cal-now i {
+  position: absolute;
+  left: -5px;
+  top: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #e0386b;
+}
+
+/* ---------- Pass box (sized to match the real SmartPass: about 425 x 445) ---------- */
+
+.modal {
+  width: 425px;
+  max-height: min(445px, calc(100vh - 118px));
+  padding: 16px 16px 16px 16px;
+  border-radius: 14px;
+  overflow-y: auto;
+}
+
+.modal-overlay.centered .modal {
+  max-height: min(445px, calc(100vh - 48px));
+}
+
+.modal-overlay {
+  padding-top: 76px;
+}
+
+/* the room-picking step is a fixed-size card, like the real one */
+.modal:has(#picker-view:not(.hidden)) {
+  height: min(445px, calc(100vh - 118px));
+}
+
+.modal-overlay.centered .modal:has(#picker-view:not(.hidden)) {
+  height: min(445px, calc(100vh - 48px));
+}
+
+.modal-top {
+  height: 57px;
+  margin: -16px -16px 16px -16px;
+  border-bottom: 1px solid #dde1ea;
+  flex-shrink: 0;
+}
+
+.route {
+  gap: 12px;
+}
+
+.route-fields {
+  gap: 10px;
+}
+
+.modal-field {
+  padding: 9px 20px;
+  border-radius: 22px;
+  background: #ffffff;
+  border: 1px solid #e3e6ee;
+}
+
+.modal-field.active {
+  border-color: #4b55c9;
+  box-shadow: 0 0 0 3px rgba(99, 112, 235, 0.18);
+}
+
+.modal-input {
+  font-size: 16px;
+  line-height: 20px;
+}
+
+.route-icons {
+  padding: 10px 0;
+}
+
+.route.from-only .route-dots,
+.route.from-only .route-pin,
+.route.from-only #going-to-field {
+  display: none;
+}
+
+.route.from-only .route-icons {
+  justify-content: center;
+}
+
+.modal-list-header {
+  margin: 14px 0 6px 0;
+}
+
+.modal-list-title {
+  font-size: 16px;
+}
+
+.modal-room-list {
+  margin: 0 -6px;
+}
+
+.room-row {
+  gap: 10px;
+  padding: 10px 8px;
+}
+
+.room-icon {
+  width: 36px;
+  height: 36px;
+}
+
+.room-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.room-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.room-code {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.duration-dest-title {
+  font-size: 20px;
+}
+
+.duration-start-btn {
+  margin-top: 16px;
+}
+
+.sched-when {
+  margin: 0 0 14px 0;
+}
+
+/* ---------- Time step (destination in its own color, vertical slider, colored Start Pass) ---------- */
+
+#duration-view {
+  --dest-color: #4a90e2;
+}
+
+.duration-dest-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 8px 2px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--dest-color);
+}
+
+.duration-dest-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 0;
+  background: none;
+  overflow: visible;
+  flex-shrink: 0;
+  filter: url(#dest-tint);
+}
+
+.duration-dest-icon img,
+.duration-dest-icon svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.duration-dest-icon.photo {
+  filter: none;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.duration-from-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.duration-from-line {
+  flex: 1;
+  height: 1px;
+  background: #e7eaee;
+}
+
+.duration-from {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #7083a0;
+}
+
+.duration-from-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 14px;
+  background: #eef0f4;
+  font-size: 14px;
+  font-weight: 500;
+  color: #4e5d74;
+}
+
+.duration-from-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  filter: url(#gray-tint);
+}
+
+.duration-from-icon:empty {
+  display: none;
+}
+
+.duration-from-icon.photo {
+  filter: none;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.duration-from-icon img,
+.duration-from-icon svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.duration-body {
+  margin-top: 16px;
+  gap: 8px;
+}
+
+.duration-slider-col {
+  width: 100px;
+  padding: 12px 0 12px 66px;
+  justify-content: flex-start;
+}
+
+.dur-track {
+  position: relative;
+  width: 36px;
+  height: 172px;
+  flex-shrink: 0;
+  cursor: pointer;
+  touch-action: none;
+  outline: none;
+}
+
+.dur-track::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: #e3e6ee;
+}
+
+.dur-fill {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: #4a5568;
+}
+
+.dur-thumb {
+  position: absolute;
+  left: 50%;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  border-radius: 50%;
+  background: #4a5568;
+  box-shadow: 0 1px 4px rgba(16, 20, 24, 0.3);
+  transition: box-shadow 0.15s ease;
+}
+
+.dur-track:hover .dur-thumb,
+.dur-track:focus-visible .dur-thumb {
+  box-shadow: 0 0 0 5px rgba(74, 85, 104, 0.18), 0 1px 4px rgba(16, 20, 24, 0.3);
+}
+
+.round-trip-pill {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #f4f5f8;
+  box-shadow: 0 1px 4px rgba(16, 20, 24, 0.1);
+  font-size: 13px;
+  font-weight: 600;
+  color: #b7c1cf;
+}
+
+.duration-question {
+  font-size: 18px;
+  font-weight: 500;
+  color: #4e5d74;
+}
+
+.duration-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #4e5d74;
+}
+
+/* the time step is a little taller than the room list, so it gets more room and doesn't scroll */
+.modal:has(#duration-view:not(.hidden)) {
+  max-height: min(580px, calc(100vh - 118px));
+}
+
+.modal-overlay.centered .modal:has(#duration-view:not(.hidden)) {
+  max-height: min(580px, calc(100vh - 48px));
+}
+
+/* a big Start Pass button, like the real one */
+.duration-start-btn {
+  margin-top: 22px;
+  padding: 21px 16px;
+  border-radius: 8px;
+  background: var(--dest-color);
+  box-shadow: 0 2px 8px rgba(16, 20, 24, 0.18);
+  font-size: 22px;
+  gap: 10px;
+}
+
+.duration-start-btn .btn-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* ---------- Route: back arrow, green "from" dot, filled "from" pill, navy pin ---------- */
+
+.modal-top {
+  display: flex;
+  align-items: center;
+  padding-left: 12px;
+}
+
+.modal-top-back {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: #1f195e;
+  cursor: pointer;
+}
+
+.modal-top-back:hover {
+  background: #f0f2f6;
+}
+
+.modal-top-back svg {
+  width: 18px;
+  height: 18px;
+}
+
+.route-circle {
+  width: 14px;
+  height: 14px;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.route.has-from .route-circle {
+  background: #00b476;
+  border-color: #00b476;
+}
+
+.route.has-from .route-dots span {
+  background: #d3d8e2;
+}
+
+.route.has-from .route-pin {
+  color: #1f195e;
+}
+
+.modal-field.filled:not(.active) {
+  background: #f4f5f8;
+  border-color: transparent;
+}
+
+/* ---------- Category tiles in the pass box (icon centered over the name, like the real one) ---------- */
+
+.category-grid {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.category-tile {
+  aspect-ratio: auto;
+  height: 78px;
+  padding: 8px 6px;
+  border-radius: 8px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 1px 3px rgba(16, 20, 24, 0.12);
+}
+
+.category-tile-icon {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+}
+
+.category-tile-footer {
+  width: auto;
+  max-width: 100%;
+  justify-content: center;
+  gap: 5px;
+}
+
+.category-tile-label {
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.category-tile-chevron {
+  width: 13px;
+  height: 13px;
+}
+
+.category-tile-chevron path {
+  stroke-width: 1.7;
+}
+
+/* ---------- Active pass screen (glassy card + stats, like the real SmartPass) ----------
+   Everything here is sized in em off one font-size on .active-pass, so the card and the stats under it grow together:
+   as big as the window allows (about 35 "em" of height for both, 24 "em" wide) without ever running past the top or bottom. */
+
+.active-pass {
+  font-size: max(12px, min(calc((100vh - 70px) / 35), calc(94vw / 24), 26px));
+  padding: 16px 12px;
+}
+
+.pass-card {
+  max-width: 24em;
+  padding: 1.4em;
+  border-radius: 0.75em;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0.75em 2.5em rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.pass-dest-icon {
+  width: 2.1em;
+  height: 2.1em;
+}
+
+.pass-card-title {
+  font-size: 1.75em;
+}
+
+.pass-card-subtitle {
+  font-size: 0.875em;
+  font-weight: 600;
+}
+
+/* the line under the title runs right out to the card's left edge */
+.pass-from-row {
+  margin: 0.65em 0 1.1em -1.4em;
+}
+
+.pass-from-line {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.pass-from {
+  font-size: 0.8em;
+  font-weight: 600;
+}
+
+.pass-from-badge {
+  padding: 0.25em 0.75em;
+  border-radius: 0.5em;
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.pass-message {
+  font-size: 0.9em;
+  border-radius: 0.5em;
+}
+
+.pass-ring {
+  width: 12.5em;
+  height: 12.5em;
+  margin: 0 auto 1.75em auto;
+}
+
+.pass-ring-track,
+.pass-ring-progress {
+  stroke-width: 12;
+}
+
+.pass-ring-track {
+  stroke: rgba(255, 255, 255, 0.26);
+}
+
+.pass-ring-timer {
+  font-size: 1.4em;
+  font-weight: 600;
+}
+
+.pass-ring-icon {
+  height: 2.75em;
+  opacity: 0.65;
+}
+
+.pass-ring-content {
+  gap: 0.4em;
+}
+
+.pass-end-btn {
+  padding: 0.95em;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 0.45em;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 1.4em;
+  font-weight: 700;
+}
+
+.pass-end-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.pass-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6em;
+  width: 100%;
+  max-width: 24em;
+  margin-top: 0.9em;
+  padding: 0.75em;
+  border-radius: 0.5em;
+  background: #ffffff;
+  box-shadow: 0 0.5em 1.75em rgba(0, 0, 0, 0.2);
+  animation: passCardIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 0.15s both;
+}
+
+.pass-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.75em 0.4em;
+  border-radius: 0.4em;
+  background: #f4f5f8;
+}
+
+.pass-stat b {
+  font-size: 1.5em;
+  font-weight: 700;
+  color: #1f195e;
+}
+
+.pass-stat span {
+  font-size: 0.875em;
+  font-weight: 500;
+  color: #7083a0;
+}
+
+/* while the pass is bouncing around the screen the stats card steps out of the way */
+.pass-card.bouncing ~ .pass-stats {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .calendar-page {
+    flex-direction: column;
+  }
+  .cal-side {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #e7eaee;
+  }
+}
+
+.duration-max {
+  margin: -6px 0 0 0;
+  color: #7083a0;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* destination boxes (restrooms, admins…): the name can wrap to two lines, photo logos stay round */
+.room-tile .category-tile-label {
+  white-space: normal;
+  line-height: 1.15;
+  overflow: visible;
+}
+
+.category-tile-icon .room-logo-img {
+  border-radius: 50%;
+}
+
+.rec-grid {
+  margin-bottom: 4px;
+}

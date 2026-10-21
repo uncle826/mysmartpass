@@ -13,6 +13,8 @@ function userKey(base) {
 
 const AVATAR_COLORS = ["#d3d7de", "#1ed17a", "#2599d6", "#7b68ee", "#fb6d4c", "#f2994a", "#b21cc4", "#14a3a1"];
 let avatarColor = AVATAR_COLORS[0];
+let rules = { requestOnly: false, dailyLimit: null, usedToday: 0, request: null };
+let lastDecisionId = null;
 
 const avatarBtn = document.getElementById("avatar-btn");
 const avatarMenu = document.getElementById("avatar-menu");
@@ -23,7 +25,7 @@ document.getElementById("avatar-menu-name").textContent = name.toUpperCase();
 
 function applyAvatarColor(color) {
   navAvatars.forEach((el) => {
-    el.style.background = color;
+    el.style.backgroundColor = color;
   });
 }
 
@@ -67,6 +69,7 @@ document.getElementById("sign-out-btn").addEventListener("click", () => {
   localStorage.removeItem("smartpass_role");
   localStorage.removeItem("smartpass_name");
   localStorage.removeItem("smartpass_school");
+  localStorage.removeItem("smartpass_student_token");
   document.body.classList.add("fade-out");
   setTimeout(() => {
     window.location.href = signInPage;
@@ -150,8 +153,44 @@ let currentCategory = null;
 let comingFromRoom = null;
 let goingToRoom = null;
 
-function categoryByKey(key) {
-  return CATEGORIES.find((c) => c.key === key);
+// Schedule Pass: the popup starts with a date + time step, then shows the same room picker
+let scheduleMode = false;
+let scheduledFor = null;
+let scheduledCache = [];
+
+const passModal = document.getElementById("pass-modal");
+const scheduleView = document.getElementById("schedule-view");
+const schedWhen = document.getElementById("sched-when");
+const schedWhenText = document.getElementById("sched-when-text");
+
+/* Small date helpers (shared with calendar.js) */
+
+function startOfDay(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function sameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+// Monday-to-Friday weeks covering a month (days from the neighbouring months fill the gaps)
+function monthWeeks(monthDate) {
+  const y = monthDate.getFullYear();
+  const m = monthDate.getMonth();
+  const start = new Date(y, m, 1);
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  const last = new Date(y, m + 1, 0);
+  const weeks = [];
+  for (let w = new Date(start); w <= last; w.setDate(w.getDate() + 7)) {
+    const week = [];
+    for (let i = 0; i < 5; i++) week.push(new Date(w.getFullYear(), w.getMonth(), w.getDate() + i));
+    weeks.push(week);
+  }
+  return weeks;
+}
+
+function formatWhen(ts) {
+  return new Date(ts).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
 function setActiveField(field) {
@@ -170,7 +209,7 @@ function roomRowMarkup(r, extraClass) {
   const isSelected = selected && selected.name === r.name ? "selected" : "";
   return `
         <button type="button" class="room-row ${isSelected} ${extraClass || ""}" data-name="${r.name}">
-          <span class="room-icon" style="background:${category.color}">${categoryIconMarkup(category)}</span>
+          <span class="room-icon" style="background:${category.color}">${roomIconMarkup(r.name, r.categoryKey)}</span>
           <span class="room-name">${r.name}</span>
           <span class="room-code">
             <svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
@@ -192,7 +231,7 @@ function recommendedRooms(from) {
     ["waterFountain", "Fountain"],
   ]
     .map(([key, word]) => {
-      const match = categoryByKey(key).rooms.find((room) => room.name === `${prefix} ${word}`);
+      const match = categoryByKey(key).rooms.find((room) => (room.origName || room.name) === `${prefix} ${word}`);
       return match ? { name: match.name, room: match.room, categoryKey: key } : null;
     })
     .filter(Boolean);
@@ -204,8 +243,9 @@ function renderCategoryGrid(categories, recommended = []) {
     return;
   }
 
+  // suggested places (like the 300's restroom) are boxes too, the same as Admins and the Main Office
   const recMarkup = recommended.length
-    ? `<div class="rec-block">${recommended.map((r) => roomRowMarkup(r, "recommended")).join("")}</div><h3 class="modal-list-title rec-sub">All Rooms</h3>`
+    ? `<div class="category-grid rec-grid">${recommended.map((r, idx) => roomTileMarkup(r, idx)).join("")}</div><h3 class="modal-list-title rec-sub">All Rooms</h3>`
     : "";
 
   roomList.innerHTML = `${recMarkup}<div class="category-grid">${categories
@@ -213,22 +253,23 @@ function renderCategoryGrid(categories, recommended = []) {
       const chevron = c.leaf
         ? ""
         : '<svg class="category-tile-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      // a single-place category (Main Office, Locker…) shows that place's own name and picture
+      const label = c.leaf ? c.leaf.name : c.label;
+      const icon = c.leaf ? roomIconMarkup(c.leaf.name, c.key) : categoryIconMarkup(c);
       return `
         <button type="button" class="category-tile" style="background:${c.color}; --i:${idx}" data-key="${c.key}">
-          <span class="category-tile-icon">${categoryIconMarkup(c)}</span>
+          <span class="category-tile-icon">${icon}</span>
           <span class="category-tile-footer">
-            <span class="category-tile-label">${c.label}</span>
+            <span class="category-tile-label">${escapeHtml(label)}</span>
             ${chevron}
           </span>
         </button>`;
     })
     .join("")}</div>`;
 
-  roomList.querySelectorAll(".room-row.recommended").forEach((row) => {
-    row.addEventListener("click", () => selectRoom(recommended.find((r) => r.name === row.dataset.name)));
-  });
+  bindRoomTiles(recommended);
 
-  roomList.querySelectorAll(".category-tile").forEach((tile) => {
+  roomList.querySelectorAll(".category-tile:not(.room-tile)").forEach((tile) => {
     tile.addEventListener("click", () => {
       const cat = categoryByKey(tile.dataset.key);
       if (cat.leaf) {
@@ -240,6 +281,37 @@ function renderCategoryGrid(categories, recommended = []) {
     });
   });
 }
+
+// a destination shown as a colored box (icon over the name), like the category boxes
+function roomTileMarkup(r, idx) {
+  const category = categoryByKey(r.categoryKey);
+  return `
+        <button type="button" class="category-tile room-tile" style="background:${category.color}; --i:${idx}" data-name="${escapeHtml(r.name)}" data-cat="${r.categoryKey}">
+          <span class="category-tile-icon">${roomIconMarkup(r.name, r.categoryKey)}</span>
+          <span class="category-tile-footer"><span class="category-tile-label">${escapeHtml(r.name)}</span></span>
+        </button>`;
+}
+
+function bindRoomTiles(rooms) {
+  roomList.querySelectorAll(".room-tile").forEach((tile) => {
+    tile.addEventListener("click", () => {
+      const room = rooms.find((r) => r.name === tile.dataset.name && r.categoryKey === tile.dataset.cat);
+      if (room) selectRoom(room);
+    });
+  });
+}
+
+function renderRoomTiles(rooms) {
+  if (rooms.length === 0) {
+    roomList.innerHTML = `<div class="no-results">No matches</div>`;
+    return;
+  }
+  roomList.innerHTML = `<div class="category-grid">${rooms.map((r, idx) => roomTileMarkup(r, idx)).join("")}</div>`;
+  bindRoomTiles(rooms);
+}
+
+// short lists (restrooms, fountains, admins…) are boxes; a long list (all the classrooms) stays a scrolling list
+const MAX_TILE_ROOMS = 12;
 
 function renderFlatList(rooms) {
   if (rooms.length === 0) {
@@ -295,7 +367,8 @@ function renderPicker(filterText) {
       room: r.room,
       categoryKey: currentCategory.key,
     }));
-    renderFlatList(rooms);
+    if (rooms.length <= MAX_TILE_ROOMS) renderRoomTiles(rooms);
+    else renderFlatList(rooms);
   } else {
     modalBack.classList.add("hidden");
     const recommended = recommendedRooms(comingFromRoom);
@@ -304,11 +377,21 @@ function renderPicker(filterText) {
   }
 }
 
+// like the real SmartPass, "Going to?" only appears once you've picked where you're coming from
+function updateRouteMode() {
+  const route = document.getElementById("route");
+  route.classList.toggle("from-only", !comingFromRoom);
+  route.classList.toggle("has-from", !!comingFromRoom);
+  comingFromField.classList.toggle("filled", !!comingFromRoom);
+  document.getElementById("modal-top-back").classList.toggle("hidden", !(comingFromRoom || scheduleMode));
+}
+
 function selectRoom(room) {
   if (activeField === "comingFrom") {
     comingFromRoom = room;
     comingFromInput.value = room.name;
     currentCategory = null;
+    updateRouteMode();
     setActiveField("goingTo");
     renderPicker("");
     goingToInput.focus();
@@ -322,22 +405,247 @@ function selectRoom(room) {
 
 function showPickerView() {
   durationView.classList.add("hidden");
+  scheduleView.classList.add("hidden");
+  passModal.classList.remove("schedule-mode");
   pickerView.classList.remove("hidden");
+  schedWhen.classList.toggle("hidden", !scheduleMode);
+  if (scheduleMode && scheduledFor) schedWhenText.textContent = formatWhen(scheduledFor);
+  updateRouteMode();
 }
+
+function showScheduleView() {
+  pickerView.classList.add("hidden");
+  durationView.classList.add("hidden");
+  scheduleView.classList.remove("hidden");
+  passModal.classList.add("schedule-mode");
+  renderScheduleGrid();
+  renderScheduleTime();
+}
+
+/* Schedule step: month grid + time spinner */
+
+const schedGrid = document.getElementById("sched-grid");
+const schedMonthLabel = document.getElementById("sched-month-label");
+const schedHourEl = document.getElementById("sched-hour");
+const schedMinEl = document.getElementById("sched-min");
+const schedAmpmBtn = document.getElementById("sched-ampm");
+const schedError = document.getElementById("sched-error");
+
+let schedMonth = null;
+let schedDate = null;
+let schedHour = 5;
+let schedMin = 0;
+let schedPm = true;
+
+function initScheduleDefaults() {
+  // default to the next free 5-minute slot at least 10 minutes from now; weekends roll to Monday morning
+  let d = new Date(Date.now() + 10 * 60000);
+  d = new Date(Math.ceil(d.getTime() / 300000) * 300000);
+  if (d.getDay() === 0 || d.getDay() === 6) {
+    d = startOfDay(d);
+    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+    d.setHours(8, 0, 0, 0);
+  }
+  schedDate = startOfDay(d);
+  schedMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+  schedPm = d.getHours() >= 12;
+  schedHour = d.getHours() % 12 || 12;
+  schedMin = d.getMinutes();
+  schedError.classList.add("hidden");
+}
+
+function renderScheduleGrid() {
+  const today = startOfDay(new Date());
+  schedMonthLabel.textContent = schedMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  document.getElementById("sched-prev").disabled = schedMonth <= new Date(today.getFullYear(), today.getMonth(), 1);
+
+  schedGrid.innerHTML = monthWeeks(schedMonth)
+    .flat()
+    .map((d) => {
+      const past = d < today;
+      const other = d.getMonth() !== schedMonth.getMonth();
+      const selected = schedDate && sameDay(d, schedDate);
+      const cls = ["mini-day", past || other ? "muted" : "", selected ? "selected" : ""].join(" ");
+      return `<button type="button" class="${cls}" data-ts="${d.getTime()}" ${past ? "disabled" : ""}>${d.getDate()}</button>`;
+    })
+    .join("");
+
+  schedGrid.querySelectorAll(".mini-day:not(:disabled)").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      schedDate = new Date(Number(btn.dataset.ts));
+      renderScheduleGrid();
+    });
+  });
+}
+
+function renderScheduleTime() {
+  schedHourEl.textContent = String(schedHour).padStart(2, "0");
+  schedMinEl.textContent = String(schedMin).padStart(2, "0");
+  schedAmpmBtn.textContent = schedPm ? "PM" : "AM";
+}
+
+function scheduledTimestamp() {
+  const d = new Date(schedDate);
+  d.setHours((schedHour % 12) + (schedPm ? 12 : 0), schedMin, 0, 0);
+  return d.getTime();
+}
+
+document.getElementById("sched-prev").addEventListener("click", () => {
+  schedMonth = new Date(schedMonth.getFullYear(), schedMonth.getMonth() - 1, 1);
+  renderScheduleGrid();
+});
+document.getElementById("sched-next").addEventListener("click", () => {
+  schedMonth = new Date(schedMonth.getFullYear(), schedMonth.getMonth() + 1, 1);
+  renderScheduleGrid();
+});
+document.getElementById("sched-hour-up").addEventListener("click", () => {
+  schedHour = (schedHour % 12) + 1;
+  renderScheduleTime();
+});
+document.getElementById("sched-hour-down").addEventListener("click", () => {
+  schedHour = schedHour === 1 ? 12 : schedHour - 1;
+  renderScheduleTime();
+});
+document.getElementById("sched-min-up").addEventListener("click", () => {
+  schedMin = (schedMin + 5) % 60;
+  renderScheduleTime();
+});
+document.getElementById("sched-min-down").addEventListener("click", () => {
+  schedMin = (schedMin + 55) % 60;
+  renderScheduleTime();
+});
+schedAmpmBtn.addEventListener("click", () => {
+  schedPm = !schedPm;
+  renderScheduleTime();
+});
+
+document.getElementById("sched-continue").addEventListener("click", () => {
+  const ts = scheduledTimestamp();
+  if (ts < Date.now() + 60000) {
+    schedError.textContent = "Pick a time in the future.";
+    schedError.classList.remove("hidden");
+    return;
+  }
+  schedError.classList.add("hidden");
+  scheduledFor = ts;
+  showPickerView();
+  comingFromInput.focus();
+});
+
+// the arrow in the popup's top strip steps back one stage: clear the "from" room, or return to the date + time
+document.getElementById("modal-top-back").addEventListener("click", () => {
+  if (comingFromRoom) {
+    comingFromRoom = null;
+    goingToRoom = null;
+    comingFromInput.value = "";
+    goingToInput.value = "";
+    currentCategory = null;
+    updateRouteMode();
+    setActiveField("comingFrom");
+    renderPicker("");
+    comingFromInput.focus();
+  } else if (scheduleMode) {
+    showScheduleView();
+  }
+});
+
+/* Time slider: a vertical track (up = more time) with a dark fill from the bottom to the thumb.
+   The hidden range input just holds the value so the rest of the code can read durationSlider.value. */
+
+const DURATION_MIN = 1;
+const DEFAULT_DURATION_MAX = 15;
+// the top of the slider: 15 minutes, or the maximum time a teacher set on the class being visited
+let durationMax = DEFAULT_DURATION_MAX;
+const durTrack = document.getElementById("dur-track");
+const durFill = document.getElementById("dur-fill");
+const durThumb = document.getElementById("dur-thumb");
+
+function paintDurationSlider() {
+  const value = Number(durationSlider.value);
+  const frac = durationMax > DURATION_MIN ? (value - DURATION_MIN) / (durationMax - DURATION_MIN) : 1;
+  durFill.style.height = `${frac * 100}%`;
+  durThumb.style.top = `${(1 - frac) * 100}%`;
+  durTrack.setAttribute("aria-valuenow", value);
+}
+
+function setDuration(value) {
+  durationSlider.value = Math.min(durationMax, Math.max(DURATION_MIN, Math.round(value)));
+  updateDurationValueText();
+}
+
+function durationFromPointer(e) {
+  const rect = durTrack.getBoundingClientRect();
+  const frac = 1 - (e.clientY - rect.top) / rect.height;
+  setDuration(DURATION_MIN + Math.min(1, Math.max(0, frac)) * (durationMax - DURATION_MIN));
+}
+
+durTrack.addEventListener("pointerdown", (e) => {
+  e.preventDefault();
+  durTrack.setPointerCapture(e.pointerId);
+  durationFromPointer(e);
+  const move = (ev) => durationFromPointer(ev);
+  const up = () => {
+    durTrack.removeEventListener("pointermove", move);
+    durTrack.removeEventListener("pointerup", up);
+    durTrack.removeEventListener("pointercancel", up);
+  };
+  durTrack.addEventListener("pointermove", move);
+  durTrack.addEventListener("pointerup", up);
+  durTrack.addEventListener("pointercancel", up);
+});
+
+durTrack.addEventListener("keydown", (e) => {
+  const step = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1 }[e.key];
+  if (!step) return;
+  e.preventDefault();
+  setDuration(Number(durationSlider.value) + step);
+});
 
 function updateDurationValueText() {
   durationValue.textContent = `${durationSlider.value} min`;
+  paintDurationSlider();
+}
+
+// "#rrggbb" -> the feColorMatrix that paints every pixel that color while keeping its transparency
+function tintFilterValues(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => (v / 255).toFixed(3));
+  return `0 0 0 0 ${c[0]}  0 0 0 0 ${c[1]}  0 0 0 0 ${c[2]}  0 0 0 1 0`;
+}
+
+function setIconMarkup(el, markup) {
+  el.innerHTML = markup;
+  // an uploaded photo logo stays a photo; everything else is a flat icon that gets tinted
+  el.classList.toggle("photo", markup.includes("room-logo-img"));
 }
 
 function showDurationView(room) {
   const category = categoryByKey(room.categoryKey);
   pickerView.classList.add("hidden");
   durationView.classList.remove("hidden");
-  durationDestIcon.style.background = category.color;
-  durationDestIcon.innerHTML = categoryIconMarkup(category);
+  durationView.style.setProperty("--dest-color", category.color);
+  document.getElementById("dest-tint-matrix").setAttribute("values", tintFilterValues(category.color));
+  setIconMarkup(durationDestIcon, roomIconMarkup(room.name, room.categoryKey));
   durationDestName.textContent = room.name;
   durationFrom.textContent = comingFromRoom ? comingFromRoom.name : "—";
-  durationSlider.value = 5;
+  setIconMarkup(
+    document.getElementById("duration-from-icon"),
+    comingFromRoom ? roomIconMarkup(comingFromRoom.name, comingFromRoom.categoryKey) : ""
+  );
+  document.getElementById("start-pass-label").textContent = scheduleMode ? "Schedule Pass" : rules.requestOnly ? "Send Request" : "Start Pass";
+  // a class can have its own maximum time; everywhere else the slider tops out at 15 minutes
+  const meta = FLAT_ROOMS.find((r) => r.categoryKey === room.categoryKey && r.name === room.name);
+  const classMax = meta && meta.maxMinutes ? meta.maxMinutes : null;
+  durationMax = classMax || DEFAULT_DURATION_MAX;
+  durationSlider.max = durationMax;
+  durTrack.setAttribute("aria-valuemax", durationMax);
+  const maxNote = document.getElementById("duration-max");
+  maxNote.textContent = classMax ? `Up to ${classMax} min here` : "";
+  maxNote.classList.toggle("hidden", !classMax);
+  // a class with its own maximum starts the slider halfway (10 -> 5 min, 20 -> 10 min), but never below 5 minutes
+  // (so a short maximum starts at 5, or at the maximum itself when that's under 5); everywhere else it starts at 5
+  const startMinutes = classMax ? Math.min(classMax, Math.max(5, Math.round(classMax / 2))) : 5;
+  durationSlider.value = startMinutes;
   updateDurationValueText();
 }
 
@@ -349,20 +657,34 @@ durationBack.addEventListener("click", () => {
   renderPicker("");
 });
 
-function openModal() {
+// centered: the big "Create Pass" button on the page opens it in the middle of the screen with a dimmed
+// backdrop; the top-bar buttons open it as a dropdown under the button instead
+function openModal({ centered = false, schedule = false, anchor = null } = {}) {
+  // a dropdown lines its right edge up with the button that opened it
+  overlay.style.paddingRight = !centered && anchor ? `${Math.max(8, window.innerWidth - anchor.getBoundingClientRect().right)}px` : "";
+  scheduleMode = schedule;
+  scheduledFor = null;
   activeField = "comingFrom";
   currentCategory = null;
   comingFromRoom = null;
   goingToRoom = null;
   comingFromInput.value = "";
   goingToInput.value = "";
-  showPickerView();
+  document.getElementById("duration-error").classList.add("hidden");
+  updateRouteMode();
   setActiveField("comingFrom");
   renderPicker("");
+  overlay.classList.toggle("centered", centered);
+  if (schedule) {
+    initScheduleDefaults();
+    showScheduleView();
+  } else {
+    showPickerView();
+  }
   clearTimeout(closeTimer);
   overlay.classList.remove("closing");
   overlay.classList.remove("hidden");
-  comingFromInput.focus();
+  if (!schedule) comingFromInput.focus();
 }
 
 let closeTimer = null;
@@ -376,10 +698,28 @@ function closeModal() {
   }, 160);
 }
 
-document.getElementById("create-pass-nav-btn").addEventListener("click", openModal);
-document.getElementById("create-pass-hero-btn").addEventListener("click", openModal);
+function passBlockedMessage() {
+  if (rules.dailyLimit === null) return null;
+  if (rules.dailyLimit === 0) return "Passes are turned off for you right now.";
+  return rules.usedToday >= rules.dailyLimit ? `You've used all ${rules.dailyLimit} of your passes for today.` : null;
+}
+
+function tryOpenModal(centered, anchor) {
+  const blocked = passBlockedMessage();
+  if (blocked) return showToast(blocked, "warn");
+  openModal({ centered, anchor });
+}
+
+const navCreateBtn = document.getElementById("create-pass-nav-btn");
+const scheduleBtn = document.getElementById("schedule-pass-btn");
+navCreateBtn.addEventListener("click", () => tryOpenModal(false, navCreateBtn));
+document.getElementById("create-pass-hero-btn").addEventListener("click", () => tryOpenModal(true));
+scheduleBtn.addEventListener("click", () => openModal({ schedule: true, anchor: scheduleBtn }));
 overlay.addEventListener("click", (e) => {
   if (e.target === overlay) closeModal();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !overlay.classList.contains("hidden") && confirmOverlay.classList.contains("hidden")) closeModal();
 });
 
 modalBack.addEventListener("click", () => {
@@ -429,7 +769,7 @@ function formatRemaining(endTime) {
   const totalSeconds = Math.max(0, Math.ceil((endTime - serverTime()) / 1000));
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 function formatOvertime(endTime) {
@@ -446,6 +786,40 @@ function shadeColor(hex, amount) {
   const g = clamp(((num >> 8) & 0xff) + amount);
   const b = clamp((num & 0xff) + amount);
   return `#${(0x1000000 + r * 0x10000 + g * 0x100 + b).toString(16).slice(1)}`;
+}
+
+// blend a hex color toward another by t (0 = unchanged, 1 = fully the target)
+function mixColor(hex, target, t) {
+  const a = parseInt(hex.slice(1), 16);
+  const b = parseInt(target.slice(1), 16);
+  const ch = (shift) => Math.round(((a >> shift) & 0xff) * (1 - t) + ((b >> shift) & 0xff) * t);
+  return `rgb(${ch(16)}, ${ch(8)}, ${ch(0)})`;
+}
+
+// the pass card is the destination's color with a soft glassy lift; the page behind it is a deeper wash of the same color
+function passCardBg(hex) {
+  return `linear-gradient(160deg, ${mixColor(hex, "#000000", 0.14)}, ${mixColor(hex, "#000000", 0.28)})`;
+}
+
+function passPageBg(hex) {
+  return `linear-gradient(160deg, ${mixColor(hex, "#000000", 0.44)}, ${mixColor(hex, "#000000", 0.6)})`;
+}
+
+/* Stats card under the pass: how many passes today, this week (from Monday) and this month */
+
+function updatePassStats() {
+  const now = new Date();
+  const today = startOfDay(now).getTime();
+  const weekStart = new Date(today);
+  weekStart.setDate(weekStart.getDate() - ((weekStart.getDay() + 6) % 7));
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+  const starts = logCache.map((p) => p.startTime);
+  if (currentPass) starts.push(currentPass.startTime);
+
+  document.getElementById("stat-today").textContent = starts.filter((t) => t >= today).length;
+  document.getElementById("stat-week").textContent = starts.filter((t) => t >= weekStart.getTime()).length;
+  document.getElementById("stat-month").textContent = starts.filter((t) => t >= monthStart).length;
 }
 
 function enterOvertime() {
@@ -483,7 +857,10 @@ function updateActivePassTimer(endTime) {
 
 let currentPass = null;
 
-function startActivePass(room, endTime, fromRoom, startTime) {
+const activePassMessage = document.getElementById("active-pass-message");
+const TEACHER_FROM_ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.6" fill="#fff"/><path d="M4.2 20c0-4.4 3.5-6.8 7.8-6.8s7.8 2.4 7.8 6.8" fill="#fff"/></svg>';
+
+function startActivePass(room, endTime, fromRoom, startTime, message, createdBy) {
   goingSomewhere.classList.add("hidden");
   activePass.classList.remove("hidden");
   createPassNavBtn.disabled = true;
@@ -493,24 +870,148 @@ function startActivePass(room, endTime, fromRoom, startTime) {
   activePass.classList.remove("overtime");
   overtimePill.classList.add("hidden");
 
-  currentPass = { room, endTime, startTime: startTime || serverTime() };
+  currentPass = { room, endTime, startTime: startTime || serverTime(), bounce: false };
+
+  activePassMessage.textContent = message || "";
+  activePassMessage.classList.toggle("hidden", !message);
 
   const category = categoryByKey(room.categoryKey);
-  activePass.style.background = `linear-gradient(160deg, ${shadeColor(category.color, -110)}, ${shadeColor(category.color, -155)})`;
-  passCard.style.background = `linear-gradient(160deg, ${shadeColor(category.color, 25)}, ${shadeColor(category.color, -20)})`;
+  activePass.style.background = passPageBg(category.color);
+  passCard.style.background = passCardBg(category.color);
   activePassDestination.textContent = room.name;
-  activePassFrom.textContent = fromRoom ? fromRoom.name : "—";
-  activePassDestIcon.innerHTML = categoryIconMarkup(category);
-  const fromCategory = fromRoom ? categoryByKey(fromRoom.categoryKey) : null;
-  activePassFromIcon.innerHTML = fromCategory ? categoryIconMarkup(fromCategory) : "";
+  activePassDestIcon.innerHTML = roomIconMarkup(room.name, room.categoryKey);
+  if (fromRoom) {
+    activePassFrom.textContent = fromRoom.name;
+    activePassFromIcon.innerHTML = roomIconMarkup(fromRoom.name, fromRoom.categoryKey);
+  } else if (createdBy) {
+    activePassFrom.textContent = createdBy;
+    activePassFromIcon.innerHTML = TEACHER_FROM_ICON;
+  } else {
+    activePassFrom.textContent = "—";
+    activePassFromIcon.innerHTML = "";
+  }
 
   updateActivePassTimer(endTime);
   clearInterval(timerInterval);
   timerInterval = setInterval(() => updateActivePassTimer(endTime), 1000);
 }
 
+const BOUNCE_COLORS = ["#e2574c", "#10b981", "#2599d6", "#f2a33a", "#7b68ee", "#e08a1e", "#b21cc4", "#14a3a1"];
+let bounceLoop = null;
+
+let bounceSpeed = 42; // pixels per second — adjustable live by the teacher, even mid-bounce
+let bounceDirX = 1;
+let bounceDirY = 0;
+
+// "Very Fast" crosses this and goes full chaos: rapid color flashing + a storm of notifications
+const CHAOS_SPEED_THRESHOLD = 300;
+const CHAOS_MESSAGE = "Your SmartPass has exploded!";
+let chaosColorTimer = null;
+let chaosNotifTimer = null;
+
+function startChaos() {
+  if (chaosColorTimer) return;
+  chaosColorTimer = setInterval(() => {
+    const c = BOUNCE_COLORS[Math.floor(Math.random() * BOUNCE_COLORS.length)];
+    passCard.style.background = passCardBg(c);
+    activePass.style.background = passPageBg(c);
+  }, 80);
+  chaosNotifTimer = setInterval(() => {
+    // real OS notifications only — stacks up in Windows/macOS/ChromeOS's own
+    // notification center instead of cluttering the page itself
+    sendBrowserNotification("SmartPass", CHAOS_MESSAGE);
+  }, 180);
+}
+
+function stopChaos() {
+  if (chaosColorTimer) {
+    clearInterval(chaosColorTimer);
+    chaosColorTimer = null;
+  }
+  if (chaosNotifTimer) {
+    clearInterval(chaosNotifTimer);
+    chaosNotifTimer = null;
+  }
+}
+
+function setBounceSpeed(speed) {
+  bounceSpeed = speed > 0 ? speed : 42;
+  if (bounceLoop) {
+    if (bounceSpeed >= CHAOS_SPEED_THRESHOLD) startChaos();
+    else stopChaos();
+  }
+}
+
+function startBounce(speed) {
+  if (speed) setBounceSpeed(speed);
+  if (bounceLoop) return;
+  const rect = passCard.getBoundingClientRect();
+  const width = rect.width;
+  const height = rect.height;
+  let x = rect.left;
+  let y = rect.top;
+  const angle = Math.random() * Math.PI * 2;
+  bounceDirX = Math.cos(angle);
+  bounceDirY = Math.sin(angle);
+  let colorIdx = 0;
+  let lastTime = null;
+
+  passCard.classList.add("bouncing");
+  passCard.style.width = width + "px";
+  passCard.style.height = height + "px";
+  passCard.style.left = "0px";
+  passCard.style.top = "0px";
+
+  function step(now) {
+    if (lastTime === null) lastTime = now;
+    // real-world seconds elapsed, not frames — keeps the speed the same on every screen's refresh rate
+    const dt = Math.min(0.05, (now - lastTime) / 1000);
+    lastTime = now;
+    // speed is read live each frame, so a teacher's change applies instantly without restarting
+    x += bounceDirX * bounceSpeed * dt;
+    y += bounceDirY * bounceSpeed * dt;
+    const maxX = Math.max(0, window.innerWidth - width);
+    const maxY = Math.max(0, window.innerHeight - height);
+    let bounced = false;
+    if (x <= 0) { x = 0; bounceDirX = Math.abs(bounceDirX); bounced = true; }
+    if (x >= maxX) { x = maxX; bounceDirX = -Math.abs(bounceDirX); bounced = true; }
+    if (y <= 0) { y = 0; bounceDirY = Math.abs(bounceDirY); bounced = true; }
+    if (y >= maxY) { y = maxY; bounceDirY = -Math.abs(bounceDirY); bounced = true; }
+    if (bounced) {
+      colorIdx = (colorIdx + 1) % BOUNCE_COLORS.length;
+      const c = BOUNCE_COLORS[colorIdx];
+      passCard.style.background = passCardBg(c);
+      // a faded, dark version of the same color washes over the full background, in sync
+      activePass.style.background = passPageBg(c);
+    }
+    passCard.style.transform = "translate(" + x + "px, " + y + "px)";
+    bounceLoop = requestAnimationFrame(step);
+  }
+  bounceLoop = requestAnimationFrame(step);
+  if (bounceSpeed >= CHAOS_SPEED_THRESHOLD) startChaos();
+}
+
+function stopBounce() {
+  stopChaos();
+  if (!bounceLoop) return;
+  cancelAnimationFrame(bounceLoop);
+  bounceLoop = null;
+  passCard.classList.remove("bouncing");
+  passCard.style.transform = "";
+  passCard.style.width = "";
+  passCard.style.height = "";
+  passCard.style.left = "";
+  passCard.style.top = "";
+  if (currentPass) {
+    const category = categoryByKey(currentPass.room.categoryKey);
+    passCard.style.background = passCardBg(category.color);
+    activePass.style.background = passPageBg(category.color);
+  }
+}
+
 function resetActivePassUI() {
   clearInterval(timerInterval);
+  stopBounce();
   activePass.classList.add("hidden");
   goingSomewhere.classList.remove("hidden");
   createPassNavBtn.disabled = false;
@@ -527,6 +1028,7 @@ async function endActivePass() {
   busy = true;
   resetActivePassUI();
   currentPass = null;
+  stopBounce();
   if (ended) sendBrowserNotification("Pass ended", `You ended your pass to ${ended.room.name}.`);
 
   const res = await apiFetch("/api/student/pass/end", { body: { name } });
@@ -611,8 +1113,16 @@ function formatClockTime(ts) {
   return new Date(ts).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
-function renderNotifications() {
+let lastNotifSignature = null;
+
+function renderNotifications(force) {
   const log = getPassLog();
+  const signature = JSON.stringify(log);
+  // the log is polled every few seconds — skip the rebuild when nothing actually
+  // changed so the list doesn't visibly "refresh" and replay its entrance animation
+  if (!force && signature === lastNotifSignature) return;
+  lastNotifSignature = signature;
+
   const overtimeCount = log.filter((p) => p.overtime).length;
 
   notifClear.disabled = log.length === 0;
@@ -638,7 +1148,7 @@ function renderNotifications() {
       const overtimeTag = p.overtime ? ' · <span class="notif-overtime-tag">Overtime</span>' : "";
       return `
         <div class="notif-item" style="--i:${idx}">
-          <span class="notif-icon" style="background:${category.color}">${categoryIconMarkup(category)}</span>
+          <span class="notif-icon" style="background:${category.color}">${roomIconMarkup(p.name, p.categoryKey)}</span>
           <div class="notif-info">
             <span class="notif-name">${escapeHtml(p.name)}</span>
             <span class="notif-meta">${formatClockTime(p.startTime)} · ${duration}${overtimeTag}</span>
@@ -648,7 +1158,7 @@ function renderNotifications() {
     .join("");
 }
 
-renderNotifications();
+renderNotifications(true);
 
 function showDurationError(message) {
   const el = document.getElementById("duration-error");
@@ -662,12 +1172,15 @@ startPassBtn.addEventListener("click", async () => {
   startPassBtn.disabled = true;
   document.getElementById("duration-error").classList.add("hidden");
 
-  const res = await apiFetch("/api/student/pass", {
+  const scheduling = scheduleMode;
+  const asRequest = rules.requestOnly && !scheduling;
+  const res = await apiFetch(scheduling ? "/api/student/schedule" : asRequest ? "/api/student/request" : "/api/student/pass", {
     body: {
       name,
       dest: goingToRoom,
       from: comingFromRoom,
       minutes: parseInt(durationSlider.value, 10),
+      when: scheduling ? scheduledFor : undefined,
     },
   });
 
@@ -676,7 +1189,9 @@ startPassBtn.addEventListener("click", async () => {
 
   if (res.ok) {
     applyServerState(res.data);
-    sendBrowserNotification("Pass created", `Heading to ${goingToRoom.name}.`);
+    if (scheduling) showToast(`Pass scheduled for ${formatWhen(scheduledFor)}.`, "success");
+    else if (asRequest) showToast("Request sent to your teacher.", "success");
+    else sendBrowserNotification("Pass created", `Heading to ${goingToRoom.name}.`);
     closeModal();
     return;
   }
@@ -690,36 +1205,143 @@ startPassBtn.addEventListener("click", async () => {
 
 /* Server sync: same account on any computer */
 
+const requestCard = document.getElementById("request-card");
+const passRulesEl = document.getElementById("pass-rules");
+
+function updateRulesUI() {
+  const blocked = passBlockedMessage();
+  const parts = [];
+  if (rules.requestOnly) parts.push("Your teacher approves your passes");
+  if (rules.dailyLimit === 0) parts.push("Passes are off right now");
+  else if (rules.dailyLimit !== null) parts.push(`${rules.usedToday} of ${rules.dailyLimit} passes used today`);
+
+  passRulesEl.textContent = parts.join(" · ");
+  passRulesEl.classList.toggle("hidden", parts.length === 0);
+  passRulesEl.classList.toggle("blocked", !!blocked);
+
+  if (currentPass) {
+    requestCard.classList.add("hidden");
+    return;
+  }
+
+  const pending = rules.request;
+  goingSomewhere.classList.toggle("hidden", !!pending);
+  requestCard.classList.toggle("hidden", !pending);
+  if (pending) {
+    document.getElementById("request-sub").textContent = `Going to ${pending.dest.name} · ${pending.minutes} min`;
+  }
+
+  [createPassNavBtn, document.getElementById("create-pass-hero-btn")].forEach((btn) => {
+    btn.disabled = !!blocked;
+    btn.style.opacity = blocked ? "0.5" : "";
+    btn.style.cursor = blocked ? "not-allowed" : "";
+  });
+}
+
+function updateScheduledNote() {
+  const note = document.getElementById("scheduled-note");
+  const next = scheduledCache[0];
+  note.classList.toggle("hidden", !next);
+  if (next) {
+    const more = scheduledCache.length > 1 ? ` (+${scheduledCache.length - 1} more)` : "";
+    note.textContent = `Scheduled: ${next.dest.name} · ${formatWhen(next.scheduledFor)}${more}`;
+  }
+}
+
+document.getElementById("request-cancel").addEventListener("click", async () => {
+  const res = await apiFetch("/api/student/request/cancel", { body: { name } });
+  if (res.ok) applyServerState(res.data);
+});
+
+function handleDecision(state) {
+  const decision = state.decision;
+  if (!decision || decision.id === lastDecisionId) return;
+  lastDecisionId = decision.id;
+  if (firstSync) return;
+  if (decision.status === "approved") {
+    showToast(`Approved! Your pass to ${decision.destName} has started.`, "success");
+    sendBrowserNotification("Pass approved", `Your pass to ${decision.destName} was approved.`);
+  } else {
+    showToast(`Your request to go to ${decision.destName} was denied.`, "warn");
+    sendBrowserNotification("Request denied", `Your request to go to ${decision.destName} was denied.`);
+  }
+}
+
 function applyServerState(state) {
   avatarColor = state.avatarColor || AVATAR_COLORS[0];
   applyAvatarColor(avatarColor);
+  navAvatars.forEach((el) => applyPhoto(el, state.photo));
   renderAvatarColors();
+
+  rules = {
+    requestOnly: !!state.requestOnly,
+    dailyLimit: state.dailyLimit === undefined ? null : state.dailyLimit,
+    usedToday: state.usedToday || 0,
+    request: state.request || null,
+  };
 
   logCache = state.log || [];
   renderNotifications();
+
+  const previousScheduled = scheduledCache;
+  scheduledCache = state.scheduled || [];
+  updateScheduledNote();
+  if (typeof renderCalendar === "function") renderCalendar();
 
   const a = state.active;
   if (a) {
     if (!currentPass || currentPass.startTime !== a.startTime) {
       if (!overlay.classList.contains("hidden")) closeModal();
-      startActivePass(a.room, a.endTime, a.from, a.startTime);
+      startActivePass(a.room, a.endTime, a.from, a.startTime, a.message, a.createdBy);
+      if (typeof showMainPage === "function") showMainPage("home");
+      if (!firstSync && !a.createdBy && previousScheduled.some((s) => !scheduledCache.some((n) => n.id === s.id))) {
+        showToast(`Your scheduled pass to ${a.room.name} has started.`, "success");
+        sendBrowserNotification("Scheduled pass started", `Your pass to ${a.room.name} has started.`);
+      }
       if (a.createdBy && !firstSync) {
-        sendBrowserNotification("Pass created", `A pass to ${a.room.name} was created for you.`);
+        sendBrowserNotification(
+          "Pass created",
+          a.message ? `${a.room.name}: ${a.message}` : `A pass to ${a.room.name} was created for you.`
+        );
+      }
+    }
+    if (currentPass) {
+      currentPass.bounce = !!a.bounce;
+      currentPass.bounceSpeed = a.bounceSpeed || 42;
+      if (a.bounce) {
+        startBounce(currentPass.bounceSpeed);
+        setBounceSpeed(currentPass.bounceSpeed);
+      } else {
+        stopBounce();
       }
     }
   } else if (currentPass) {
     resetActivePassUI();
     currentPass = null;
   }
+  updatePassStats();
+  updateRulesUI();
+  handleDecision(state);
   firstSync = false;
 }
 
 async function loadState() {
   if (busy) return;
-  let res = await apiFetch(`/api/student/state?name=${encodeURIComponent(name)}`);
-  if (res.status === 404) res = await apiFetch("/api/student/login", { body: { name } });
+  let res = await apiFetch(`/api/student/state?name=${encodeURIComponent(name)}&tz=${tzOffset()}`);
+  if (res.status === 404) return signOutStudent();
   if (res.ok && !busy) applyServerState(res.data);
 }
+
+async function loadClasses() {
+  const res = await apiFetch("/api/classes");
+  if (res.ok) {
+    applyRoomOverrides(res.data.overrides || []);
+    applyCustomClasses(res.data.classes || []);
+  }
+}
+
+loadClasses();
+setInterval(loadClasses, 20000);
 
 loadState();
 setInterval(loadState, 3000);
