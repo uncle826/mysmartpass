@@ -1305,6 +1305,23 @@ function applyServerState(state) {
         );
       }
     }
+    if (currentPass && currentPass.startTime === a.startTime && currentPass.endTime !== a.endTime) {
+      // a teacher added time to this pass: restart the countdown on the new end time
+      const wasOvertime = activePass.classList.contains("overtime");
+      const added = a.endTime > currentPass.endTime;
+      currentPass.endTime = a.endTime;
+      if (wasOvertime && a.endTime > serverTime()) {
+        const category = categoryByKey(currentPass.room.categoryKey);
+        activePass.classList.remove("overtime");
+        overtimePill.classList.add("hidden");
+        activePass.style.background = passPageBg(category.color);
+        passCard.style.background = passCardBg(category.color);
+      }
+      updateActivePassTimer(a.endTime);
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => updateActivePassTimer(a.endTime), 1000);
+      if (added && !firstSync) showToast("Your teacher added time to your pass.", "success");
+    }
     if (currentPass) {
       currentPass.bounce = !!a.bounce;
       currentPass.bounceSpeed = a.bounceSpeed || 42;
