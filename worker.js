@@ -1115,6 +1115,22 @@ async function handleApi(request, env, url) {
       return json({ ok: true });
     }
 
+    if (pathname === "/api/teacher/pass/extend" && method === "POST") {
+      const body = await readBody(request);
+      const key = String(body.key || "");
+      const minutes = Math.round(Number(body.minutes));
+      if (!KEY_RE.test(key) || !Number.isFinite(minutes) || minutes < 1 || minutes > 60) return fail("Invalid request.");
+      const active = await env.DB.prepare("SELECT id, start_time, end_time FROM passes WHERE student_key = ? AND finished_at IS NULL").bind(key).first();
+      if (!active) return fail("That student isn't on a pass right now.", 409);
+
+      // time is added to whichever is later: the planned end, or right now (so an overtime pass gets the full extra time)
+      const now = Date.now();
+      const newEnd = Math.max(active.end_time, now) + minutes * 60000;
+      if (newEnd - active.start_time > 480 * 60000) return fail("A pass can't be longer than 8 hours.");
+      await env.DB.prepare("UPDATE passes SET end_time = ? WHERE id = ?").bind(newEnd, active.id).run();
+      return json({ ok: true, endTime: newEnd, serverNow: now });
+    }
+
     if (pathname === "/api/teacher/pass/delete" && method === "POST") {
       const body = await readBody(request);
       const key = String(body.key || "");
