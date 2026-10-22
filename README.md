@@ -1,7 +1,12 @@
 ![mySmartPass](banner.jpg)
+
 # mySmartPass
 
-A remake of SmartPass so you can go to the bathroom, locker, or anything whenever and teach wont know.
+A self-hosted digital hall pass app inspired by SmartPass, built as a hobby project.
+
+## Overview
+
+Students pick a destination, choose a duration, and get a timed pass with a live countdown.
 
 ## Features
 
