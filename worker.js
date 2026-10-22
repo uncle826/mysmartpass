@@ -4,7 +4,8 @@ const PBKDF2_ITERATIONS = 100000;
 const NAME_RE = /^[\p{L}\p{N} .,'’_-]{1,40}$/u;
 const TEACHER_RE = /^[\p{L}\p{N} .,'’_-]{3,40}$/u;
 const DEST_RE = /^[\p{L}\p{N} .,'’()#&_-]{1,60}$/u;
-const KEY_RE = /^[a-z0-9]+$/;
+// must accept everything keyOf() can produce, including accented and non-Latin letters
+const KEY_RE = /^[\p{L}\p{N}]{1,80}$/u;
 
 const PHOTO_RE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
 const MAX_PHOTO_CHARS = 30000;
