@@ -896,6 +896,21 @@ function startActivePass(room, endTime, fromRoom, startTime, message, createdBy)
   timerInterval = setInterval(() => updateActivePassTimer(endTime), 1000);
 }
 
+// a teacher added time: follow the new end time, and leave overtime if the pass is back within its time
+function updateActivePassEnd(endTime) {
+  currentPass.endTime = endTime;
+  if (endTime > serverTime() && activePass.classList.contains("overtime")) {
+    activePass.classList.remove("overtime");
+    overtimePill.classList.add("hidden");
+    const category = categoryByKey(currentPass.room.categoryKey);
+    activePass.style.background = passPageBg(category.color);
+    passCard.style.background = passCardBg(category.color);
+  }
+  updateActivePassTimer(endTime);
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => updateActivePassTimer(endTime), 1000);
+}
+
 const BOUNCE_COLORS = ["#e2574c", "#10b981", "#2599d6", "#f2a33a", "#7b68ee", "#e08a1e", "#b21cc4", "#14a3a1"];
 let bounceLoop = null;
 
@@ -1306,6 +1321,7 @@ function applyServerState(state) {
       }
     }
     if (currentPass) {
+      if (currentPass.endTime !== a.endTime) updateActivePassEnd(a.endTime);
       currentPass.bounce = !!a.bounce;
       currentPass.bounceSpeed = a.bounceSpeed || 42;
       if (a.bounce) {

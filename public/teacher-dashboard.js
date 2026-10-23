@@ -23,6 +23,8 @@ const teacherName = localStorage.getItem("smartpass_name") || "Teacher";
 document.getElementById("teacher-name").textContent = teacherName.toUpperCase();
 
 const AVATAR_PALETTE = ["#2599d6", "#7b68ee", "#fb6d4c", "#f2994a", "#b21cc4", "#14a3a1", "#1ed17a", "#e2574c"];
+// quick amounts a teacher can add to an ongoing pass (the server caps a pass at 8 hours)
+const EXTEND_MINUTES = [1, 5, 10, 15];
 const BOUNCE_SPEEDS = [
   { value: 25, label: "Slow" },
   { value: 55, label: "Medium" },
@@ -521,6 +523,15 @@ function renderDetail(animate = true) {
           ${activeMsg}
         </div>
         <div class="t-active-time" id="t-active-time"></div>
+      </div>
+      <div class="t-bounce-row">
+        <div class="t-bounce-text">
+          <div class="t-bounce-title">Add time</div>
+          <div class="t-bounce-sub">Extends this pass; an overtime pass gets the full amount from now</div>
+        </div>
+        <div class="segmented" id="t-extend">
+          ${EXTEND_MINUTES.map((m) => `<button type="button" class="seg-btn" data-minutes="${m}">+${m} min</button>`).join("")}
+        </div>
       </div>`;
   }
 
@@ -656,6 +667,9 @@ function renderDetail(animate = true) {
       const speed = Number(btn.dataset.speed);
       if (speed !== (s.active.bounceSpeed || 42)) setBounce(s, s.active.bounce, speed);
     });
+  });
+  document.querySelectorAll("#t-extend .seg-btn").forEach((btn) => {
+    btn.addEventListener("click", () => extendStudentPass(s, Number(btn.dataset.minutes), btn));
   });
   document.querySelectorAll("#t-limit .seg-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -882,6 +896,19 @@ async function endStudentPass(s) {
   const res = await teacherApi("/api/teacher/pass/end", { key: s.key });
   if (res.status === 401) return kickToSignIn();
   showToast(`Ended ${s.name}'s pass`, "info");
+  refresh(true);
+}
+
+async function extendStudentPass(s, minutes, btn) {
+  if (!s.active) return;
+  if (btn) btn.disabled = true;
+  const res = await teacherApi("/api/teacher/pass/extend", { key: s.key, minutes });
+  if (btn) btn.disabled = false;
+  if (res.status === 401) return kickToSignIn();
+  if (!res.ok) return showToast(res.data.error || "Couldn't add time to that pass.", "warn");
+  if (s.active) s.active.endTime = res.data.endTime;
+  tick();
+  showToast(`Added ${minutes} min to ${s.name}'s pass`, "success");
   refresh(true);
 }
 
