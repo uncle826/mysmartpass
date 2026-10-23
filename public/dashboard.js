@@ -1,8 +1,7 @@
 requestAnimationFrame(() => document.body.classList.add("loaded"));
 
-let name = localStorage.getItem("smartpass_name");
-if (!name) location.replace("/student-signin");
-name = name || "there";
+stayOnlyIfHome("/dashboard", "student");
+let name = localStorage.getItem("smartpass_name") || "there";
 document.getElementById("user-name").textContent = name.toUpperCase();
 
 function userKey(base) {

@@ -1,9 +1,5 @@
 const teacherToken = localStorage.getItem("smartpass_teacher_token");
-if (localStorage.getItem("smartpass_role") !== "teacher" || !teacherToken) {
-  localStorage.removeItem("smartpass_role");
-  localStorage.removeItem("smartpass_teacher_token");
-  location.replace("/teacher-signin");
-}
+stayOnlyIfHome("/teacher-dashboard", "teacher");
 
 function teacherApi(path, body) {
   return apiFetch(path, { body, token: teacherToken, method: body ? "POST" : "GET" });
