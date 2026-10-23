@@ -75,6 +75,16 @@ function avatarHtml(s, extraClass = "") {
   return `<span class="t-avatar ${s.photo ? "has-photo" : ""} ${extraClass}" style="background-color:${color}${photo}">${initial}</span>`;
 }
 
+// "Account Name (Display Name)" as HTML, with the display name a little lighter; just the account name if there isn't one
+function nameHtml(s) {
+  const shown = s.displayName && s.displayName !== s.name ? ` <span class="t-name-display">(${escapeHtml(s.displayName)})</span>` : "";
+  return escapeHtml(s.name) + shown;
+}
+
+function nameText(s) {
+  return s.displayName && s.displayName !== s.name ? `${s.name} (${s.displayName})` : s.name;
+}
+
 function shade(hex, amount) {
   const num = parseInt(hex.slice(1), 16);
   const clamp = (v) => Math.max(0, Math.min(255, v));
@@ -220,7 +230,7 @@ function renderList() {
         <div class="t-student ${s.key === selectedKey ? "selected" : ""} ${stagger ? "stagger" : ""} ${s.hidden ? "is-hidden" : ""}" style="--i:${Math.min(i, 14)}" data-key="${s.key}" role="button" tabindex="0">
           ${avatarHtml(s)}
           <span class="t-student-info">
-            <span class="t-student-name">${escapeHtml(s.name)}${s.displayName ? `<span class="t-student-alias">${escapeHtml(s.displayName)}</span>` : ""}</span>
+            <span class="t-student-name">${nameHtml(s)}</span>
             <span class="t-student-sub js-status ${st.cls}" data-key="${s.key}">${escapeHtml(st.text)}</span>
           </span>
           ${chip}
@@ -649,7 +659,7 @@ function renderDetail(animate = true) {
         <span class="t-avatar-cam"><svg viewBox="0 0 24 24"><path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="2.2"/></svg></span>
       </button>
       <div class="t-detail-title">
-        <h2>${escapeHtml(s.name)}</h2>
+        <h2>${nameHtml(s)}</h2>
         <div class="t-status" id="t-status"></div>
       </div>
       <div class="t-actions">${actions}</div>
@@ -790,7 +800,7 @@ function hallCardMarkup(s, enter) {
       <button type="button" class="h-card-top" data-open="${s.key}">
         ${avatarHtml(s)}
         <span class="h-who">
-          <span class="h-name">${escapeHtml(s.name)}</span>
+          <span class="h-name">${nameHtml(s)}</span>
           <span class="h-sub">Left at ${timeOfDay(s.active.startTime)}${from}${by}</span>
         </span>
         <span class="h-dest-icon" style="background:${cat.color}">${roomIconMarkup(s.active.room.name, s.active.room.categoryKey)}</span>
@@ -819,7 +829,7 @@ function requestCardMarkup(s, enter) {
       <button type="button" class="h-card-top" data-open="${s.key}">
         ${avatarHtml(s)}
         <span class="h-who">
-          <span class="h-name">${escapeHtml(s.name)}</span>
+          <span class="h-name">${nameHtml(s)}</span>
           <span class="h-sub">Asking to leave${from}</span>
         </span>
         <span class="h-dest-icon" style="background:${cat.color}">${roomIconMarkup(r.dest.name, r.dest.categoryKey)}</span>
@@ -1154,7 +1164,7 @@ function closeOverlay(overlay) {
 
 function openCreate(s) {
   modalStudent = s;
-  modalSub.textContent = `Create a pass for ${s.name}.`;
+  modalSub.textContent = `Create a pass for ${nameText(s)}.`;
   roomSearch.value = "";
   messageInput.value = "";
   durationInput.value = 5;

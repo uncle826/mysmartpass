@@ -1444,15 +1444,10 @@
   color: #ffffff;
 }
 
-.t-student-alias {
-  margin-left: 6px;
-  padding: 1px 7px;
-  border-radius: 8px;
-  background: #eef0fb;
-  color: #4b55c9;
-  font-size: 11px;
-  font-weight: 700;
-  vertical-align: middle;
+/* the "(Display Name)" after a student's account name */
+.t-name-display {
+  font-weight: 500;
+  color: #8a94a3;
 }
 
 /* ---------- hall monitor cards ---------- */
