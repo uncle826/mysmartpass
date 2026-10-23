@@ -499,11 +499,6 @@
   background: #e2574c;
 }
 
-.h-end {
-  width: 100%;
-  justify-content: center;
-}
-
 .h-actions {
   display: flex;
   gap: 8px;
@@ -644,10 +639,10 @@
   padding: 0;
   border: none;
   border-radius: 50%;
-  background: #e2574c;
-  color: #ffffff;
+  background: #f3f4f7;
+  color: #8a94a3;
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(226, 87, 76, 0.4);
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .t-delete-btn svg {
@@ -656,8 +651,8 @@
 }
 
 .t-delete-btn:hover {
-  background: #c8493f;
-  transform: scale(1.08);
+  background: #e2574c;
+  color: #ffffff;
 }
 
 .t-unhide-btn {
@@ -841,68 +836,6 @@
   outline-offset: -2px;
 }
 
-/* ---------- bounce that pass ---------- */
-
-.t-bounce-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 14px;
-  padding: 12px 16px;
-  border: 1px solid #eceef3;
-  border-radius: 10px;
-  background: #fbfcfe;
-}
-
-.t-bounce-text {
-  flex: 1;
-}
-
-.t-bounce-title {
-  font-size: 14.5px;
-  font-weight: 700;
-  color: #2b2560;
-}
-
-.t-bounce-sub {
-  font-size: 12.5px;
-  color: #8a94a3;
-}
-
-.h-bounce-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  margin-top: 8px;
-  padding: 8px 0;
-  border: 1px solid #eceef3;
-  border-radius: 8px;
-  background: #f7f8fb;
-  color: #6b7484;
-  font: inherit;
-  font-size: 12.5px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.h-bounce-btn svg {
-  width: 14px;
-  height: 14px;
-}
-
-.h-bounce-btn:hover {
-  border-color: #c9cee0;
-  color: #2b2560;
-}
-
-.h-bounce-btn.active {
-  border-color: #7b68ee;
-  background: #eef0fb;
-  color: #4b55c9;
-}
-
 /* ---------- add a class ---------- */
 
 .t-add-class-link {
@@ -1020,22 +953,6 @@
   color: #8a94a3;
 }
 
-/* ---------- delete student (bottom of the detail panel) ---------- */
-
-.t-delete-student-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  margin-top: 22px;
-}
-
-.t-delete-student-btn svg {
-  width: 15px;
-  height: 15px;
-}
-
 /* ---------- class cards: edit + delete ---------- */
 
 .t-class-card {
@@ -1078,41 +995,6 @@
 .t-class-edit-btn:hover {
   background: #4b55c9;
   color: #ffffff;
-}
-
-/* bottom-of-panel password actions */
-.t-pw-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 22px;
-}
-
-.t-show-pw-btn {
-  flex: 1;
-  padding: 12px;
-  border: none;
-  border-radius: 8px;
-  background: #1799e8;
-  color: #ffffff;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  box-shadow: 0 2px 10px rgba(16, 20, 24, 0.08);
-  transition: background 0.15s ease;
-}
-
-.t-show-pw-btn:hover {
-  background: #0f86d0;
-}
-
-.t-reset-pw-btn {
-  flex: 1;
-  justify-content: center;
-}
-
-.t-pw-actions + .t-delete-student-btn {
-  margin-top: 12px;
 }
 
 /* keypad popup */
@@ -1385,4 +1267,398 @@
 
 .class-reset:hover {
   background: #fdf1f0;
+}
+
+/* ---------- student panel ---------- */
+
+.t-section-label {
+  margin: 26px 0 10px 0;
+  font-family: "Baloo 2", "Segoe UI", Arial, sans-serif;
+  font-size: 17px;
+  font-weight: 700;
+  color: #2b2560;
+}
+
+/* the current pass: countdown on top, what you can do about it underneath */
+.t-pass-card {
+  margin-bottom: 22px;
+  overflow: hidden;
+  border: 1px solid #eceef3;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.t-pass-card .t-active {
+  margin-bottom: 0;
+  border-radius: 0;
+}
+
+/* the room colour gives way to red once the pass runs over */
+.t-pass-card.overtime .t-active {
+  background: linear-gradient(135deg, #e2574c, #b8382e) !important;
+}
+
+.t-pass-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+  padding: 14px 18px;
+  background: #fbfcfe;
+}
+
+.t-tool {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.t-tool-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #8a94a3;
+}
+
+/* password and remove: rarely needed, so kept quiet at the bottom */
+.t-account {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 4px;
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px solid #eceef3;
+}
+
+.t-account-title {
+  margin-right: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #8a94a3;
+}
+
+.t-link-btn {
+  padding: 7px 12px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: #4b55c9;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.t-link-btn:hover {
+  background: #eef0fb;
+}
+
+.t-link-btn.danger {
+  margin-left: auto;
+  color: #e2574c;
+}
+
+.t-link-btn.danger:hover {
+  background: #fdf1f0;
+}
+
+/* only shown on phones, where the list and the details take turns */
+.t-back-btn {
+  display: none;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  margin-right: -4px;
+  padding: 0;
+  border: 1px solid #eceef3;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #2b2560;
+  cursor: pointer;
+}
+
+.t-back-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---------- student list filters ---------- */
+
+.t-filters {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.t-filter {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 6px;
+  border: 1px solid #eceef3;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #6b7484;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.t-filter:hover:not(.active) {
+  border-color: #d4d9e2;
+  color: #2b2560;
+}
+
+.t-filter span {
+  min-width: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: #f0f2f6;
+  font-size: 11.5px;
+  line-height: 18px;
+}
+
+.t-filter.active {
+  border-color: #00b476;
+  background: #e7f8f1;
+  color: #0e9f6e;
+}
+
+.t-filter.active span {
+  background: #ffffff;
+}
+
+.t-filter.has-requests span {
+  background: #f2a33a;
+  color: #ffffff;
+}
+
+.t-student-alias {
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 8px;
+  background: #eef0fb;
+  color: #4b55c9;
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+/* ---------- hall monitor cards ---------- */
+
+.h-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.h-foot {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.h-tool {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 6px;
+  border: 1px solid #eceef3;
+  border-radius: 8px;
+  background: #f7f8fb;
+  color: #4e5d74;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.h-tool svg {
+  width: 14px;
+  height: 14px;
+}
+
+.h-tool:hover {
+  border-color: #c9cee0;
+  color: #2b2560;
+}
+
+.h-tool.active {
+  border-color: #7b68ee;
+  background: #eef0fb;
+  color: #4b55c9;
+}
+
+.h-tool.danger {
+  border-color: #f0c4c0;
+  background: #ffffff;
+  color: #e2574c;
+}
+
+.h-tool.danger:hover {
+  background: #fdf1f0;
+}
+
+.h-tool:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ---------- phones and narrow windows ---------- */
+
+@media (max-width: 860px) {
+  .topbar {
+    height: 64px;
+    padding: 0 12px;
+  }
+
+  .topbar-side {
+    flex: 0 0 auto;
+  }
+
+  .topbar .role-chip {
+    display: none;
+  }
+
+  .main-nav {
+    flex: 1;
+    justify-content: center;
+    gap: 2px;
+  }
+
+  .main-nav .nav-item {
+    padding: 0 10px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .nav-icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  .t-content {
+    display: block;
+    height: auto;
+    padding: 14px;
+  }
+
+  .t-students {
+    width: auto;
+    padding: 18px 16px;
+  }
+
+  .t-student-list {
+    overflow: visible;
+  }
+
+  body.t-detail-open .t-students,
+  body:not(.t-detail-open) .t-detail {
+    display: none;
+  }
+
+  .t-detail {
+    padding: 18px 16px;
+    overflow: visible;
+  }
+
+  .t-back-btn {
+    display: flex;
+  }
+
+  .t-detail-head {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .t-detail-head .t-avatar {
+    width: 46px;
+    height: 46px;
+    font-size: 19px;
+  }
+
+  .t-detail-title h2 {
+    font-size: 22px;
+  }
+
+  .t-actions {
+    width: 100%;
+  }
+
+  .t-actions .btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .t-active {
+    padding: 14px 16px;
+  }
+
+  .t-active-name {
+    font-size: 18px;
+  }
+
+  .t-pass-tools {
+    flex-direction: column;
+    padding: 14px 16px;
+  }
+
+  .t-tool {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+
+  .t-tool-label {
+    width: 100%;
+  }
+
+  .t-tool .segmented {
+    flex: 1;
+  }
+
+  .t-tool .seg-btn {
+    flex: 1;
+    padding-left: 4px;
+    padding-right: 4px;
+    white-space: nowrap;
+  }
+
+  .t-rule .segmented,
+  .t-display-form {
+    width: 100%;
+  }
+
+  .t-display-form .t-search {
+    flex: 1;
+    width: auto;
+  }
+
+  .t-link-btn.danger {
+    margin-left: 0;
+  }
+
+  .t-hall {
+    height: auto;
+  }
+
+  .t-hall-inner {
+    padding: 18px 14px 32px;
+  }
+
+  .h-grid {
+    grid-template-columns: 1fr;
+  }
 }

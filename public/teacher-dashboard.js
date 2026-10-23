@@ -162,10 +162,36 @@ document.querySelectorAll(".main-nav .nav-item").forEach((a) => {
 
 /* ---------- student list ---------- */
 
+// which students the list shows: everyone, the ones out of class, or the ones waiting for an answer
+let listFilter = "all";
+const LIST_FILTERS = [
+  { key: "all", label: "All", test: () => true },
+  { key: "out", label: "Out now", test: (s) => !!s.active },
+  { key: "requests", label: "Requests", test: (s) => !!s.request && !s.active },
+];
+
+function renderFilters(visible) {
+  const filtersEl = document.getElementById("t-filters");
+  filtersEl.innerHTML = LIST_FILTERS.map((f) => {
+    const n = visible.filter(f.test).length;
+    return `<button type="button" class="t-filter ${f.key === listFilter ? "active" : ""} ${f.key === "requests" && n ? "has-requests" : ""}" data-filter="${f.key}">${f.label}<span>${n}</span></button>`;
+  }).join("");
+  filtersEl.querySelectorAll("[data-filter]").forEach((btn) =>
+    btn.addEventListener("click", () => {
+      listFilter = btn.dataset.filter;
+      renderList();
+    })
+  );
+}
+
 function renderList() {
   const term = searchEl.value.trim().toLowerCase();
   const visible = students.filter((s) => showHidden || !s.hidden);
-  const shown = visible.filter((s) => !term || s.name.toLowerCase().includes(term));
+  const filter = LIST_FILTERS.find((f) => f.key === listFilter);
+  const shown = visible.filter(
+    (s) => filter.test(s) && (!term || s.name.toLowerCase().includes(term) || (s.displayName || "").toLowerCase().includes(term))
+  );
+  renderFilters(visible);
   const hiddenCount = students.filter((s) => s.hidden).length;
   const now = serverTime();
 
@@ -173,7 +199,15 @@ function renderList() {
     countEl.textContent = visible.length;
     popElement(countEl);
   }
-  emptyEl.classList.toggle("hidden", visible.length > 0);
+  emptyEl.classList.toggle("hidden", shown.length > 0);
+  emptyEl.textContent =
+    visible.length === 0
+      ? "No students yet. Students show up here after they sign in."
+      : term
+      ? "No students match that search."
+      : listFilter === "out"
+      ? "Everyone is in class."
+      : "No pass requests right now.";
 
   const stagger = !listAnimated && shown.length > 0;
   if (stagger) listAnimated = true;
@@ -186,7 +220,7 @@ function renderList() {
         <div class="t-student ${s.key === selectedKey ? "selected" : ""} ${stagger ? "stagger" : ""} ${s.hidden ? "is-hidden" : ""}" style="--i:${Math.min(i, 14)}" data-key="${s.key}" role="button" tabindex="0">
           ${avatarHtml(s)}
           <span class="t-student-info">
-            <span class="t-student-name">${escapeHtml(s.name)}</span>
+            <span class="t-student-name">${escapeHtml(s.name)}${s.displayName ? `<span class="t-student-alias">${escapeHtml(s.displayName)}</span>` : ""}</span>
             <span class="t-student-sub js-status ${st.cls}" data-key="${s.key}">${escapeHtml(st.text)}</span>
           </span>
           ${chip}
@@ -236,6 +270,8 @@ async function setHidden(s, hidden) {
 function selectStudent(key) {
   const changed = key !== selectedKey;
   selectedKey = key;
+  // on phones the list and the details take turns; this shows the details
+  document.body.classList.add("t-detail-open");
   listEl.querySelectorAll(".t-student").forEach((b) => b.classList.toggle("selected", b.dataset.key === key));
   renderDetail(changed);
 }
@@ -450,6 +486,7 @@ function renderRules(s) {
   }).join("");
 
   return `
+    <h3 class="t-section-label">Settings</h3>
     <div class="t-rules">
       <div class="t-rule">
         <div class="t-rule-text">
@@ -463,6 +500,13 @@ function renderRules(s) {
       </div>
       <div class="t-rule">
         <div class="t-rule-text">
+          <div class="t-rule-title">Passes per day</div>
+          <div class="t-rule-sub" id="t-limit-sub">${escapeHtml(limitSummary(s))}</div>
+        </div>
+        <div class="segmented" id="t-limit">${options}</div>
+      </div>
+      <div class="t-rule">
+        <div class="t-rule-text">
           <div class="t-rule-title">Display name</div>
           <div class="t-rule-sub">Shown on their dashboard instead of ${escapeHtml(s.name)}</div>
         </div>
@@ -470,13 +514,6 @@ function renderRules(s) {
           <input type="text" class="t-search" id="t-display-name" maxlength="40" placeholder="${escapeHtml(s.name)}" value="${escapeHtml(s.displayName || "")}" data-key="${s.key}">
           <button type="submit" class="btn btn-primary">Save</button>
         </form>
-      </div>
-      <div class="t-rule">
-        <div class="t-rule-text">
-          <div class="t-rule-title">Passes per day</div>
-          <div class="t-rule-sub" id="t-limit-sub">${escapeHtml(limitSummary(s))}</div>
-        </div>
-        <div class="segmented" id="t-limit">${options}</div>
       </div>
     </div>`;
 }
@@ -508,46 +545,38 @@ function renderDetail(animate = true) {
     const cat = categoryByKey(s.active.room.categoryKey);
     const activeMsg = s.active.message ? `<div class="t-active-message">${escapeHtml(s.active.message)}</div>` : "";
     activeBlock = `
-      <div class="t-bounce-row">
-        <div class="t-bounce-text">
-          <div class="t-bounce-title">Bounce this pass</div>
-          <div class="t-bounce-sub">Bouncing right now, on or off</div>
+      <section class="t-pass-card">
+        <div class="t-active" style="background:linear-gradient(135deg, ${cat.color}, ${shade(cat.color, -45)})">
+          <span class="t-active-icon">${roomIconMarkup(s.active.room.name, s.active.room.categoryKey)}</span>
+          <div class="t-active-info">
+            <div class="t-active-label" id="t-active-label">On a pass to</div>
+            <div class="t-active-name">${escapeHtml(s.active.room.name)}</div>
+            ${activeMsg}
+          </div>
+          <div class="t-active-time" id="t-active-time"></div>
         </div>
-        <label class="switch">
-          <input type="checkbox" id="t-bounce-toggle" ${s.active.bounce ? "checked" : ""}>
-          <span class="switch-track"></span>
-        </label>
-      </div>
-      <div class="t-bounce-row">
-        <div class="t-bounce-text">
-          <div class="t-bounce-title">Bounce speed</div>
-          <div class="t-bounce-sub">Changes live, even while it's already bouncing</div>
+        <div class="t-pass-tools">
+          <div class="t-tool">
+            <span class="t-tool-label">Add time</span>
+            <div class="segmented" id="t-extend">
+              ${EXTEND_MINUTES.map((m) => `<button type="button" class="seg-btn" data-minutes="${m}">+${m} min</button>`).join("")}
+            </div>
+          </div>
+          <div class="t-tool">
+            <span class="t-tool-label">Bounce</span>
+            <label class="switch" title="Make this pass bounce around their screen">
+              <input type="checkbox" id="t-bounce-toggle" ${s.active.bounce ? "checked" : ""}>
+              <span class="switch-track"></span>
+            </label>
+            <div class="segmented" id="t-bounce-speed" title="Speed changes live, even while it's bouncing">
+              ${BOUNCE_SPEEDS.map(
+                (o) =>
+                  `<button type="button" class="seg-btn ${o.value === (s.active.bounceSpeed || 42) ? "active" : ""}" data-speed="${o.value}">${o.label}</button>`
+              ).join("")}
+            </div>
+          </div>
         </div>
-        <div class="segmented" id="t-bounce-speed">
-          ${BOUNCE_SPEEDS.map(
-            (o) =>
-              `<button type="button" class="seg-btn ${o.value === (s.active.bounceSpeed || 42) ? "active" : ""}" data-speed="${o.value}">${o.label}</button>`
-          ).join("")}
-        </div>
-      </div>
-      <div class="t-active" style="background:linear-gradient(135deg, ${cat.color}, ${shade(cat.color, -45)})">
-        <span class="t-active-icon">${roomIconMarkup(s.active.room.name, s.active.room.categoryKey)}</span>
-        <div class="t-active-info">
-          <div class="t-active-label" id="t-active-label">On a pass to</div>
-          <div class="t-active-name">${escapeHtml(s.active.room.name)}</div>
-          ${activeMsg}
-        </div>
-        <div class="t-active-time" id="t-active-time"></div>
-      </div>
-      <div class="t-bounce-row">
-        <div class="t-bounce-text">
-          <div class="t-bounce-title">Add time</div>
-          <div class="t-bounce-sub">Extends this pass; an overtime pass gets the full amount from now</div>
-        </div>
-        <div class="segmented" id="t-extend">
-          ${EXTEND_MINUTES.map((m) => `<button type="button" class="seg-btn" data-minutes="${m}">+${m} min</button>`).join("")}
-        </div>
-      </div>`;
+      </section>`;
   }
 
   const hiddenBanner = s.hidden
@@ -612,6 +641,9 @@ function renderDetail(animate = true) {
   detailEl.innerHTML = `
     ${hiddenBanner}
     <div class="t-detail-head">
+      <button type="button" class="t-back-btn" id="t-back-btn" aria-label="Back to all students">
+        <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
       <button type="button" class="t-avatar-btn" id="t-photo-btn" title="Change photo" aria-label="Change photo">
         ${avatarHtml(s)}
         <span class="t-avatar-cam"><svg viewBox="0 0 24 24"><path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="2.2"/></svg></span>
@@ -625,29 +657,25 @@ function renderDetail(animate = true) {
 
     ${requestBlock}
 
+    ${activeBlock}
+
     <div class="notif-stats">
       <div class="notif-stat"><span class="notif-stat-value">${total}</span><span class="notif-stat-label">Passes</span></div>
-      <div class="notif-stat"><span class="notif-stat-value">${overtime}</span><span class="notif-stat-label">Overtime Passes</span></div>
-      <div class="notif-stat"><span class="notif-stat-value">${total ? formatDuration(avg) : "—"}</span><span class="notif-stat-label">Average Time</span></div>
+      <div class="notif-stat"><span class="notif-stat-value">${overtime}</span><span class="notif-stat-label">Overtime</span></div>
+      <div class="notif-stat"><span class="notif-stat-value">${total ? formatDuration(avg) : "—"}</span><span class="notif-stat-label">Average time</span></div>
     </div>
 
     ${renderRules(s)}
 
-    ${activeBlock}
-
-    <h3 class="t-history-title">Where ${escapeHtml(s.name)} has been</h3>
+    <h3 class="t-section-label">History</h3>
     ${historyHtml}
 
-    <div class="t-pw-actions">
-      <button type="button" class="t-show-pw-btn" id="t-show-pw-btn">Show student password</button>
-      <button type="button" class="btn btn-outline t-reset-pw-btn" id="t-reset-pw-btn">Reset password</button>
-    </div>
-
-    ${s.hidden ? "" : `
-    <button type="button" class="btn btn-danger-outline t-delete-student-btn" id="t-delete-student-btn">
-      <svg viewBox="0 0 24 24"><path d="M4 7h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      Delete student
-    </button>`}`;
+    <div class="t-account">
+      <span class="t-account-title">Account</span>
+      <button type="button" class="t-link-btn" id="t-show-pw-btn">Show password</button>
+      <button type="button" class="t-link-btn" id="t-reset-pw-btn">Reset password</button>
+      ${s.hidden ? "" : `<button type="button" class="t-link-btn danger" id="t-delete-student-btn">Remove from list</button>`}
+    </div>`;
 
   if (typing) {
     const input = document.getElementById("t-display-name");
@@ -655,6 +683,11 @@ function renderDetail(animate = true) {
     input.focus();
     input.setSelectionRange(typing.start, typing.end);
   }
+
+  document.getElementById("t-back-btn").addEventListener("click", () => {
+    document.body.classList.remove("t-detail-open");
+    window.scrollTo(0, 0);
+  });
 
   const createBtn = document.getElementById("t-create-btn");
   if (createBtn) createBtn.addEventListener("click", () => openCreate(s));
@@ -737,6 +770,8 @@ function tick() {
           : `+${clock(-remaining, false)}<small>overtime</small>`;
       }
       if (labelEl) labelEl.textContent = remaining > 0 ? "On a pass to" : "Overtime on a pass to";
+      const passCard = detailEl.querySelector(".t-pass-card");
+      if (passCard) passCard.classList.toggle("overtime", remaining <= 0);
     }
   }
 
@@ -764,11 +799,14 @@ function hallCardMarkup(s, enter) {
       ${msg}
       <div class="h-time js-h-time" data-key="${s.key}"></div>
       <div class="h-bar"><div class="h-bar-fill js-h-bar" data-key="${s.key}"></div></div>
-      <button type="button" class="h-bounce-btn ${s.active.bounce ? "active" : ""}" data-bounce="${s.key}">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="6.5" r="2.8" fill="currentColor"/><path d="M12 9.3v3.2m-5.2 7.5 5.2-5 5.2 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
-        ${s.active.bounce ? "Bouncing" : "Bounce"}
-      </button>
-      <button type="button" class="btn btn-danger-outline h-end" data-end="${s.key}">End pass</button>
+      <div class="h-foot">
+        <button type="button" class="h-tool" data-extend="${s.key}" title="Add 5 minutes">+5 min</button>
+        <button type="button" class="h-tool ${s.active.bounce ? "active" : ""}" data-bounce="${s.key}">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="6.5" r="2.8" fill="currentColor"/><path d="M12 9.3v3.2m-5.2 7.5 5.2-5 5.2 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+          ${s.active.bounce ? "Bouncing" : "Bounce"}
+        </button>
+        <button type="button" class="h-tool danger" data-end="${s.key}">End pass</button>
+      </div>
     </div>`;
 }
 
@@ -837,6 +875,13 @@ function renderHall() {
       e.stopPropagation();
       const s = studentMap.get(btn.dataset.end);
       if (s) endStudentPass(s);
+    });
+  });
+  hallView.querySelectorAll("[data-extend]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const s = studentMap.get(btn.dataset.extend);
+      if (s && s.active) extendStudentPass(s, 5, btn);
     });
   });
   hallView.querySelectorAll("[data-bounce]").forEach((btn) => {
