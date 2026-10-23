@@ -227,6 +227,17 @@
   color: #8a94a3;
 }
 
+.t-display-form {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.t-display-form .t-search {
+  width: 190px;
+  padding: 8px 12px;
+}
+
 .switch {
   position: relative;
   flex-shrink: 0;

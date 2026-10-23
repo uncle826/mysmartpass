@@ -24,6 +24,7 @@ const MIGRATIONS = [
   "ALTER TABLE passes ADD COLUMN bounce_speed INTEGER NOT NULL DEFAULT 42",
   "ALTER TABLE students ADD COLUMN password TEXT",
   "ALTER TABLE classes ADD COLUMN max_minutes INTEGER",
+  "ALTER TABLE students ADD COLUMN display_name TEXT",
 ];
 
 // "Learn" followed by exactly five digits (the word itself can be typed in any case)
@@ -397,7 +398,7 @@ async function limitMessage(env, key, student) {
 
 async function studentState(env, key) {
   const student = await env.DB
-    .prepare("SELECT key, name, avatar_color, photo, request_only, daily_limit, tz_offset FROM students WHERE key = ?")
+    .prepare("SELECT key, name, display_name, avatar_color, photo, request_only, daily_limit, tz_offset FROM students WHERE key = ?")
     .bind(key)
     .first();
   if (!student) return null;
@@ -427,6 +428,7 @@ async function studentState(env, key) {
   return {
     key: student.key,
     name: student.name,
+    displayName: student.display_name || null,
     avatarColor: student.avatar_color,
     photo: student.photo || null,
     requestOnly: !!student.request_only,
@@ -961,7 +963,7 @@ async function handleApi(request, env, url) {
     if (pathname === "/api/teacher/students" && method === "GET") {
       const now = Date.now();
       const students = await env.DB
-        .prepare("SELECT key, name, avatar_color, photo, request_only, daily_limit, tz_offset, hidden FROM students ORDER BY name COLLATE NOCASE")
+        .prepare("SELECT key, name, display_name, avatar_color, photo, request_only, daily_limit, tz_offset, hidden FROM students ORDER BY name COLLATE NOCASE")
         .all();
       const active = await env.DB.prepare("SELECT * FROM passes WHERE finished_at IS NULL").all();
       const finished = await env.DB
@@ -989,6 +991,7 @@ async function handleApi(request, env, url) {
           return {
             key: s.key,
             name: s.name,
+            displayName: s.display_name || null,
             avatarColor: s.avatar_color,
             photo: s.photo || null,
             requestOnly: !!s.request_only,
@@ -1017,6 +1020,19 @@ async function handleApi(request, env, url) {
         await env.DB.prepare("UPDATE students SET daily_limit = ? WHERE key = ?").bind(v, key).run();
       }
       return json({ ok: true });
+    }
+
+    // the name shown on a student's dashboard; empty clears it so their account name is used again
+    if (pathname === "/api/teacher/student/display-name" && method === "POST") {
+      const body = await readBody(request);
+      const key = String(body.key || "");
+      if (!KEY_RE.test(key)) return fail("Invalid request.");
+      const raw = String(body.displayName || "").replace(/\s+/g, " ").trim();
+      const displayName = raw ? cleanName(raw) : null;
+      if (raw && !displayName) return fail("Display names need 1–40 letters, numbers, spaces or . , ' _ -");
+      const res = await env.DB.prepare("UPDATE students SET display_name = ? WHERE key = ?").bind(displayName, key).run();
+      if (!res.meta.changes) return fail("Student not found.", 404);
+      return json({ ok: true, displayName });
     }
 
     if (pathname === "/api/teacher/student/hide" && method === "POST") {

@@ -1283,6 +1283,11 @@ function handleDecision(state) {
 }
 
 function applyServerState(state) {
+  // a teacher can give the student a display name; otherwise their account name is shown
+  const shownName = (state.displayName || state.name || name).toUpperCase();
+  document.getElementById("user-name").textContent = shownName;
+  document.getElementById("avatar-menu-name").textContent = shownName;
+
   avatarColor = state.avatarColor || AVATAR_COLORS[0];
   applyAvatarColor(avatarColor);
   navAvatars.forEach((el) => applyPhoto(el, state.photo));

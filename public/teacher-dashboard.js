@@ -463,6 +463,16 @@ function renderRules(s) {
       </div>
       <div class="t-rule">
         <div class="t-rule-text">
+          <div class="t-rule-title">Display name</div>
+          <div class="t-rule-sub">Shown on their dashboard instead of ${escapeHtml(s.name)}</div>
+        </div>
+        <form class="t-display-form" id="t-display-form" autocomplete="off">
+          <input type="text" class="t-search" id="t-display-name" maxlength="40" placeholder="${escapeHtml(s.name)}" value="${escapeHtml(s.displayName || "")}" data-key="${s.key}">
+          <button type="submit" class="btn btn-primary">Save</button>
+        </form>
+      </div>
+      <div class="t-rule">
+        <div class="t-rule-text">
           <div class="t-rule-title">Passes per day</div>
           <div class="t-rule-sub" id="t-limit-sub">${escapeHtml(limitSummary(s))}</div>
         </div>
@@ -474,6 +484,11 @@ function renderRules(s) {
 function renderDetail(animate = true) {
   detailEl.classList.toggle("no-anim", !animate);
   const s = studentMap.get(selectedKey);
+
+  // a background refresh redraws this panel, so keep a display name the teacher is still typing
+  const typing = document.activeElement && document.activeElement.id === "t-display-name" && document.activeElement.dataset.key === selectedKey
+    ? { value: document.activeElement.value, start: document.activeElement.selectionStart, end: document.activeElement.selectionEnd }
+    : null;
 
   if (!s) {
     detailEl.innerHTML = `
@@ -634,6 +649,13 @@ function renderDetail(animate = true) {
       Delete student
     </button>`}`;
 
+  if (typing) {
+    const input = document.getElementById("t-display-name");
+    input.value = typing.value;
+    input.focus();
+    input.setSelectionRange(typing.start, typing.end);
+  }
+
   const createBtn = document.getElementById("t-create-btn");
   if (createBtn) createBtn.addEventListener("click", () => openCreate(s));
   const endBtn = document.getElementById("t-end-btn");
@@ -657,6 +679,10 @@ function renderDetail(animate = true) {
     btn.addEventListener("click", () => decideRequest(Number(btn.dataset.id), btn.dataset.decide === "approve", btn));
   });
 
+  document.getElementById("t-display-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    saveDisplayName(s, document.getElementById("t-display-name").value, e.submitter);
+  });
   document.getElementById("t-request-only").addEventListener("change", (e) => {
     saveSettings(s, { requestOnly: e.target.checked });
   });
@@ -949,6 +975,17 @@ async function setBounce(s, bounce, speed) {
     renderHall();
     showToast(res.data.error || "Couldn't update that.", "warn");
   }
+}
+
+async function saveDisplayName(s, value, btn) {
+  if (btn) btn.disabled = true;
+  const res = await teacherApi("/api/teacher/student/display-name", { key: s.key, displayName: value });
+  if (btn) btn.disabled = false;
+  if (res.status === 401) return kickToSignIn();
+  if (!res.ok) return showToast(res.data.error || "Couldn't save that display name.", "warn");
+  s.displayName = res.data.displayName;
+  showToast(s.displayName ? `${s.name} will see “${s.displayName}”` : `${s.name} will see their account name`, "success");
+  refresh(true);
 }
 
 async function saveSettings(s, change) {
