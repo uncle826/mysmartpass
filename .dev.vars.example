@@ -1,0 +1,4 @@
+# Copy this file to .dev.vars for local testing (.dev.vars is git-ignored). Use different values in production.
+ACCESS_CODE=pick-a-long-teacher-signup-code
+PASSWORD_PIN=4821
+# ADMIN_PASSWORD=optional-password-for-the-admin-teacher-account

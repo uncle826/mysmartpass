@@ -38,10 +38,17 @@ const encoder = new TextEncoder();
 
 /* ---------------- helpers ---------------- */
 
+const SECURITY_HEADERS = {
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+  "referrer-policy": "no-referrer",
+  "content-security-policy": "default-src 'none'; frame-ancestors 'none'",
+};
+
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "content-type": "application/json", "cache-control": "no-store" },
+    headers: { "content-type": "application/json", "cache-control": "no-store", ...SECURITY_HEADERS },
   });
 }
 
@@ -236,7 +243,7 @@ function ensureSchema(env) {
   return schemaReady;
 }
 
-// If the ADMIN_PASSWORD variable is set in wrangler.jsonc, the "admin" teacher account's password is set to it
+// If the ADMIN_PASSWORD secret is set, the "admin" teacher account's password is set to it
 // once per value: changing the variable applies the new password, while resetting it from the sign-in page
 // afterwards sticks (the stored fingerprint only changes when the variable does).
 let adminPasswordChecked = false;
@@ -504,8 +511,10 @@ function clampMinutesTeacher(value) {
 
 async function newSession(env, username) {
   const token = randomHex(32);
+  const now = Date.now();
+  await env.DB.prepare("DELETE FROM sessions WHERE expires_at < ?").bind(now).run();
   await env.DB.prepare("INSERT INTO sessions (token_hash, username, expires_at) VALUES (?, ?, ?)")
-    .bind(await sha256Hex(token), username, Date.now() + SESSION_MS)
+    .bind(await sha256Hex(token), username, now + SESSION_MS)
     .run();
   return token;
 }
@@ -540,12 +549,15 @@ async function requireStudentSession(request, env, url) {
   return null;
 }
 
-// seeing or resetting a student's password takes a 4-digit code (the PASSWORD_PIN variable, 2012 unless changed);
-// returns an error response when the code is wrong or tried too many times, otherwise null
+// seeing or resetting a student's password takes a 4-digit code (the PASSWORD_PIN secret); there's no built-in
+// default, so the feature stays off until one is set. Returns an error response when the code is wrong or
+// tried too many times, otherwise null
 async function checkStudentPin(env, teacher, pin) {
+  const expected = String(env.PASSWORD_PIN || "");
+  if (!/^\d{4}$/.test(expected)) return fail("Student passwords are locked until a PASSWORD_PIN is set up.", 403);
   const bucket = `pin:${teacher.username}`;
   if (!(await allowAttempt(env, bucket, 8, 15 * 60000))) return fail("Too many wrong codes. Please wait a few minutes.", 429);
-  if (!safeEqual(String(pin || ""), String(env.PASSWORD_PIN || "2012"))) return fail("Wrong code.", 403);
+  if (!safeEqual(String(pin || ""), expected)) return fail("Wrong code.", 403);
   await clearAttempts(env, bucket);
   return null;
 }
@@ -588,9 +600,13 @@ async function handleApi(request, env, url) {
     if (!STUDENT_PASSWORD_RE.test(typed)) return fail("Your password is Learn followed by 5 numbers, like Learn12345.");
     const password = `Learn${typed.slice(5)}`;
 
+    // limited per device and per name, so guessing one student's password from many addresses still gets stopped
     const ip = clientIp(request);
     const bucket = `slogin:${ip}:${key}`;
-    if (!(await allowAttempt(env, bucket, 10, 15 * 60000))) return fail("Too many tries. Please wait a few minutes and try again.", 429);
+    const nameBucket = `slogin-name:${key}`;
+    if (!(await allowAttempt(env, bucket, 10, 15 * 60000)) || !(await allowAttempt(env, nameBucket, 30, 15 * 60000))) {
+      return fail("Too many tries. Please wait a few minutes and try again.", 429);
+    }
 
     const now = Date.now();
     const tz = cleanTz(body.tz);
@@ -613,6 +629,7 @@ async function handleApi(request, env, url) {
         .run();
     }
     await clearAttempts(env, bucket);
+    await clearAttempts(env, nameBucket);
 
     const state = await studentState(env, key);
     return json({ ...state, token: await newStudentSession(env, key) });
@@ -873,6 +890,10 @@ async function handleApi(request, env, url) {
 
     const username = String(body.username || "").replace(/\s+/g, " ").trim().toLowerCase();
     const password = String(body.password || "");
+    const userBucket = `login-user:${username}`;
+    if (username && !(await allowAttempt(env, userBucket, 20, 15 * 60000))) {
+      return fail("Too many attempts. Please wait a few minutes and try again.", 429);
+    }
     const teacher = username
       ? await env.DB.prepare("SELECT username, display, salt, hash FROM teachers WHERE username = ?").bind(username).first()
       : null;
@@ -882,6 +903,7 @@ async function handleApi(request, env, url) {
     if (!teacher || !safeEqual(attempt, teacher.hash)) return fail("Incorrect username or password.", 401);
 
     await clearAttempts(env, bucket);
+    await clearAttempts(env, userBucket);
     return json({ token: await newSession(env, teacher.username), name: teacher.display });
   }
 
@@ -909,7 +931,7 @@ async function handleApi(request, env, url) {
       return json({ ok: true });
     }
 
-    // seeing a student's password takes a 4-digit code (the PASSWORD_PIN variable, 2012 unless changed)
+    // seeing a student's password takes the 4-digit PASSWORD_PIN code
     if (pathname === "/api/teacher/student/password" && method === "POST") {
       const body = await readBody(request);
       const key = String(body.key || "");

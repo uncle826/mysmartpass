@@ -12,8 +12,7 @@
       "database_name": "smartpass",
       "database_id": "84c97462-a3b3-4b37-a0ea-d4a02c135284"
     }
-  ],
-  "vars": {
-    "ACCESS_CODE": "Uncle!"
-  }
+  ]
+  // ACCESS_CODE, PASSWORD_PIN and ADMIN_PASSWORD are secrets: set them with `npx wrangler secret put <NAME>`
+  // (and in .dev.vars for local testing), never here, because this file is public
 }
