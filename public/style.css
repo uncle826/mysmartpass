@@ -391,3 +391,20 @@ body.fade-out {
 #password-form .back-link {
   margin-top: 12px;
 }
+
+/* phones: the card keeps a margin from the screen edges and uses a little less padding */
+@media (max-width: 520px) {
+  body {
+    padding: 16px;
+  }
+
+  .login-card {
+    width: 100%;
+    min-height: 0;
+    padding: 36px 24px;
+  }
+
+  .logo {
+    margin-bottom: 30px;
+  }
+}

@@ -1,0 +1,211 @@
+/* Student dashboard on phones. Loaded after dashboard.css and calendar.css, and only changes
+   anything below 760px wide, so the desktop layout is untouched. */
+
+@media (max-width: 760px) {
+  body {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+
+  /* ---------- top bar: compact actions; Home / Calendar move to a bottom tab bar ---------- */
+
+  /* no slide-in here: an animated transform would make the top bar the box the fixed tab bar is placed in */
+  .topbar {
+    height: 60px;
+    padding: 0 12px;
+    position: sticky;
+    top: 0;
+    animation: none;
+  }
+
+  .topbar-side:first-child {
+    display: none;
+  }
+
+  .topbar-side.right {
+    flex: 1;
+    gap: 8px;
+  }
+
+  .topbar-side.right > .btn {
+    width: 40px;
+    height: 40px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .topbar-side.right > .btn .btn-icon {
+    width: 19px;
+    height: 19px;
+  }
+
+  .topbar-side.right > .btn .btn-label {
+    display: none;
+  }
+
+  /* the first button sits at the left edge, the rest stay on the right */
+  #schedule-pass-btn {
+    margin-right: auto;
+    width: auto !important;
+    padding: 0 14px !important;
+    gap: 8px;
+  }
+
+  #schedule-pass-btn .btn-label {
+    display: inline !important;
+  }
+
+  .avatar-menu {
+    position: fixed;
+    top: 66px;
+    right: 10px;
+    width: min(300px, calc(100vw - 20px));
+  }
+
+  .main-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 90;
+    height: calc(64px + env(safe-area-inset-bottom));
+    gap: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    background: #ffffff;
+    box-shadow: 0 -2px 12px rgba(16, 20, 24, 0.08);
+  }
+
+  .main-nav .nav-item {
+    flex: 1;
+    gap: 3px;
+    font-size: 12px;
+    border-bottom: none;
+    border-top: 3px solid transparent;
+  }
+
+  .main-nav .nav-item.active {
+    border-top-color: #00b476;
+  }
+
+  /* ---------- home ---------- */
+
+  .content {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 22px;
+    padding: 20px 16px 24px;
+  }
+
+  .welcome-title {
+    margin-bottom: 34px;
+    font-size: 24px;
+    overflow-wrap: anywhere;
+  }
+
+  .walk-icon {
+    height: 64px;
+  }
+
+  .going-somewhere-text {
+    font-size: 21px;
+  }
+
+  .btn-large {
+    width: 100%;
+    max-width: 320px;
+    justify-content: center;
+  }
+
+  .request-card {
+    max-width: none;
+  }
+
+  .requests-panel {
+    width: auto;
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    padding: 18px 16px;
+  }
+
+  .notif-list {
+    max-height: 360px;
+    overflow-y: auto;
+  }
+
+  /* ---------- create / schedule: a sheet that slides up from the bottom ---------- */
+
+  .modal-overlay,
+  .modal-overlay.centered {
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0 !important;
+    background: rgba(16, 20, 24, 0.4);
+  }
+
+  .modal-overlay .modal,
+  .modal-overlay.centered .modal {
+    width: 100%;
+    max-width: none;
+    max-height: calc(100vh - 40px);
+    border: none;
+    border-radius: 18px 18px 0 0;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+    animation: sheetUp 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .modal-overlay .modal:has(#picker-view:not(.hidden)),
+  .modal-overlay.centered .modal:has(#picker-view:not(.hidden)) {
+    height: min(600px, calc(100vh - 40px));
+  }
+
+  /* ---------- calendar: month and day list on top, the week underneath ---------- */
+
+  .calendar-page {
+    min-height: 0;
+  }
+
+  .cal-main {
+    width: 100%;
+    padding: 14px 10px 20px;
+  }
+
+  .cal-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .cal-title {
+    font-size: 17px;
+  }
+
+  .cal-head-day {
+    padding-left: 4px;
+    font-size: 12px;
+  }
+
+  .cal-head-day b {
+    display: block;
+  }
+
+  .cal-scroll {
+    max-height: 60vh;
+  }
+
+  /* ---------- toasts: across the top, clear of the tab bar ---------- */
+
+  .toast-host {
+    top: 68px;
+    left: 12px;
+    right: 12px;
+  }
+}
+
+@keyframes sheetUp {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
