@@ -188,8 +188,6 @@ if (codeForm) {
   }
 }
 
-if (signedInRole() && !localStorage.getItem("smartpass_school")) showView(schoolView);
-
 document.querySelectorAll(".school-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
     const school = btn.dataset.school;

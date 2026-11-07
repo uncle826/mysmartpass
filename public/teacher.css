@@ -2,7 +2,7 @@
   padding: 6px 14px;
   border-radius: 16px;
   background: #e7f8f1;
-  color: #0e9f6e;
+  color: #009a65;
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.3px;
@@ -44,10 +44,10 @@
 }
 
 .t-students-head h2 {
-  font-family: "Baloo 2", "Segoe UI", Arial, sans-serif;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
   font-size: 19px;
   font-weight: 700;
-  color: #2b2560;
+  color: #1f195e;
   margin: 0;
 }
 
@@ -68,7 +68,7 @@
   border: 1px solid #eceef3;
   border-radius: 10px;
   background: #f3f4f7;
-  color: #2b2560;
+  color: #1f195e;
   font-size: 15px;
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
@@ -135,19 +135,19 @@
 .t-student-name {
   font-size: 15px;
   font-weight: 700;
-  color: #2b2560;
+  color: #1f195e;
 }
 
 .t-student-sub {
   font-size: 12.5px;
-  color: #8a94a3;
+  color: #7083a0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .t-student-sub.on-pass {
-  color: #0e9f6e;
+  color: #009a65;
   font-weight: 600;
 }
 
@@ -212,21 +212,21 @@
 }
 
 .t-detail-title h2 {
-  font-family: "Baloo 2", "Segoe UI", Arial, sans-serif;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
   font-size: 26px;
   font-weight: 700;
-  color: #2b2560;
+  color: #1f195e;
   margin: 0;
   line-height: 1.15;
 }
 
 .t-status {
   font-size: 14px;
-  color: #8a94a3;
+  color: #7083a0;
 }
 
 .t-status.on-pass {
-  color: #0e9f6e;
+  color: #009a65;
   font-weight: 600;
 }
 
@@ -314,10 +314,10 @@
 }
 
 .t-history-title {
-  font-family: "Baloo 2", "Segoe UI", Arial, sans-serif;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
   font-size: 17px;
   font-weight: 700;
-  color: #2b2560;
+  color: #1f195e;
   margin: 0 0 8px 0;
 }
 
@@ -327,7 +327,7 @@
   font-weight: 700;
   letter-spacing: 0.4px;
   text-transform: uppercase;
-  color: #8a94a3;
+  color: #7083a0;
 }
 
 .t-no-history {
@@ -340,12 +340,12 @@
 /* Create pass dialog */
 
 .confirm-primary {
-  background: #10b981;
+  background: #00b476;
   color: #ffffff;
 }
 
 .confirm-primary:hover:not(:disabled) {
-  background: #0e9f6e;
+  background: #009a65;
 }
 
 .confirm-primary:disabled {
@@ -382,12 +382,12 @@
 
 .t-duration input[type="range"] {
   flex: 1;
-  accent-color: #10b981;
+  accent-color: #00b476;
 }
 
 .t-duration-value {
   min-width: 56px;
   text-align: right;
   font-weight: 700;
-  color: #2b2560;
+  color: #1f195e;
 }

@@ -4,8 +4,7 @@ const PBKDF2_ITERATIONS = 100000;
 const NAME_RE = /^[\p{L}\p{N} .,'’_-]{1,40}$/u;
 const TEACHER_RE = /^[\p{L}\p{N} .,'’_-]{3,40}$/u;
 const DEST_RE = /^[\p{L}\p{N} .,'’()#&_-]{1,60}$/u;
-// must accept everything keyOf() can produce, including accented and non-Latin letters
-const KEY_RE = /^[\p{L}\p{N}]{1,80}$/u;
+const KEY_RE = /^[a-z0-9]+$/;
 
 const PHOTO_RE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/;
 const MAX_PHOTO_CHARS = 30000;
@@ -24,7 +23,6 @@ const MIGRATIONS = [
   "ALTER TABLE passes ADD COLUMN bounce_speed INTEGER NOT NULL DEFAULT 42",
   "ALTER TABLE students ADD COLUMN password TEXT",
   "ALTER TABLE classes ADD COLUMN max_minutes INTEGER",
-  "ALTER TABLE students ADD COLUMN display_name TEXT",
 ];
 
 // "Learn" followed by exactly five digits (the word itself can be typed in any case)
@@ -39,17 +37,10 @@ const encoder = new TextEncoder();
 
 /* ---------------- helpers ---------------- */
 
-const SECURITY_HEADERS = {
-  "x-content-type-options": "nosniff",
-  "x-frame-options": "DENY",
-  "referrer-policy": "no-referrer",
-  "content-security-policy": "default-src 'none'; frame-ancestors 'none'",
-};
-
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { "content-type": "application/json", "cache-control": "no-store", ...SECURITY_HEADERS },
+    headers: { "content-type": "application/json", "cache-control": "no-store" },
   });
 }
 
@@ -244,7 +235,7 @@ function ensureSchema(env) {
   return schemaReady;
 }
 
-// If the ADMIN_PASSWORD secret is set, the "admin" teacher account's password is set to it
+// If the ADMIN_PASSWORD variable is set in wrangler.jsonc, the "admin" teacher account's password is set to it
 // once per value: changing the variable applies the new password, while resetting it from the sign-in page
 // afterwards sticks (the stored fingerprint only changes when the variable does).
 let adminPasswordChecked = false;
@@ -398,7 +389,7 @@ async function limitMessage(env, key, student) {
 
 async function studentState(env, key) {
   const student = await env.DB
-    .prepare("SELECT key, name, display_name, avatar_color, photo, request_only, daily_limit, tz_offset FROM students WHERE key = ?")
+    .prepare("SELECT key, name, avatar_color, photo, request_only, daily_limit, tz_offset FROM students WHERE key = ?")
     .bind(key)
     .first();
   if (!student) return null;
@@ -428,7 +419,6 @@ async function studentState(env, key) {
   return {
     key: student.key,
     name: student.name,
-    displayName: student.display_name || null,
     avatarColor: student.avatar_color,
     photo: student.photo || null,
     requestOnly: !!student.request_only,
@@ -513,10 +503,8 @@ function clampMinutesTeacher(value) {
 
 async function newSession(env, username) {
   const token = randomHex(32);
-  const now = Date.now();
-  await env.DB.prepare("DELETE FROM sessions WHERE expires_at < ?").bind(now).run();
   await env.DB.prepare("INSERT INTO sessions (token_hash, username, expires_at) VALUES (?, ?, ?)")
-    .bind(await sha256Hex(token), username, now + SESSION_MS)
+    .bind(await sha256Hex(token), username, Date.now() + SESSION_MS)
     .run();
   return token;
 }
@@ -551,15 +539,12 @@ async function requireStudentSession(request, env, url) {
   return null;
 }
 
-// seeing or resetting a student's password takes a 4-digit code (the PASSWORD_PIN secret); there's no built-in
-// default, so the feature stays off until one is set. Returns an error response when the code is wrong or
-// tried too many times, otherwise null
+// seeing or resetting a student's password takes a 4-digit code (the PASSWORD_PIN variable, 2012 unless changed);
+// returns an error response when the code is wrong or tried too many times, otherwise null
 async function checkStudentPin(env, teacher, pin) {
-  const expected = String(env.PASSWORD_PIN || "");
-  if (!/^\d{4}$/.test(expected)) return fail("Student passwords are locked until a PASSWORD_PIN is set up.", 403);
   const bucket = `pin:${teacher.username}`;
   if (!(await allowAttempt(env, bucket, 8, 15 * 60000))) return fail("Too many wrong codes. Please wait a few minutes.", 429);
-  if (!safeEqual(String(pin || ""), expected)) return fail("Wrong code.", 403);
+  if (!safeEqual(String(pin || ""), String(env.PASSWORD_PIN || "2012"))) return fail("Wrong code.", 403);
   await clearAttempts(env, bucket);
   return null;
 }
@@ -602,13 +587,9 @@ async function handleApi(request, env, url) {
     if (!STUDENT_PASSWORD_RE.test(typed)) return fail("Your password is Learn followed by 5 numbers, like Learn12345.");
     const password = `Learn${typed.slice(5)}`;
 
-    // limited per device and per name, so guessing one student's password from many addresses still gets stopped
     const ip = clientIp(request);
     const bucket = `slogin:${ip}:${key}`;
-    const nameBucket = `slogin-name:${key}`;
-    if (!(await allowAttempt(env, bucket, 10, 15 * 60000)) || !(await allowAttempt(env, nameBucket, 30, 15 * 60000))) {
-      return fail("Too many tries. Please wait a few minutes and try again.", 429);
-    }
+    if (!(await allowAttempt(env, bucket, 10, 15 * 60000))) return fail("Too many tries. Please wait a few minutes and try again.", 429);
 
     const now = Date.now();
     const tz = cleanTz(body.tz);
@@ -631,7 +612,6 @@ async function handleApi(request, env, url) {
         .run();
     }
     await clearAttempts(env, bucket);
-    await clearAttempts(env, nameBucket);
 
     const state = await studentState(env, key);
     return json({ ...state, token: await newStudentSession(env, key) });
@@ -892,10 +872,6 @@ async function handleApi(request, env, url) {
 
     const username = String(body.username || "").replace(/\s+/g, " ").trim().toLowerCase();
     const password = String(body.password || "");
-    const userBucket = `login-user:${username}`;
-    if (username && !(await allowAttempt(env, userBucket, 20, 15 * 60000))) {
-      return fail("Too many attempts. Please wait a few minutes and try again.", 429);
-    }
     const teacher = username
       ? await env.DB.prepare("SELECT username, display, salt, hash FROM teachers WHERE username = ?").bind(username).first()
       : null;
@@ -905,7 +881,6 @@ async function handleApi(request, env, url) {
     if (!teacher || !safeEqual(attempt, teacher.hash)) return fail("Incorrect username or password.", 401);
 
     await clearAttempts(env, bucket);
-    await clearAttempts(env, userBucket);
     return json({ token: await newSession(env, teacher.username), name: teacher.display });
   }
 
@@ -933,7 +908,7 @@ async function handleApi(request, env, url) {
       return json({ ok: true });
     }
 
-    // seeing a student's password takes the 4-digit PASSWORD_PIN code
+    // seeing a student's password takes a 4-digit code (the PASSWORD_PIN variable, 2012 unless changed)
     if (pathname === "/api/teacher/student/password" && method === "POST") {
       const body = await readBody(request);
       const key = String(body.key || "");
@@ -963,7 +938,7 @@ async function handleApi(request, env, url) {
     if (pathname === "/api/teacher/students" && method === "GET") {
       const now = Date.now();
       const students = await env.DB
-        .prepare("SELECT key, name, display_name, avatar_color, photo, request_only, daily_limit, tz_offset, hidden FROM students ORDER BY name COLLATE NOCASE")
+        .prepare("SELECT key, name, avatar_color, photo, request_only, daily_limit, tz_offset, hidden FROM students ORDER BY name COLLATE NOCASE")
         .all();
       const active = await env.DB.prepare("SELECT * FROM passes WHERE finished_at IS NULL").all();
       const finished = await env.DB
@@ -991,7 +966,6 @@ async function handleApi(request, env, url) {
           return {
             key: s.key,
             name: s.name,
-            displayName: s.display_name || null,
             avatarColor: s.avatar_color,
             photo: s.photo || null,
             requestOnly: !!s.request_only,
@@ -1020,19 +994,6 @@ async function handleApi(request, env, url) {
         await env.DB.prepare("UPDATE students SET daily_limit = ? WHERE key = ?").bind(v, key).run();
       }
       return json({ ok: true });
-    }
-
-    // the name shown on a student's dashboard; empty clears it so their account name is used again
-    if (pathname === "/api/teacher/student/display-name" && method === "POST") {
-      const body = await readBody(request);
-      const key = String(body.key || "");
-      if (!KEY_RE.test(key)) return fail("Invalid request.");
-      const raw = String(body.displayName || "").replace(/\s+/g, " ").trim();
-      const displayName = raw ? cleanName(raw) : null;
-      if (raw && !displayName) return fail("Display names need 1–40 letters, numbers, spaces or . , ' _ -");
-      const res = await env.DB.prepare("UPDATE students SET display_name = ? WHERE key = ?").bind(displayName, key).run();
-      if (!res.meta.changes) return fail("Student not found.", 404);
-      return json({ ok: true, displayName });
     }
 
     if (pathname === "/api/teacher/student/hide" && method === "POST") {
@@ -1152,22 +1113,6 @@ async function handleApi(request, env, url) {
         await env.DB.prepare("UPDATE passes SET bounce = ? WHERE id = ?").bind(body.bounce ? 1 : 0, active.id).run();
       }
       return json({ ok: true });
-    }
-
-    if (pathname === "/api/teacher/pass/extend" && method === "POST") {
-      const body = await readBody(request);
-      const key = String(body.key || "");
-      const minutes = Math.round(Number(body.minutes));
-      if (!KEY_RE.test(key) || !Number.isFinite(minutes) || minutes < 1 || minutes > 60) return fail("Invalid request.");
-      const active = await env.DB.prepare("SELECT id, start_time, end_time FROM passes WHERE student_key = ? AND finished_at IS NULL").bind(key).first();
-      if (!active) return fail("That student isn't on a pass right now.", 409);
-
-      // time is added to whichever is later: the planned end, or right now (so an overtime pass gets the full extra time)
-      const now = Date.now();
-      const newEnd = Math.max(active.end_time, now) + minutes * 60000;
-      if (newEnd - active.start_time > 480 * 60000) return fail("A pass can't be longer than 8 hours.");
-      await env.DB.prepare("UPDATE passes SET end_time = ? WHERE id = ?").bind(newEnd, active.id).run();
-      return json({ ok: true, endTime: newEnd, serverNow: now });
     }
 
     if (pathname === "/api/teacher/pass/delete" && method === "POST") {

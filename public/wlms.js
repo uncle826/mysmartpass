@@ -12,6 +12,6 @@ setTimeout(() => {
   clearInterval(messageInterval);
   document.body.classList.add("fade-out");
   setTimeout(() => {
-    window.location.href = signedInHome() || signInPageFor(localStorage.getItem("smartpass_role"));
+    window.location.href = localStorage.getItem("smartpass_role") === "teacher" ? "teacher-dashboard.html" : "dashboard.html";
   }, 250);
 }, 600);

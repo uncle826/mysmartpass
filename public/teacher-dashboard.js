@@ -1,5 +1,9 @@
 const teacherToken = localStorage.getItem("smartpass_teacher_token");
-stayOnlyIfHome("/teacher-dashboard", "teacher");
+if (localStorage.getItem("smartpass_role") !== "teacher" || !teacherToken) {
+  localStorage.removeItem("smartpass_role");
+  localStorage.removeItem("smartpass_teacher_token");
+  location.replace("/teacher-signin");
+}
 
 function teacherApi(path, body) {
   return apiFetch(path, { body, token: teacherToken, method: body ? "POST" : "GET" });
@@ -19,8 +23,6 @@ const teacherName = localStorage.getItem("smartpass_name") || "Teacher";
 document.getElementById("teacher-name").textContent = teacherName.toUpperCase();
 
 const AVATAR_PALETTE = ["#2599d6", "#7b68ee", "#fb6d4c", "#f2994a", "#b21cc4", "#14a3a1", "#1ed17a", "#e2574c"];
-// quick amounts a teacher can add to an ongoing pass (the server caps a pass at 8 hours)
-const EXTEND_MINUTES = [1, 5, 10, 15];
 const BOUNCE_SPEEDS = [
   { value: 25, label: "Slow" },
   { value: 55, label: "Medium" },
@@ -69,16 +71,6 @@ function avatarHtml(s, extraClass = "") {
   const photo = s.photo ? `;background-image:url('${s.photo}')` : "";
   const initial = s.photo ? "" : escapeHtml(s.name.charAt(0).toUpperCase());
   return `<span class="t-avatar ${s.photo ? "has-photo" : ""} ${extraClass}" style="background-color:${color}${photo}">${initial}</span>`;
-}
-
-// "Account Name (Display Name)" as HTML, with the display name a little lighter; just the account name if there isn't one
-function nameHtml(s) {
-  const shown = s.displayName && s.displayName !== s.name ? ` <span class="t-name-display">(${escapeHtml(s.displayName)})</span>` : "";
-  return escapeHtml(s.name) + shown;
-}
-
-function nameText(s) {
-  return s.displayName && s.displayName !== s.name ? `${s.name} (${s.displayName})` : s.name;
 }
 
 function shade(hex, amount) {
@@ -168,36 +160,10 @@ document.querySelectorAll(".main-nav .nav-item").forEach((a) => {
 
 /* ---------- student list ---------- */
 
-// which students the list shows: everyone, the ones out of class, or the ones waiting for an answer
-let listFilter = "all";
-const LIST_FILTERS = [
-  { key: "all", label: "All", test: () => true },
-  { key: "out", label: "Out now", test: (s) => !!s.active },
-  { key: "requests", label: "Requests", test: (s) => !!s.request && !s.active },
-];
-
-function renderFilters(visible) {
-  const filtersEl = document.getElementById("t-filters");
-  filtersEl.innerHTML = LIST_FILTERS.map((f) => {
-    const n = visible.filter(f.test).length;
-    return `<button type="button" class="t-filter ${f.key === listFilter ? "active" : ""} ${f.key === "requests" && n ? "has-requests" : ""}" data-filter="${f.key}">${f.label}<span>${n}</span></button>`;
-  }).join("");
-  filtersEl.querySelectorAll("[data-filter]").forEach((btn) =>
-    btn.addEventListener("click", () => {
-      listFilter = btn.dataset.filter;
-      renderList();
-    })
-  );
-}
-
 function renderList() {
   const term = searchEl.value.trim().toLowerCase();
   const visible = students.filter((s) => showHidden || !s.hidden);
-  const filter = LIST_FILTERS.find((f) => f.key === listFilter);
-  const shown = visible.filter(
-    (s) => filter.test(s) && (!term || s.name.toLowerCase().includes(term) || (s.displayName || "").toLowerCase().includes(term))
-  );
-  renderFilters(visible);
+  const shown = visible.filter((s) => !term || s.name.toLowerCase().includes(term));
   const hiddenCount = students.filter((s) => s.hidden).length;
   const now = serverTime();
 
@@ -205,15 +171,7 @@ function renderList() {
     countEl.textContent = visible.length;
     popElement(countEl);
   }
-  emptyEl.classList.toggle("hidden", shown.length > 0);
-  emptyEl.textContent =
-    visible.length === 0
-      ? "No students yet. Students show up here after they sign in."
-      : term
-      ? "No students match that search."
-      : listFilter === "out"
-      ? "Everyone is in class."
-      : "No pass requests right now.";
+  emptyEl.classList.toggle("hidden", visible.length > 0);
 
   const stagger = !listAnimated && shown.length > 0;
   if (stagger) listAnimated = true;
@@ -226,7 +184,7 @@ function renderList() {
         <div class="t-student ${s.key === selectedKey ? "selected" : ""} ${stagger ? "stagger" : ""} ${s.hidden ? "is-hidden" : ""}" style="--i:${Math.min(i, 14)}" data-key="${s.key}" role="button" tabindex="0">
           ${avatarHtml(s)}
           <span class="t-student-info">
-            <span class="t-student-name">${nameHtml(s)}</span>
+            <span class="t-student-name">${escapeHtml(s.name)}</span>
             <span class="t-student-sub js-status ${st.cls}" data-key="${s.key}">${escapeHtml(st.text)}</span>
           </span>
           ${chip}
@@ -276,8 +234,6 @@ async function setHidden(s, hidden) {
 function selectStudent(key) {
   const changed = key !== selectedKey;
   selectedKey = key;
-  // on phones the list and the details take turns; this shows the details
-  document.body.classList.add("t-detail-open");
   listEl.querySelectorAll(".t-student").forEach((b) => b.classList.toggle("selected", b.dataset.key === key));
   renderDetail(changed);
 }
@@ -492,7 +448,6 @@ function renderRules(s) {
   }).join("");
 
   return `
-    <h3 class="t-section-label">Settings</h3>
     <div class="t-rules">
       <div class="t-rule">
         <div class="t-rule-text">
@@ -511,27 +466,12 @@ function renderRules(s) {
         </div>
         <div class="segmented" id="t-limit">${options}</div>
       </div>
-      <div class="t-rule">
-        <div class="t-rule-text">
-          <div class="t-rule-title">Display name</div>
-          <div class="t-rule-sub">Shown on their dashboard instead of ${escapeHtml(s.name)}</div>
-        </div>
-        <form class="t-display-form" id="t-display-form" autocomplete="off">
-          <input type="text" class="t-search" id="t-display-name" maxlength="40" placeholder="${escapeHtml(s.name)}" value="${escapeHtml(s.displayName || "")}" data-key="${s.key}">
-          <button type="submit" class="btn btn-primary">Save</button>
-        </form>
-      </div>
     </div>`;
 }
 
 function renderDetail(animate = true) {
   detailEl.classList.toggle("no-anim", !animate);
   const s = studentMap.get(selectedKey);
-
-  // a background refresh redraws this panel, so keep a display name the teacher is still typing
-  const typing = document.activeElement && document.activeElement.id === "t-display-name" && document.activeElement.dataset.key === selectedKey
-    ? { value: document.activeElement.value, start: document.activeElement.selectionStart, end: document.activeElement.selectionEnd }
-    : null;
 
   if (!s) {
     detailEl.innerHTML = `
@@ -551,38 +491,37 @@ function renderDetail(animate = true) {
     const cat = categoryByKey(s.active.room.categoryKey);
     const activeMsg = s.active.message ? `<div class="t-active-message">${escapeHtml(s.active.message)}</div>` : "";
     activeBlock = `
-      <section class="t-pass-card">
-        <div class="t-active" style="background:linear-gradient(135deg, ${cat.color}, ${shade(cat.color, -45)})">
-          <span class="t-active-icon">${roomIconMarkup(s.active.room.name, s.active.room.categoryKey)}</span>
-          <div class="t-active-info">
-            <div class="t-active-label" id="t-active-label">On a pass to</div>
-            <div class="t-active-name">${escapeHtml(s.active.room.name)}</div>
-            ${activeMsg}
-          </div>
-          <div class="t-active-time" id="t-active-time"></div>
+      <div class="t-bounce-row">
+        <div class="t-bounce-text">
+          <div class="t-bounce-title">Bounce this pass</div>
+          <div class="t-bounce-sub">Bouncing right now, on or off</div>
         </div>
-        <div class="t-pass-tools">
-          <div class="t-tool">
-            <span class="t-tool-label">Add time</span>
-            <div class="segmented" id="t-extend">
-              ${EXTEND_MINUTES.map((m) => `<button type="button" class="seg-btn" data-minutes="${m}">+${m} min</button>`).join("")}
-            </div>
-          </div>
-          <div class="t-tool">
-            <span class="t-tool-label">Bounce</span>
-            <label class="switch" title="Make this pass bounce around their screen">
-              <input type="checkbox" id="t-bounce-toggle" ${s.active.bounce ? "checked" : ""}>
-              <span class="switch-track"></span>
-            </label>
-            <div class="segmented" id="t-bounce-speed" title="Speed changes live, even while it's bouncing">
-              ${BOUNCE_SPEEDS.map(
-                (o) =>
-                  `<button type="button" class="seg-btn ${o.value === (s.active.bounceSpeed || 42) ? "active" : ""}" data-speed="${o.value}">${o.label}</button>`
-              ).join("")}
-            </div>
-          </div>
+        <label class="switch">
+          <input type="checkbox" id="t-bounce-toggle" ${s.active.bounce ? "checked" : ""}>
+          <span class="switch-track"></span>
+        </label>
+      </div>
+      <div class="t-bounce-row">
+        <div class="t-bounce-text">
+          <div class="t-bounce-title">Bounce speed</div>
+          <div class="t-bounce-sub">Changes live, even while it's already bouncing</div>
         </div>
-      </section>`;
+        <div class="segmented" id="t-bounce-speed">
+          ${BOUNCE_SPEEDS.map(
+            (o) =>
+              `<button type="button" class="seg-btn ${o.value === (s.active.bounceSpeed || 42) ? "active" : ""}" data-speed="${o.value}">${o.label}</button>`
+          ).join("")}
+        </div>
+      </div>
+      <div class="t-active" style="background:linear-gradient(135deg, ${cat.color}, ${shade(cat.color, -45)})">
+        <span class="t-active-icon">${roomIconMarkup(s.active.room.name, s.active.room.categoryKey)}</span>
+        <div class="t-active-info">
+          <div class="t-active-label" id="t-active-label">On a pass to</div>
+          <div class="t-active-name">${escapeHtml(s.active.room.name)}</div>
+          ${activeMsg}
+        </div>
+        <div class="t-active-time" id="t-active-time"></div>
+      </div>`;
   }
 
   const hiddenBanner = s.hidden
@@ -647,15 +586,12 @@ function renderDetail(animate = true) {
   detailEl.innerHTML = `
     ${hiddenBanner}
     <div class="t-detail-head">
-      <button type="button" class="t-back-btn" id="t-back-btn" aria-label="Back to all students">
-        <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
       <button type="button" class="t-avatar-btn" id="t-photo-btn" title="Change photo" aria-label="Change photo">
         ${avatarHtml(s)}
         <span class="t-avatar-cam"><svg viewBox="0 0 24 24"><path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="2.2"/></svg></span>
       </button>
       <div class="t-detail-title">
-        <h2>${nameHtml(s)}</h2>
+        <h2>${escapeHtml(s.name)}</h2>
         <div class="t-status" id="t-status"></div>
       </div>
       <div class="t-actions">${actions}</div>
@@ -663,37 +599,29 @@ function renderDetail(animate = true) {
 
     ${requestBlock}
 
-    ${activeBlock}
-
     <div class="notif-stats">
       <div class="notif-stat"><span class="notif-stat-value">${total}</span><span class="notif-stat-label">Passes</span></div>
-      <div class="notif-stat"><span class="notif-stat-value">${overtime}</span><span class="notif-stat-label">Overtime</span></div>
-      <div class="notif-stat"><span class="notif-stat-value">${total ? formatDuration(avg) : "—"}</span><span class="notif-stat-label">Average time</span></div>
+      <div class="notif-stat"><span class="notif-stat-value">${overtime}</span><span class="notif-stat-label">Overtime Passes</span></div>
+      <div class="notif-stat"><span class="notif-stat-value">${total ? formatDuration(avg) : "—"}</span><span class="notif-stat-label">Average Time</span></div>
     </div>
 
     ${renderRules(s)}
 
-    <h3 class="t-section-label">History</h3>
+    ${activeBlock}
+
+    <h3 class="t-history-title">Where ${escapeHtml(s.name)} has been</h3>
     ${historyHtml}
 
-    <div class="t-account">
-      <span class="t-account-title">Account</span>
-      <button type="button" class="t-link-btn" id="t-show-pw-btn">Show password</button>
-      <button type="button" class="t-link-btn" id="t-reset-pw-btn">Reset password</button>
-      ${s.hidden ? "" : `<button type="button" class="t-link-btn danger" id="t-delete-student-btn">Remove from list</button>`}
-    </div>`;
+    <div class="t-pw-actions">
+      <button type="button" class="t-show-pw-btn" id="t-show-pw-btn">Show student password</button>
+      <button type="button" class="btn btn-outline t-reset-pw-btn" id="t-reset-pw-btn">Reset password</button>
+    </div>
 
-  if (typing) {
-    const input = document.getElementById("t-display-name");
-    input.value = typing.value;
-    input.focus();
-    input.setSelectionRange(typing.start, typing.end);
-  }
-
-  document.getElementById("t-back-btn").addEventListener("click", () => {
-    document.body.classList.remove("t-detail-open");
-    window.scrollTo(0, 0);
-  });
+    ${s.hidden ? "" : `
+    <button type="button" class="btn btn-danger-outline t-delete-student-btn" id="t-delete-student-btn">
+      <svg viewBox="0 0 24 24"><path d="M4 7h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      Delete student
+    </button>`}`;
 
   const createBtn = document.getElementById("t-create-btn");
   if (createBtn) createBtn.addEventListener("click", () => openCreate(s));
@@ -718,10 +646,6 @@ function renderDetail(animate = true) {
     btn.addEventListener("click", () => decideRequest(Number(btn.dataset.id), btn.dataset.decide === "approve", btn));
   });
 
-  document.getElementById("t-display-form").addEventListener("submit", (e) => {
-    e.preventDefault();
-    saveDisplayName(s, document.getElementById("t-display-name").value, e.submitter);
-  });
   document.getElementById("t-request-only").addEventListener("change", (e) => {
     saveSettings(s, { requestOnly: e.target.checked });
   });
@@ -732,9 +656,6 @@ function renderDetail(animate = true) {
       const speed = Number(btn.dataset.speed);
       if (speed !== (s.active.bounceSpeed || 42)) setBounce(s, s.active.bounce, speed);
     });
-  });
-  document.querySelectorAll("#t-extend .seg-btn").forEach((btn) => {
-    btn.addEventListener("click", () => extendStudentPass(s, Number(btn.dataset.minutes), btn));
   });
   document.querySelectorAll("#t-limit .seg-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -776,8 +697,6 @@ function tick() {
           : `+${clock(-remaining, false)}<small>overtime</small>`;
       }
       if (labelEl) labelEl.textContent = remaining > 0 ? "On a pass to" : "Overtime on a pass to";
-      const passCard = detailEl.querySelector(".t-pass-card");
-      if (passCard) passCard.classList.toggle("overtime", remaining <= 0);
     }
   }
 
@@ -796,7 +715,7 @@ function hallCardMarkup(s, enter) {
       <button type="button" class="h-card-top" data-open="${s.key}">
         ${avatarHtml(s)}
         <span class="h-who">
-          <span class="h-name">${nameHtml(s)}</span>
+          <span class="h-name">${escapeHtml(s.name)}</span>
           <span class="h-sub">Left at ${timeOfDay(s.active.startTime)}${from}${by}</span>
         </span>
         <span class="h-dest-icon" style="background:${cat.color}">${roomIconMarkup(s.active.room.name, s.active.room.categoryKey)}</span>
@@ -805,14 +724,11 @@ function hallCardMarkup(s, enter) {
       ${msg}
       <div class="h-time js-h-time" data-key="${s.key}"></div>
       <div class="h-bar"><div class="h-bar-fill js-h-bar" data-key="${s.key}"></div></div>
-      <div class="h-foot">
-        <button type="button" class="h-tool" data-extend="${s.key}" title="Add 5 minutes">+5 min</button>
-        <button type="button" class="h-tool ${s.active.bounce ? "active" : ""}" data-bounce="${s.key}">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="6.5" r="2.8" fill="currentColor"/><path d="M12 9.3v3.2m-5.2 7.5 5.2-5 5.2 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
-          ${s.active.bounce ? "Bouncing" : "Bounce"}
-        </button>
-        <button type="button" class="h-tool danger" data-end="${s.key}">End pass</button>
-      </div>
+      <button type="button" class="h-bounce-btn ${s.active.bounce ? "active" : ""}" data-bounce="${s.key}">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="6.5" r="2.8" fill="currentColor"/><path d="M12 9.3v3.2m-5.2 7.5 5.2-5 5.2 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        ${s.active.bounce ? "Bouncing" : "Bounce"}
+      </button>
+      <button type="button" class="btn btn-danger-outline h-end" data-end="${s.key}">End pass</button>
     </div>`;
 }
 
@@ -825,7 +741,7 @@ function requestCardMarkup(s, enter) {
       <button type="button" class="h-card-top" data-open="${s.key}">
         ${avatarHtml(s)}
         <span class="h-who">
-          <span class="h-name">${nameHtml(s)}</span>
+          <span class="h-name">${escapeHtml(s.name)}</span>
           <span class="h-sub">Asking to leave${from}</span>
         </span>
         <span class="h-dest-icon" style="background:${cat.color}">${roomIconMarkup(r.dest.name, r.dest.categoryKey)}</span>
@@ -881,13 +797,6 @@ function renderHall() {
       e.stopPropagation();
       const s = studentMap.get(btn.dataset.end);
       if (s) endStudentPass(s);
-    });
-  });
-  hallView.querySelectorAll("[data-extend]").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const s = studentMap.get(btn.dataset.extend);
-      if (s && s.active) extendStudentPass(s, 5, btn);
     });
   });
   hallView.querySelectorAll("[data-bounce]").forEach((btn) => {
@@ -976,19 +885,6 @@ async function endStudentPass(s) {
   refresh(true);
 }
 
-async function extendStudentPass(s, minutes, btn) {
-  if (!s.active) return;
-  if (btn) btn.disabled = true;
-  const res = await teacherApi("/api/teacher/pass/extend", { key: s.key, minutes });
-  if (btn) btn.disabled = false;
-  if (res.status === 401) return kickToSignIn();
-  if (!res.ok) return showToast(res.data.error || "Couldn't add time to that pass.", "warn");
-  if (s.active) s.active.endTime = res.data.endTime;
-  tick();
-  showToast(`Added ${minutes} min to ${s.name}'s pass`, "success");
-  refresh(true);
-}
-
 async function decideRequest(id, approve, btn) {
   if (btn) btn.disabled = true;
   const res = await teacherApi("/api/teacher/request/decide", { id, approve });
@@ -1026,17 +922,6 @@ async function setBounce(s, bounce, speed) {
     renderHall();
     showToast(res.data.error || "Couldn't update that.", "warn");
   }
-}
-
-async function saveDisplayName(s, value, btn) {
-  if (btn) btn.disabled = true;
-  const res = await teacherApi("/api/teacher/student/display-name", { key: s.key, displayName: value });
-  if (btn) btn.disabled = false;
-  if (res.status === 401) return kickToSignIn();
-  if (!res.ok) return showToast(res.data.error || "Couldn't save that display name.", "warn");
-  s.displayName = res.data.displayName;
-  showToast(s.displayName ? `${s.name} will see “${s.displayName}”` : `${s.name} will see their account name`, "success");
-  refresh(true);
 }
 
 async function saveSettings(s, change) {
@@ -1160,7 +1045,7 @@ function closeOverlay(overlay) {
 
 function openCreate(s) {
   modalStudent = s;
-  modalSub.textContent = `Create a pass for ${nameText(s)}.`;
+  modalSub.textContent = `Create a pass for ${s.name}.`;
   roomSearch.value = "";
   messageInput.value = "";
   durationInput.value = 5;
@@ -1282,16 +1167,31 @@ function renderClassSettings() {
   });
   const matches = (e, c) => !term || `${e.name} ${e.room || ""} ${c.label}`.toLowerCase().includes(term);
 
+  // the Rooms tab lists the built-in places; the Classes tab lists the classes a teacher added
+  const classesTab = settingsTab === "classes";
   const groups = [];
   const other = [];
+  const mine = [];
   CATEGORIES.forEach((c) => {
-    const entries = (c.leaf ? [c.leaf] : c.rooms).map((r) => toEntry(r, c)).filter((e) => matches(e, c));
-    if (c.leaf) other.push(...entries);
+    const entries = (c.leaf ? [c.leaf] : c.rooms)
+      .map((r) => toEntry(r, c))
+      .filter((e) => (classesTab ? e.custom : !e.custom) && matches(e, c));
+    if (classesTab) mine.push(...entries);
+    else if (c.leaf) other.push(...entries);
     else if (entries.length) groups.push({ label: c.label, entries });
   });
-  if (other.length) groups.push({ label: "Other places", entries: other });
+  if (classesTab) {
+    if (mine.length) groups.push({ label: "Your classes", entries: mine });
+  } else if (other.length) {
+    groups.push({ label: "Other places", entries: other });
+  }
 
   const all = [];
+  emptyEl.textContent = term
+    ? "Nothing matches that search."
+    : classesTab
+      ? "You haven't added any classes yet. Use Add a class to make one."
+      : "No rooms to show.";
   emptyEl.classList.toggle("hidden", groups.length > 0);
   listEl.innerHTML = groups
     .map((g) => {
@@ -1332,6 +1232,61 @@ function renderClassSettings() {
 }
 
 document.getElementById("settings-class-search").addEventListener("input", renderClassSettings);
+
+/* Admin sidebar: Rooms (the built-in places) and Classes (the ones you add) */
+
+let settingsTab = "rooms";
+const SETTINGS_TABS = {
+  rooms: {
+    title: "Rooms",
+    sub: "Every built-in place students can pick when creating a pass. Click the pencil on any of them to change its name, room, picture or maximum time.",
+    search: "Search rooms",
+  },
+  classes: {
+    title: "Classes",
+    sub: "Teachers and classes you've added so students can pick them as a destination. Add as many as you like, and change or remove them any time.",
+    search: "Search classes",
+  },
+};
+
+function setSettingsTab(tab) {
+  settingsTab = SETTINGS_TABS[tab] ? tab : "rooms";
+  const info = SETTINGS_TABS[settingsTab];
+  document.querySelectorAll(".t-side-item").forEach((b) => b.classList.toggle("active", b.dataset.settingsTab === settingsTab));
+  document.getElementById("settings-title").textContent = info.title;
+  document.getElementById("settings-sub").textContent = info.sub;
+  const search = document.getElementById("settings-class-search");
+  search.placeholder = info.search;
+  search.value = "";
+  document.getElementById("settings-add-class-btn").classList.toggle("hidden", settingsTab !== "classes");
+  renderClassSettings();
+}
+
+document.querySelectorAll(".t-side-item").forEach((b) => {
+  b.addEventListener("click", () => setSettingsTab(b.dataset.settingsTab));
+});
+setSettingsTab("rooms");
+
+/* Top bar: search students, and Create Pass for the student you have open */
+
+const topSearch = document.getElementById("top-search");
+topSearch.addEventListener("input", () => {
+  searchEl.value = topSearch.value;
+  renderList();
+  if (currentView !== "students") setView("students");
+});
+
+document.getElementById("top-create-pass").addEventListener("click", () => {
+  const s = studentMap.get(selectedKey);
+  if (s) return openCreate(s);
+  setView("students");
+  showToast("Click a student first, then press Create Pass.", "info");
+});
+
+document.querySelector(".tb-logo").addEventListener("click", (e) => {
+  e.preventDefault();
+  setView("students");
+});
 
 async function deleteClass(c) {
   customClasses = customClasses.filter((x) => x.id !== c.id);

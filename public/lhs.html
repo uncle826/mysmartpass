@@ -35,6 +35,10 @@
       <a href="/student-signin" id="back-link" class="next-btn dev-back-btn">Go Back</a>
     </div>
   </div>
-<script src="lhs.js"></script>
+<script>
+  if (localStorage.getItem("smartpass_role") === "teacher") {
+    document.getElementById("back-link").href = "/teacher-signin";
+  }
+</script>
 </body>
 </html>
