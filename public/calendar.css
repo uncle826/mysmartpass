@@ -1165,3 +1165,36 @@
 .rec-grid {
   margin-bottom: 4px;
 }
+
+/* emergency mode banner (students) */
+.emergency-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: #d92d3f;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 2px 10px rgba(16, 20, 24, 0.25);
+}
+
+.emergency-banner svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.emergency-banner b {
+  font-weight: 700;
+}
+
+body.has-emergency {
+  padding-top: 42px;
+}

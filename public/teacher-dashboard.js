@@ -57,6 +57,7 @@ let hallShown = new Set();
 let knownRequestIds = null;
 let showHidden = false;
 let customClasses = [];
+let schoolRules = { emergency: false, emergencySince: null, emergencyBy: null, cooldownMinutes: 0, hallwayMax: 0 };
 
 /* ---------- helpers ---------- */
 
@@ -846,6 +847,12 @@ async function refresh(force) {
   if (res.status === 401) return kickToSignIn();
   if (!res.ok) return;
 
+  // school-wide rules (emergency mode, cooldown, hallway max) ride along with every refresh
+  if (res.data.rules) {
+    schoolRules = res.data.rules;
+    if (typeof onRulesUpdate === "function") onRulesUpdate();
+  }
+
   const list = res.data.students || [];
   const signature = JSON.stringify(list);
   if (!force && signature === lastSignature) return;
@@ -863,6 +870,7 @@ async function refresh(force) {
   renderList();
   renderDetail(selectedKey !== previousSelected);
   renderHall();
+  if (typeof onStudentsUpdate === "function") onStudentsUpdate();
 }
 
 function announceNewRequests() {
@@ -1249,10 +1257,20 @@ const SETTINGS_TABS = {
   },
 };
 
+const ADMIN_PANELS = ["rooms", "classes", "analytics", "rules", "emergency"];
+
 function setSettingsTab(tab) {
-  settingsTab = SETTINGS_TABS[tab] ? tab : "rooms";
+  const active = ADMIN_PANELS.includes(tab) ? tab : "rooms";
+  document.querySelectorAll(".t-side-item").forEach((b) => b.classList.toggle("active", b.dataset.settingsTab === active));
+
+  // Rooms and Classes share one panel; Analytics, Pass rules and Emergency each have their own
+  const places = active === "rooms" || active === "classes";
+  document.querySelectorAll(".t-panel").forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== (places ? "places" : active)));
+  if (typeof onAdminTab === "function") onAdminTab(active);
+  if (!places) return;
+
+  settingsTab = active;
   const info = SETTINGS_TABS[settingsTab];
-  document.querySelectorAll(".t-side-item").forEach((b) => b.classList.toggle("active", b.dataset.settingsTab === settingsTab));
   document.getElementById("settings-title").textContent = info.title;
   document.getElementById("settings-sub").textContent = info.sub;
   const search = document.getElementById("settings-class-search");

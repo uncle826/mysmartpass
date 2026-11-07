@@ -698,7 +698,17 @@ function closeModal() {
   }, 160);
 }
 
+function cooldownMinutesLeft() {
+  return rules.cooldownUntil && rules.cooldownUntil > serverTime() ? Math.ceil((rules.cooldownUntil - serverTime()) / 60000) : 0;
+}
+
 function passBlockedMessage() {
+  // school-wide rules first: emergency mode, the cooldown between passes, and a full hallway
+  if (rules.emergency) return "Emergency mode is on. Passes are paused right now.";
+  const wait = cooldownMinutesLeft();
+  if (wait) return `Please wait ${wait} more minute${wait === 1 ? "" : "s"} before your next pass.`;
+  if (rules.hallwayFull && !rules.requestOnly) return "The hallway is full right now. Try again in a minute.";
+
   if (rules.dailyLimit === null) return null;
   if (rules.dailyLimit === 0) return "Passes are turned off for you right now.";
   return rules.usedToday >= rules.dailyLimit ? `You've used all ${rules.dailyLimit} of your passes for today.` : null;
@@ -1211,6 +1221,9 @@ const passRulesEl = document.getElementById("pass-rules");
 function updateRulesUI() {
   const blocked = passBlockedMessage();
   const parts = [];
+  if (rules.emergency) parts.push("Emergency mode: passes are paused");
+  else if (cooldownMinutesLeft()) parts.push(`Next pass in ${cooldownMinutesLeft()} min`);
+  else if (rules.hallwayFull && !rules.requestOnly) parts.push("The hallway is full right now");
   if (rules.requestOnly) parts.push("Your teacher approves your passes");
   if (rules.dailyLimit === 0) parts.push("Passes are off right now");
   else if (rules.dailyLimit !== null) parts.push(`${rules.usedToday} of ${rules.dailyLimit} passes used today`);
@@ -1278,7 +1291,12 @@ function applyServerState(state) {
     dailyLimit: state.dailyLimit === undefined ? null : state.dailyLimit,
     usedToday: state.usedToday || 0,
     request: state.request || null,
+    emergency: !!state.emergency,
+    cooldownUntil: state.cooldownUntil || null,
+    hallwayFull: !!state.hallwayFull,
   };
+  document.getElementById("emergency-banner").classList.toggle("hidden", !rules.emergency);
+  document.body.classList.toggle("has-emergency", rules.emergency); // pushes the page down so the banner doesn't cover the top bar
 
   logCache = state.log || [];
   renderNotifications();

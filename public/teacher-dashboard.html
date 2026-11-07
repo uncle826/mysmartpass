@@ -10,9 +10,9 @@
 <script src="pwa.js" defer></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="dashboard.css">
-<link rel="stylesheet" href="teacher.css?v=17">
-<link rel="stylesheet" href="teacher-extra.css?v=17">
-<link rel="stylesheet" href="teacher-redesign.css?v=17">
+<link rel="stylesheet" href="teacher.css?v=20">
+<link rel="stylesheet" href="teacher-extra.css?v=20">
+<link rel="stylesheet" href="teacher-redesign.css?v=20">
 </head>
 <body>
 
@@ -119,6 +119,13 @@
 
   <main class="t-admin hidden" id="settings-view">
     <aside class="t-admin-side" aria-label="Admin sections">
+      <button type="button" class="t-side-item" data-settings-tab="analytics">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="5.5" y="11" width="3" height="6.5" rx=".8" fill="currentColor"/><rect x="10.5" y="6.5" width="3" height="11" rx=".8" fill="currentColor"/><rect x="15.5" y="9" width="3" height="8.5" rx=".8" fill="currentColor"/></svg>
+        <span>Analytics</span><em class="t-beta">Beta</em>
+      </button>
+
+      <div class="t-side-divider"></div>
+
       <button type="button" class="t-side-item active" data-settings-tab="rooms">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3.5" width="14" height="17" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="15.2" cy="12.2" r="1.1" fill="currentColor"/></svg>
         <span>Rooms</span>
@@ -127,26 +134,152 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 20h8M12 15.5V20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         <span>Classes</span>
       </button>
+      <button type="button" class="t-side-item" data-settings-tab="rules">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="7" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 9.5V13l2.6 1.6M9.5 3.5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Pass rules</span>
+      </button>
+      <button type="button" class="t-side-item" data-settings-tab="emergency">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 2.8 19.5h18.4L12 3.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 10v4M12 16.8h.01" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span>Emergency</span>
+      </button>
     </aside>
 
     <section class="t-admin-main">
-      <div class="t-admin-bar">
-        <span></span>
-        <h1 id="settings-title">Rooms</h1>
-        <button type="button" class="btn btn-primary hidden" id="settings-add-class-btn">
-          <svg viewBox="0 0 24 24" class="btn-icon"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
-          Add a class
-        </button>
+      <!-- Rooms + Classes -->
+      <div class="t-panel" data-panel="places">
+        <div class="t-admin-bar">
+          <span></span>
+          <h1 id="settings-title">Rooms</h1>
+          <button type="button" class="btn btn-primary hidden" id="settings-add-class-btn">
+            <svg viewBox="0 0 24 24" class="btn-icon"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+            Add a class
+          </button>
+        </div>
+
+        <div class="t-admin-card">
+          <p class="t-settings-sub" id="settings-sub"></p>
+          <input type="text" class="t-search t-settings-search" id="settings-class-search" placeholder="Search rooms" autocomplete="off">
+          <div id="settings-class-list"></div>
+          <p class="t-no-history hidden" id="settings-class-empty">Nothing matches that search.</p>
+        </div>
       </div>
 
-      <div class="t-admin-card">
-        <p class="t-settings-sub" id="settings-sub"></p>
-        <input type="text" class="t-search t-settings-search" id="settings-class-search" placeholder="Search rooms" autocomplete="off">
-        <div id="settings-class-list"></div>
-        <p class="t-no-history hidden" id="settings-class-empty">Nothing matches that search.</p>
+      <!-- Analytics -->
+      <div class="t-panel hidden" data-panel="analytics">
+        <div class="t-admin-bar">
+          <span></span>
+          <h1>Analytics</h1>
+          <button type="button" class="btn btn-outline" id="an-export">
+            <svg viewBox="0 0 24 24" class="btn-icon"><path d="M12 4v11M7.5 11 12 15.5 16.5 11M5 19.5h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Export CSV
+          </button>
+        </div>
+
+        <div class="t-admin-card">
+          <div class="an-filters">
+            <div class="segmented" id="an-range" role="group" aria-label="Time range">
+              <button type="button" class="seg-btn" data-days="7">Last 7 days</button>
+              <button type="button" class="seg-btn active" data-days="30">Last 30 days</button>
+              <button type="button" class="seg-btn" data-days="0">All time</button>
+            </div>
+          </div>
+
+          <div class="an-tiles" id="an-tiles"></div>
+
+          <h3 class="an-h">Passes per day</h3>
+          <div class="an-chart" id="an-chart" role="img" aria-label="Bar chart of passes per day"></div>
+          <div class="an-tip hidden" id="an-tip" role="status"></div>
+
+          <div class="an-two">
+            <div>
+              <h3 class="an-h">Most used rooms</h3>
+              <div id="an-rooms"></div>
+            </div>
+            <div>
+              <h3 class="an-h">Students with the most passes</h3>
+              <div id="an-students"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pass rules -->
+      <div class="t-panel hidden" data-panel="rules">
+        <div class="t-admin-bar">
+          <span></span>
+          <h1>Pass rules</h1>
+          <span></span>
+        </div>
+
+        <div class="t-admin-card rules-card">
+          <p class="t-settings-sub">Rules for the whole school. Teachers can always create a pass for a student, whatever these say.</p>
+
+          <div class="rule-block">
+            <div class="rule-head">
+              <h3>Pass cooldown</h3>
+              <p>How long a student has to wait after one pass ends before they can start another.</p>
+            </div>
+            <div class="rule-chips" id="rule-cooldown" data-key="cooldownMinutes">
+              <button type="button" data-v="0">Off</button>
+              <button type="button" data-v="5">5 min</button>
+              <button type="button" data-v="10">10 min</button>
+              <button type="button" data-v="15">15 min</button>
+              <button type="button" data-v="20">20 min</button>
+              <button type="button" data-v="30">30 min</button>
+            </div>
+          </div>
+
+          <div class="rule-block">
+            <div class="rule-head">
+              <h3>Hallway maximum</h3>
+              <p>The most students who can be out on a pass at the same time. When the hallway is full, others see a message and try again in a minute.</p>
+            </div>
+            <div class="rule-chips" id="rule-hallway" data-key="hallwayMax">
+              <button type="button" data-v="0">No limit</button>
+              <button type="button" data-v="3">3</button>
+              <button type="button" data-v="5">5</button>
+              <button type="button" data-v="8">8</button>
+              <button type="button" data-v="10">10</button>
+              <button type="button" data-v="15">15</button>
+            </div>
+          </div>
+
+          <div class="rule-save">
+            <button type="button" class="btn btn-primary" id="rules-save">Save rules</button>
+            <span class="rule-saved hidden" id="rules-saved">Saved</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Emergency -->
+      <div class="t-panel hidden" data-panel="emergency">
+        <div class="t-admin-bar">
+          <span></span>
+          <h1>Emergency mode</h1>
+          <span></span>
+        </div>
+
+        <div class="t-admin-card em-card">
+          <div class="em-status" id="em-status"></div>
+          <button type="button" class="btn em-btn" id="em-toggle"></button>
+          <ul class="em-list">
+            <li>Students can't start new passes or send requests, and scheduled passes won't start.</li>
+            <li>Every student sees a red banner on their screen.</li>
+            <li>Passes that are already running keep going, and you can see them below.</li>
+          </ul>
+
+          <h3 class="an-h">In the hallway right now <span class="t-count" id="em-count">0</span></h3>
+          <div id="em-hall"></div>
+        </div>
       </div>
     </section>
   </main>
+
+  <div class="t-emergency-bar hidden" id="t-emergency-bar" role="alert">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 20h20L12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <span><b>Emergency mode is on.</b> Student passes are paused.</span>
+    <button type="button" id="t-emergency-off">Turn off</button>
+  </div>
 
   <div class="confirm-overlay hidden" id="t-modal-overlay">
     <div class="confirm-box t-modal" role="dialog" aria-modal="true" aria-labelledby="t-modal-title">
@@ -304,8 +437,9 @@
     </div>
   </div>
 
-<script src="api.js?v=17"></script>
-<script src="rooms.js?v=17"></script>
-<script src="teacher-dashboard.js?v=17"></script>
+<script src="api.js?v=20"></script>
+<script src="rooms.js?v=20"></script>
+<script src="teacher-dashboard.js?v=20"></script>
+<script src="teacher-admin.js?v=20"></script>
 </body>
 </html>

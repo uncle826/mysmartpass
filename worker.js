@@ -343,6 +343,7 @@ async function activateDueScheduled(env, key, student) {
     .bind(key, now)
     .first();
   if (!due) return;
+  if ((await loadRules(env)).emergency) return; // nothing starts on its own during an emergency
 
   const setStatus = (status) =>
     env.DB.prepare("UPDATE scheduled_passes SET status = ? WHERE id = ?").bind(status, due.id).run();
@@ -370,6 +371,52 @@ async function activateDueScheduled(env, key, student) {
   }
 
   if (await createPass(env, key, dest, from, due.minutes, null)) await setStatus("started");
+}
+
+/* ---------------- school-wide rules: emergency mode, pass cooldown, hallway max ---------------- */
+
+async function setMeta(env, k, v) {
+  await env.DB.prepare("INSERT OR REPLACE INTO app_meta (k, v) VALUES (?, ?)").bind(k, String(v)).run();
+}
+
+async function loadRules(env) {
+  const rows = await env.DB
+    .prepare("SELECT k, v FROM app_meta WHERE k IN ('emergency_on', 'emergency_since', 'emergency_by', 'cooldown_minutes', 'hallway_max')")
+    .all();
+  const m = new Map(rows.results.map((r) => [r.k, r.v]));
+  const num = (k) => {
+    const n = Number(m.get(k));
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+  const emergency = m.get("emergency_on") === "1";
+  return {
+    emergency,
+    emergencySince: emergency ? num("emergency_since") || null : null,
+    emergencyBy: emergency ? m.get("emergency_by") || null : null,
+    cooldownMinutes: num("cooldown_minutes"), // 0 = no cooldown
+    hallwayMax: num("hallway_max"), // 0 = no limit on how many students can be out at once
+  };
+}
+
+// a message when school-wide rules stop this student from starting a pass (or sending a request) right now
+async function studentPassBlock(env, key, { immediate }) {
+  const rules = await loadRules(env);
+  if (rules.emergency) return "Emergency mode is on. Passes are paused right now.";
+
+  if (rules.cooldownMinutes) {
+    const last = await env.DB.prepare("SELECT MAX(finished_at) AS t FROM passes WHERE student_key = ? AND finished_at IS NOT NULL").bind(key).first();
+    const readyAt = last && last.t ? last.t + rules.cooldownMinutes * 60000 : 0;
+    if (Date.now() < readyAt) {
+      const mins = Math.ceil((readyAt - Date.now()) / 60000);
+      return `Please wait ${mins} more minute${mins === 1 ? "" : "s"} before your next pass.`;
+    }
+  }
+
+  if (immediate && rules.hallwayMax) {
+    const out = await env.DB.prepare("SELECT COUNT(*) AS n FROM passes WHERE finished_at IS NULL").first();
+    if (out && out.n >= rules.hallwayMax) return "The hallway is full right now. Try again in a minute.";
+  }
+  return null;
 }
 
 async function passesToday(env, key, tzOffset) {
@@ -416,8 +463,21 @@ async function studentState(env, key) {
     .bind(key, now - 180000)
     .first();
 
+  // school-wide rules the student's screen needs to know about
+  const rules = await loadRules(env);
+  const lastEnded = logRows.results.length ? logRows.results[logRows.results.length - 1].finished_at : null;
+  const readyAt = rules.cooldownMinutes && lastEnded ? lastEnded + rules.cooldownMinutes * 60000 : null;
+  let hallwayFull = false;
+  if (rules.hallwayMax && !activeRow) {
+    const out = await env.DB.prepare("SELECT COUNT(*) AS n FROM passes WHERE finished_at IS NULL").first();
+    hallwayFull = !!out && out.n >= rules.hallwayMax;
+  }
+
   return {
     key: student.key,
+    emergency: rules.emergency,
+    cooldownUntil: readyAt && readyAt > now ? readyAt : null,
+    hallwayFull,
     name: student.name,
     avatarColor: student.avatar_color,
     photo: student.photo || null,
@@ -648,7 +708,7 @@ async function handleApi(request, env, url) {
     const student = await env.DB.prepare("SELECT request_only, daily_limit, tz_offset FROM students WHERE key = ?").bind(key).first();
     if (!student) return fail("Student not found.", 404);
     if (student.request_only) return fail("Your teacher needs to approve your passes. Send a request instead.", 403);
-    const blocked = await limitMessage(env, key, student);
+    const blocked = (await limitMessage(env, key, student)) || (await studentPassBlock(env, key, { immediate: true }));
     if (blocked) return fail(blocked, 403);
 
     const created = await createPass(env, key, dest, from, await studentMinutes(env, dest, body.minutes), null);
@@ -673,7 +733,7 @@ async function handleApi(request, env, url) {
     if (!student) return fail("Student not found.", 404);
     const active = await env.DB.prepare("SELECT id FROM passes WHERE student_key = ? AND finished_at IS NULL").bind(key).first();
     if (active) return fail("You're already on a pass.", 409);
-    const blocked = await limitMessage(env, key, student);
+    const blocked = (await limitMessage(env, key, student)) || (await studentPassBlock(env, key, { immediate: false }));
     if (blocked) return fail(blocked, 403);
 
     try {
@@ -961,6 +1021,7 @@ async function handleApi(request, env, url) {
 
       return json({
         serverNow: now,
+        rules: await loadRules(env),
         students: students.results.map((s) => {
           const since = dayStart(now, s.tz_offset);
           return {
@@ -978,6 +1039,35 @@ async function handleApi(request, env, url) {
           };
         }),
       });
+    }
+
+    // school-wide pass rules
+    if (pathname === "/api/teacher/rules" && method === "GET") {
+      return json(await loadRules(env));
+    }
+
+    if (pathname === "/api/teacher/rules" && method === "POST") {
+      const body = await readBody(request);
+      const cooldown = Number(body.cooldownMinutes);
+      const hallway = Number(body.hallwayMax);
+      if (!Number.isInteger(cooldown) || cooldown < 0 || cooldown > 240) return fail("The cooldown has to be 0 to 240 minutes.");
+      if (!Number.isInteger(hallway) || hallway < 0 || hallway > 500) return fail("The hallway maximum has to be 0 to 500 students.");
+      await setMeta(env, "cooldown_minutes", cooldown);
+      await setMeta(env, "hallway_max", hallway);
+      return json(await loadRules(env));
+    }
+
+    // emergency mode: pauses new student passes everywhere until a teacher turns it off
+    if (pathname === "/api/teacher/emergency" && method === "POST") {
+      const body = await readBody(request);
+      if (body.on) {
+        await setMeta(env, "emergency_on", "1");
+        await setMeta(env, "emergency_since", Date.now());
+        await setMeta(env, "emergency_by", teacher.display);
+      } else {
+        await setMeta(env, "emergency_on", "0");
+      }
+      return json(await loadRules(env));
     }
 
     if (pathname === "/api/teacher/student/settings" && method === "POST") {

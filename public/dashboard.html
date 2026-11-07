@@ -9,8 +9,8 @@
 <meta name="theme-color" content="#ffffff">
 <script src="pwa.js" defer></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="dashboard.css?v=16">
-<link rel="stylesheet" href="calendar.css?v=16">
+<link rel="stylesheet" href="dashboard.css?v=20">
+<link rel="stylesheet" href="calendar.css?v=20">
 </head>
 <body>
 
@@ -25,6 +25,11 @@
       </filter>
     </defs>
   </svg>
+
+  <div class="emergency-banner hidden" id="emergency-banner" role="alert">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 20h20L12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v4M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <span><b>Emergency mode is on.</b> Passes are paused. Stay with your teacher.</span>
+  </div>
 
   <header class="topbar">
     <div class="topbar-side"></div>
@@ -355,9 +360,9 @@
     </div>
   </div>
 
-<script src="api.js?v=16"></script>
-<script src="rooms.js?v=16"></script>
-<script src="dashboard.js?v=16"></script>
-<script src="calendar.js?v=16"></script>
+<script src="api.js?v=20"></script>
+<script src="rooms.js?v=20"></script>
+<script src="dashboard.js?v=20"></script>
+<script src="calendar.js?v=20"></script>
 </body>
 </html>
