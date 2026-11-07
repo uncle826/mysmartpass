@@ -337,6 +337,164 @@ document.getElementById("em-toggle").addEventListener("click", () => {
 
 document.getElementById("t-emergency-off").addEventListener("click", () => setEmergency(false));
 
+/* ---------- Dashboard ---------- */
+
+function greeting() {
+  const h = new Date().getHours();
+  return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+}
+
+function renderDashboard() {
+  const name = (document.getElementById("teacher-name").textContent || "").trim();
+  document.getElementById("dash-hello").textContent = `${greeting()}${name ? `, ${name}` : ""}. Here's what's happening right now.`;
+
+  const out = students.filter((s) => s.active);
+  const today = students.reduce((sum, s) => sum + (s.usedToday || 0), 0);
+  const waiting = students.filter((s) => s.request).length;
+  document.getElementById("dash-tiles").innerHTML = [
+    { value: students.length, label: "Students" },
+    { value: out.length, label: "Out right now" },
+    { value: today, label: "Passes today" },
+    { value: waiting, label: "Requests waiting" },
+  ]
+    .map((t) => `<div class="an-tile"><b>${t.value}</b><span>${t.label}</span></div>`)
+    .join("");
+
+  const now = serverTime();
+  document.getElementById("dash-out-count").textContent = out.length;
+  document.getElementById("dash-out").innerHTML = out.length
+    ? out
+        .map((s) => {
+          const remaining = s.active.endTime - now;
+          const status = remaining > 0 ? `${clock(remaining, true)} left` : `Overtime +${clock(-remaining, false)}`;
+          return `
+          <div class="em-person ${remaining > 0 ? "" : "over"}">
+            ${avatarHtml(s)}
+            <div class="em-person-info"><b>${escapeHtml(s.name)}</b><span>${escapeHtml(s.active.room.name)}</span></div>
+            <span class="em-person-time">${status}</span>
+          </div>`;
+        })
+        .join("")
+    : `<p class="an-empty">Nobody is out on a pass.</p>`;
+
+  const latest = allFinishedPasses().sort((a, b) => b.endTime - a.endTime).slice(0, 6);
+  document.getElementById("dash-latest").innerHTML = latest.length
+    ? latest
+        .map(
+          (p) => `
+          <div class="an-row dash-pass">
+            <div class="an-row-top"><span class="an-row-name">${escapeHtml(p.student)} · ${escapeHtml(p.name)}</span><b>${formatDuration(p.endTime - p.startTime)}</b></div>
+            <div class="an-row-sub">${dayLabel(p.startTime)}, ${timeOfDay(p.startTime)}${p.overtime ? " · Overtime" : ""}</div>
+          </div>`
+        )
+        .join("")
+    : `<p class="an-empty">No passes yet.</p>`;
+}
+
+document.querySelectorAll("[data-goto]").forEach((b) => {
+  b.addEventListener("click", () => setSettingsTab(b.dataset.goto));
+});
+
+/* ---------- Accounts ---------- */
+
+function renderAccounts() {
+  const term = document.getElementById("accounts-search").value.trim().toLowerCase();
+  const list = students.filter((s) => !term || s.name.toLowerCase().includes(term));
+  const now = serverTime();
+  document.getElementById("accounts-list").innerHTML = list.length
+    ? list
+        .map((s) => {
+          const info = statusInfo(s, now);
+          const tags = [
+            s.requestOnly ? '<span class="acct-tag">Request only</span>' : "",
+            s.dailyLimit !== null ? `<span class="acct-tag">${s.dailyLimit === 0 ? "Passes off" : `${s.dailyLimit}/day`}</span>` : "",
+            s.hidden ? '<span class="acct-tag muted">Hidden</span>' : "",
+          ].join("");
+          return `
+          <button type="button" class="acct-row" data-key="${escapeHtml(s.key)}">
+            ${avatarHtml(s)}
+            <span class="acct-info"><b>${escapeHtml(s.name)}</b><span class="${info.cls}">${escapeHtml(info.text)}</span></span>
+            <span class="acct-tags">${tags}</span>
+            <svg class="acct-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>`;
+        })
+        .join("")
+    : `<p class="an-empty">${term ? "Nobody matches that search." : "No students yet. Students show up here after they sign in."}</p>`;
+
+  document.querySelectorAll("#accounts-list .acct-row").forEach((row) => {
+    row.addEventListener("click", () => {
+      selectedKey = row.dataset.key;
+      setView("students");
+      renderList();
+      renderDetail(true);
+    });
+  });
+}
+
+document.getElementById("accounts-search").addEventListener("input", renderAccounts);
+document.getElementById("accounts-limits").addEventListener("click", () => setSettingsTab("rules"));
+document.getElementById("rules-back").addEventListener("click", () => setSettingsTab("accounts"));
+
+/* ---------- "Coming soon" pages ---------- */
+
+const SOON_PAGES = {
+  bell: {
+    title: "Bell Schedule",
+    blurb: "Build your school year, regular days and holidays, so passes know which class each student is in.",
+    points: ["Create the school year and its terms", "Set regular days, rotations and holidays", "\"Coming from\" fills in automatically from the schedule"],
+  },
+  flex: {
+    title: "Flex",
+    blurb: "Flex periods, clubs and activities, with sign-ups and attendance, tied into the same passes.",
+    points: ["Create activities students can sign up for", "Take attendance and add students where they need to go", "See every student: in class, in an activity, or on a pass"],
+  },
+  idcards: {
+    title: "ID Cards",
+    blurb: "Digital ID cards and kiosk scanning so students can check in and out with a quick scan.",
+    points: ["Digital ID cards for every student", "Kiosk mode with an ID scanner", "Scan a card to start and end a pass"],
+  },
+  wrapped: {
+    title: "Wrapped report",
+    blurb: "A year-end recap of your school's passes: totals, the most popular rooms, and more.",
+    points: ["Total passes, total pass time and active users", "Most popular bathrooms and common destinations"],
+  },
+  concierge: {
+    title: "Data Concierge",
+    blurb: "Custom reports built for you, for when the built-in Analytics aren't enough.",
+    points: ["Ask for the report you need", "Reports delivered for review"],
+  },
+  help: {
+    title: "Help center",
+    blurb: "Guides and tips for setting up and getting the most out of SmartPass.",
+    points: ["Step-by-step setup guides", "Answers to common questions"],
+  },
+  calendar: {
+    title: "Calendar",
+    blurb: "See every scheduled and past pass across all of your students in one week view.",
+    points: ["Week and day views with a live \"now\" line", "Scheduled passes and requests in one place", "Click a pass to see the student and details"],
+  },
+};
+
+function soonMarkup(key) {
+  const p = SOON_PAGES[key];
+  return `
+    <div class="soon-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 8.6V13l3 1.8M9.5 3.6h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <span class="soon-pill">Coming soon</span>
+    <h2>${escapeHtml(p.title)}</h2>
+    <p class="soon-blurb">${escapeHtml(p.blurb)}</p>
+    <ul class="soon-points">${p.points.map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+    <p class="soon-note">This part of SmartPass isn't built yet, so the option is here but doesn't do anything.</p>`;
+}
+
+function renderSoonPanel(key) {
+  document.getElementById("soon-title").textContent = SOON_PAGES[key].title;
+  document.getElementById("soon-body").innerHTML = soonMarkup(key);
+}
+
+// the Calendar and Flex tabs along the top
+document.getElementById("calendar-soon").innerHTML = soonMarkup("calendar");
+document.getElementById("flex-soon").innerHTML = soonMarkup("flex");
+
 /* ---------- hooks called by teacher-dashboard.js ---------- */
 
 // the red bar shows on every teacher page while emergency mode is on, except on the Emergency page itself (it has its own status)
@@ -351,12 +509,20 @@ function onRulesUpdate() {
 }
 
 function onStudentsUpdate() {
+  if (panelVisible("dashboard")) renderDashboard();
+  if (panelVisible("accounts")) renderAccounts();
   if (panelVisible("analytics")) renderAnalytics();
   if (panelVisible("emergency")) renderEmergencyHall();
 }
 
 function onAdminTab(tab) {
   updateEmergencyBar();
+  if (tab === "dashboard") renderDashboard();
+  if (tab === "accounts") {
+    document.getElementById("accounts-search").value = "";
+    renderAccounts();
+  }
+  if (SOON_PAGES[tab] && tab !== "calendar") renderSoonPanel(tab);
   if (tab === "analytics") renderAnalytics();
   if (tab === "rules") syncRuleDraftFromServer();
   if (tab === "emergency") {

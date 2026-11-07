@@ -45,7 +45,13 @@ const detailEl = document.getElementById("t-detail");
 const studentsView = document.getElementById("students-view");
 const hallView = document.getElementById("hall-view");
 const settingsView = document.getElementById("settings-view");
-const VIEWS = { students: studentsView, hall: hallView, settings: settingsView };
+const VIEWS = {
+  students: studentsView,
+  hall: hallView,
+  calendar: document.getElementById("calendar-view"),
+  flex: document.getElementById("flex-view"),
+  settings: settingsView,
+};
 
 let students = [];
 let studentMap = new Map();
@@ -1257,17 +1263,36 @@ const SETTINGS_TABS = {
   },
 };
 
-const ADMIN_PANELS = ["rooms", "classes", "analytics", "rules", "emergency"];
+const ADMIN_PANEL_FOR = {
+  dashboard: "dashboard",
+  analytics: "analytics",
+  accounts: "accounts",
+  rules: "rules", // reached from the Pass Limits button on Accounts
+  rooms: "places",
+  classes: "places",
+  emergency: "emergency",
+  // not built yet: they show a "Coming soon" page
+  bell: "soon",
+  flex: "soon",
+  idcards: "soon",
+  wrapped: "soon",
+  concierge: "soon",
+  help: "soon",
+};
 
 function setSettingsTab(tab) {
-  const active = ADMIN_PANELS.includes(tab) ? tab : "rooms";
-  document.querySelectorAll(".t-side-item").forEach((b) => b.classList.toggle("active", b.dataset.settingsTab === active));
+  const active = ADMIN_PANEL_FOR[tab] ? tab : "dashboard";
+  const panel = ADMIN_PANEL_FOR[active];
 
-  // Rooms and Classes share one panel; Analytics, Pass rules and Emergency each have their own
-  const places = active === "rooms" || active === "classes";
-  document.querySelectorAll(".t-panel").forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== (places ? "places" : active)));
+  // the sidebar highlights the page you're on (Pass rules lives under Accounts)
+  const highlight = active === "rules" ? "accounts" : active;
+  document.querySelectorAll(".t-side-item[data-settings-tab]").forEach((b) => b.classList.toggle("active", b.dataset.settingsTab === highlight));
+  // the Explore group opens itself when one of its pages is showing
+  if (["wrapped", "concierge", "help"].includes(active)) setExploreOpen(true);
+
+  document.querySelectorAll(".t-panel").forEach((p) => p.classList.toggle("hidden", p.dataset.panel !== panel));
   if (typeof onAdminTab === "function") onAdminTab(active);
-  if (!places) return;
+  if (panel !== "places") return;
 
   settingsTab = active;
   const info = SETTINGS_TABS[settingsTab];
@@ -1280,10 +1305,21 @@ function setSettingsTab(tab) {
   renderClassSettings();
 }
 
-document.querySelectorAll(".t-side-item").forEach((b) => {
+function setExploreOpen(open) {
+  document.getElementById("explore-sub").classList.toggle("hidden", !open);
+  const toggle = document.getElementById("explore-toggle");
+  toggle.classList.toggle("open", open);
+  toggle.setAttribute("aria-expanded", String(open));
+}
+
+document.getElementById("explore-toggle").addEventListener("click", () => {
+  setExploreOpen(document.getElementById("explore-sub").classList.contains("hidden"));
+});
+
+document.querySelectorAll(".t-side-item[data-settings-tab]").forEach((b) => {
   b.addEventListener("click", () => setSettingsTab(b.dataset.settingsTab));
 });
-setSettingsTab("rooms");
+setSettingsTab("dashboard");
 
 /* Top bar: search students, and Create Pass for the student you have open */
 
