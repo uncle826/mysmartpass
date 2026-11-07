@@ -411,89 +411,34 @@ function renderAccounts() {
             s.hidden ? '<span class="acct-tag muted">Hidden</span>' : "",
           ].join("");
           return `
-          <button type="button" class="acct-row" data-key="${escapeHtml(s.key)}">
+          <div class="acct-row" role="button" tabindex="0" data-key="${escapeHtml(s.key)}">
             ${avatarHtml(s)}
             <span class="acct-info"><b>${escapeHtml(s.name)}</b><span class="${info.cls}">${escapeHtml(info.text)}</span></span>
             <span class="acct-tags">${tags}</span>
+            <button type="button" class="acct-id" data-id-edit="${escapeHtml(s.key)}" title="Change ID number and grade">ID ${escapeHtml(s.studentId || "—")}${s.grade ? ` · Gr ${escapeHtml(s.grade)}` : ""}</button>
             <svg class="acct-go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>`;
+          </div>`;
         })
         .join("")
     : `<p class="an-empty">${term ? "Nobody matches that search." : "No students yet. Students show up here after they sign in."}</p>`;
 
   document.querySelectorAll("#accounts-list .acct-row").forEach((row) => {
-    row.addEventListener("click", () => {
+    const open = (e) => {
+      const idBtn = e.target.closest && e.target.closest("[data-id-edit]");
+      if (idBtn) return typeof openIdEdit === "function" && openIdEdit(idBtn.dataset.idEdit);
       selectedKey = row.dataset.key;
       setView("students");
       renderList();
       renderDetail(true);
-    });
+    };
+    row.addEventListener("click", open);
+    row.addEventListener("keydown", (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), open(e)));
   });
 }
 
 document.getElementById("accounts-search").addEventListener("input", renderAccounts);
 document.getElementById("accounts-limits").addEventListener("click", () => setSettingsTab("rules"));
 document.getElementById("rules-back").addEventListener("click", () => setSettingsTab("accounts"));
-
-/* ---------- "Coming soon" pages ---------- */
-
-const SOON_PAGES = {
-  bell: {
-    title: "Bell Schedule",
-    blurb: "Build your school year, regular days and holidays, so passes know which class each student is in.",
-    points: ["Create the school year and its terms", "Set regular days, rotations and holidays", "\"Coming from\" fills in automatically from the schedule"],
-  },
-  flex: {
-    title: "Flex",
-    blurb: "Flex periods, clubs and activities, with sign-ups and attendance, tied into the same passes.",
-    points: ["Create activities students can sign up for", "Take attendance and add students where they need to go", "See every student: in class, in an activity, or on a pass"],
-  },
-  idcards: {
-    title: "ID Cards",
-    blurb: "Digital ID cards and kiosk scanning so students can check in and out with a quick scan.",
-    points: ["Digital ID cards for every student", "Kiosk mode with an ID scanner", "Scan a card to start and end a pass"],
-  },
-  wrapped: {
-    title: "Wrapped report",
-    blurb: "A year-end recap of your school's passes: totals, the most popular rooms, and more.",
-    points: ["Total passes, total pass time and active users", "Most popular bathrooms and common destinations"],
-  },
-  concierge: {
-    title: "Data Concierge",
-    blurb: "Custom reports built for you, for when the built-in Analytics aren't enough.",
-    points: ["Ask for the report you need", "Reports delivered for review"],
-  },
-  help: {
-    title: "Help center",
-    blurb: "Guides and tips for setting up and getting the most out of SmartPass.",
-    points: ["Step-by-step setup guides", "Answers to common questions"],
-  },
-  calendar: {
-    title: "Calendar",
-    blurb: "See every scheduled and past pass across all of your students in one week view.",
-    points: ["Week and day views with a live \"now\" line", "Scheduled passes and requests in one place", "Click a pass to see the student and details"],
-  },
-};
-
-function soonMarkup(key) {
-  const p = SOON_PAGES[key];
-  return `
-    <div class="soon-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 8.6V13l3 1.8M9.5 3.6h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-    <span class="soon-pill">Coming soon</span>
-    <h2>${escapeHtml(p.title)}</h2>
-    <p class="soon-blurb">${escapeHtml(p.blurb)}</p>
-    <ul class="soon-points">${p.points.map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
-    <p class="soon-note">This part of SmartPass isn't built yet, so the option is here but doesn't do anything.</p>`;
-}
-
-function renderSoonPanel(key) {
-  document.getElementById("soon-title").textContent = SOON_PAGES[key].title;
-  document.getElementById("soon-body").innerHTML = soonMarkup(key);
-}
-
-// the Calendar and Flex tabs along the top
-document.getElementById("calendar-soon").innerHTML = soonMarkup("calendar");
-document.getElementById("flex-soon").innerHTML = soonMarkup("flex");
 
 /* ---------- hooks called by teacher-dashboard.js ---------- */
 
@@ -508,7 +453,12 @@ function onRulesUpdate() {
   if (!rulesDirty) syncRuleDraftFromServer();
 }
 
+// other scripts add themselves here to be told when the student data refreshes, or when an Admin page opens
+const studentsListeners = [];
+const adminTabHandlers = {};
+
 function onStudentsUpdate() {
+  studentsListeners.forEach((fn) => fn());
   if (panelVisible("dashboard")) renderDashboard();
   if (panelVisible("accounts")) renderAccounts();
   if (panelVisible("analytics")) renderAnalytics();
@@ -517,12 +467,12 @@ function onStudentsUpdate() {
 
 function onAdminTab(tab) {
   updateEmergencyBar();
+  if (adminTabHandlers[tab]) adminTabHandlers[tab]();
   if (tab === "dashboard") renderDashboard();
   if (tab === "accounts") {
     document.getElementById("accounts-search").value = "";
     renderAccounts();
   }
-  if (SOON_PAGES[tab] && tab !== "calendar") renderSoonPanel(tab);
   if (tab === "analytics") renderAnalytics();
   if (tab === "rules") syncRuleDraftFromServer();
   if (tab === "emergency") {

@@ -155,6 +155,7 @@ function setView(view) {
     renderClassSettings();
     loadClasses();
   }
+  if (typeof onViewShown === "function") onViewShown(currentView);
   tick();
 }
 
@@ -1271,16 +1272,16 @@ const ADMIN_PANEL_FOR = {
   rooms: "places",
   classes: "places",
   emergency: "emergency",
-  // not built yet: they show a "Coming soon" page
-  bell: "soon",
-  flex: "soon",
-  idcards: "soon",
-  wrapped: "soon",
-  concierge: "soon",
-  help: "soon",
+  bell: "bell",
+  idcards: "idcards",
+  wrapped: "wrapped",
+  concierge: "concierge",
+  help: "help",
 };
 
 function setSettingsTab(tab) {
+  // Flex has its own page along the top; the sidebar item is a shortcut to it
+  if (tab === "flex") return setView("flex");
   const active = ADMIN_PANEL_FOR[tab] ? tab : "dashboard";
   const panel = ADMIN_PANEL_FOR[active];
 

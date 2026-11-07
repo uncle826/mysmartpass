@@ -13,6 +13,8 @@ function userKey(base) {
 
 const AVATAR_COLORS = ["#d3d7de", "#1ed17a", "#2599d6", "#7b68ee", "#fb6d4c", "#f2994a", "#b21cc4", "#14a3a1"];
 let avatarColor = AVATAR_COLORS[0];
+// who the signed-in student is, kept for their digital ID card
+let studentProfile = null;
 let rules = { requestOnly: false, dailyLimit: null, usedToday: 0, request: null };
 let lastDecisionId = null;
 
@@ -1281,6 +1283,7 @@ function handleDecision(state) {
 }
 
 function applyServerState(state) {
+  studentProfile = { name: state.name, photo: state.photo, avatarColor: state.avatarColor, studentId: state.studentId, grade: state.grade };
   avatarColor = state.avatarColor || AVATAR_COLORS[0];
   applyAvatarColor(avatarColor);
   navAvatars.forEach((el) => applyPhoto(el, state.photo));

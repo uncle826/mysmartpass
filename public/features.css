@@ -1,0 +1,202 @@
+/* Shared by the student and teacher screens: the digital ID card, the school-day pill, and Flex cards. */
+
+/* ---------- digital ID card ---------- */
+
+.idc-card {
+  width: min(100%, 420px);
+  aspect-ratio: 1.586 / 1;
+  perspective: 1200px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.idc-flip {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.3, 0.8, 0.3, 1);
+}
+
+.idc-card.flipped .idc-flip {
+  transform: rotateY(180deg);
+}
+
+.idc-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 10px 34px rgba(16, 20, 24, 0.22);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.idc-back {
+  transform: rotateY(180deg);
+}
+
+.idc-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px;
+  background: linear-gradient(120deg, var(--idc), var(--idc-dark));
+  color: #ffffff;
+}
+
+.idc-school {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.idc-kind {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  opacity: 0.85;
+}
+
+.idc-body {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px 8px;
+}
+
+.idc-photo {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  background-position: center;
+  background-size: cover;
+  color: #ffffff;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.idc-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.idc-who b {
+  overflow: hidden;
+  font-size: 20px;
+  color: #1f195e;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.idc-grade {
+  color: #7083a0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.idc-code {
+  padding: 0 16px;
+  text-align: center;
+}
+
+.idc-barcode {
+  display: block;
+  width: 100%;
+  height: 46px;
+}
+
+.idc-num {
+  margin-top: 3px;
+  color: #4e5d74;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 3px;
+}
+
+.idc-bignum {
+  padding: 10px 0 4px;
+  color: #1f195e;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 4px;
+}
+
+.idc-backtext {
+  flex: 1;
+  margin: 0;
+  padding: 16px;
+  color: #4e5d74;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* a moving highlight proves the card is live and not a screenshot */
+.idc-live {
+  height: 6px;
+  margin-top: auto;
+  overflow: hidden;
+  background: #eef0f4;
+}
+
+.idc-live i {
+  display: block;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, var(--idc), transparent);
+  animation: idcSlide 2.2s linear infinite;
+}
+
+@keyframes idcSlide {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(260%); }
+}
+
+/* ---------- the school-day pill (current period) ---------- */
+
+.bell-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  margin: 8px 0 0;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: #e6f7f0;
+  color: #00875a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.bell-pill.off,
+.bell-pill.after,
+.bell-pill.before {
+  background: #eef0f4;
+  color: #4e5d74;
+}
+
+.bell-pill.passing {
+  background: #fff4d6;
+  color: #9a6a00;
+}
+
+.bell-pill b {
+  font-weight: 700;
+}
+
+.bell-pill span {
+  font-weight: 500;
+  opacity: 0.85;
+}

@@ -1,0 +1,698 @@
+/* Teacher pages: forms, Bell Schedule, ID Cards, Wrapped, Data Concierge, Help center, Flex and the Calendar page. */
+
+/* ---------- page shell for the Calendar and Flex tabs ---------- */
+
+.t-page {
+  height: calc(100vh - 74px);
+  overflow-y: auto;
+  background: #f3f5f8;
+}
+
+.tcal.calendar-page {
+  min-height: 100%;
+}
+
+/* ---------- shared form bits ---------- */
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 6px;
+}
+
+.form-grid .wide {
+  grid-column: 1 / -1;
+}
+
+.f-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+  color: #1f195e;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.f-field .t-search,
+.f-field input,
+.f-field textarea,
+.f-field select {
+  width: 100%;
+}
+
+.f-field textarea.t-search {
+  max-width: none;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.f-hint {
+  color: #7083a0;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.f-error {
+  margin: 12px 0 0;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: #fdf1f0;
+  color: #cf463b;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.f-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.f-count {
+  color: #7083a0;
+  font-size: 12.5px;
+}
+
+.f-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #f1f3f6;
+  color: #1f195e;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.f-toggle input {
+  width: 20px;
+  height: 20px;
+  accent-color: #00b476;
+}
+
+.link-btn {
+  margin-left: 8px;
+  padding: 2px 6px;
+  border: none;
+  background: none;
+  color: #1799e8;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+.icon-x {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: #7083a0;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.icon-x:hover {
+  background: #fdecee;
+  color: #d92d3f;
+}
+
+/* ---------- Bell Schedule ---------- */
+
+.bell-now {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 4px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: #e6f7f0;
+  color: #00875a;
+  font-size: 14px;
+}
+
+.bell-now b {
+  color: #006b47;
+  font-size: 16px;
+}
+
+.bell-now-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.bell-row {
+  display: grid;
+  grid-template-columns: 1fr 130px auto 130px 28px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.bell-row .t-search {
+  margin: 0 !important;
+  max-width: none !important;
+}
+
+.bell-to {
+  color: #7083a0;
+  font-size: 13px;
+}
+
+.bell-hol {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #f1f3f6;
+}
+
+.bell-hol-name {
+  flex: 1;
+  color: #1f195e;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.bell-hol-date {
+  color: #7083a0;
+  font-size: 13px;
+}
+
+.holiday-add {
+  display: grid;
+  grid-template-columns: 1fr 170px auto;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.holiday-add .t-search {
+  margin: 0 !important;
+  max-width: none !important;
+}
+
+/* ---------- ID Cards ---------- */
+
+.idc-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+
+.idc-preview {
+  position: sticky;
+  top: 12px;
+}
+
+.idc-preview-label {
+  margin-bottom: 10px;
+  color: #1f195e;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.idc-preview-label span {
+  color: #7083a0;
+  font-weight: 500;
+}
+
+.idc-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.idc-swatch {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #d4d9e2;
+  cursor: pointer;
+}
+
+.idc-swatch.on {
+  box-shadow: 0 0 0 2.5px #1f195e;
+}
+
+/* ---------- Wrapped ---------- */
+
+.wrapped-wrap {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.wrapped-empty {
+  text-align: center;
+}
+
+.wr-hero {
+  margin-bottom: 14px;
+  padding: 34px 32px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #1f195e, #6a58f2 60%, #b00ee0);
+  color: #ffffff;
+}
+
+.wr-kicker {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.wr-hero h2 {
+  margin: 8px 0 6px;
+  font-size: 44px;
+  font-weight: 800;
+}
+
+.wr-hero p {
+  margin: 0;
+  max-width: 520px;
+  font-size: 16px;
+  line-height: 1.5;
+  opacity: 0.92;
+}
+
+.wr-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.wr-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 130px;
+  padding: 16px;
+  border-radius: 14px;
+  color: #ffffff;
+}
+
+.wr-card span {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.wr-card b {
+  margin-top: auto;
+  font-size: 22px;
+  line-height: 1.15;
+}
+
+.wr-card em {
+  font-size: 13px;
+  font-style: normal;
+  opacity: 0.9;
+}
+
+.wr-card.c1 { background: linear-gradient(135deg, #00b476, #0f766e); }
+.wr-card.c2 { background: linear-gradient(135deg, #2599d6, #1f195e); }
+.wr-card.c3 { background: linear-gradient(135deg, #f59300, #d92d3f); }
+.wr-card.c4 { background: linear-gradient(135deg, #6a58f2, #b00ee0); }
+.wr-card.c5 { background: linear-gradient(135deg, #d92d3f, #7a0f1a); }
+.wr-card.c6 { background: linear-gradient(135deg, #7f89a3, #1f195e); }
+.wr-card.c7 { background: linear-gradient(135deg, #3796e6, #0f766e); }
+.wr-card.c8 { background: linear-gradient(135deg, #b00ee0, #6a58f2); }
+
+/* ---------- Data Concierge ---------- */
+
+.cc-item {
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #f1f3f6;
+}
+
+.cc-top {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  color: #7083a0;
+  font-size: 12.5px;
+}
+
+.cc-status {
+  padding: 1px 9px;
+  border-radius: 8px;
+  background: #e6f7f0;
+  color: #00875a;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.cc-item p {
+  margin: 0;
+  color: #1f195e;
+  font-size: 14px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+/* ---------- Help center ---------- */
+
+.help-item {
+  margin-top: 8px;
+  border-radius: 8px;
+  background: #f1f3f6;
+}
+
+.help-item summary {
+  padding: 13px 16px;
+  color: #1f195e;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.help-item[open] summary {
+  color: #00875a;
+}
+
+.help-item p {
+  margin: 0;
+  padding: 0 16px 14px;
+  color: #4e5d74;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+/* ---------- Flex ---------- */
+
+.flex-page {
+  display: flex;
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 28px 40px;
+}
+
+.flex-list-col {
+  width: 330px;
+  flex-shrink: 0;
+  align-self: flex-start;
+  padding: 18px;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 2px 10px rgba(16, 20, 24, 0.08);
+}
+
+.flex-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.flex-list-head h2 {
+  margin: 0;
+  color: #1f195e;
+  font-size: 18px;
+}
+
+.flex-day {
+  margin: 14px 0 6px;
+  color: #7083a0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.flex-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #f1f3f6;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.flex-item:hover {
+  background: #eceff3;
+}
+
+.flex-item.on {
+  background: #e8e6fc;
+  box-shadow: inset 3px 0 0 var(--c);
+}
+
+.flex-item i {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--c);
+}
+
+.flex-item-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.flex-item-main b {
+  overflow: hidden;
+  color: #1f195e;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flex-item-main span {
+  color: #7083a0;
+  font-size: 12px;
+}
+
+.flex-count {
+  padding: 2px 9px;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #4e5d74;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.flex-count.full {
+  background: #fdecee;
+  color: #d92d3f;
+}
+
+.flex-detail {
+  flex: 1;
+  min-width: 0;
+}
+
+.flex-card {
+  margin-bottom: 14px;
+}
+
+.flex-card h2 {
+  margin: 0 0 16px;
+  color: #1f195e;
+  font-size: 20px;
+}
+
+.flex-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 80px 20px;
+  color: #7083a0;
+  text-align: center;
+}
+
+.flex-placeholder svg {
+  width: 56px;
+  height: 56px;
+  color: #b9c0cd;
+}
+
+.flex-placeholder b {
+  color: #1f195e;
+  font-size: 17px;
+}
+
+.fx-person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #f1f3f6;
+}
+
+.fx-name {
+  flex: 1;
+  min-width: 0;
+  color: #1f195e;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.fx-lock {
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 8px;
+  background: #e8e6fc;
+  color: #4b55c9;
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.fx-att {
+  display: flex;
+  gap: 4px;
+}
+
+.fx-att button {
+  padding: 6px 12px;
+  border: 1px solid #d4d9e2;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #4e5d74;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fx-att button.on.present {
+  border-color: #00b476;
+  background: #00b476;
+  color: #ffffff;
+}
+
+.fx-att button.on.absent {
+  border-color: #d92d3f;
+  background: #d92d3f;
+  color: #ffffff;
+}
+
+.fx-add {
+  display: flex;
+  gap: 10px;
+  margin: 12px 0 8px;
+}
+
+.fx-add select {
+  flex: 1;
+  margin: 0 !important;
+  max-width: none !important;
+}
+
+@media (max-width: 860px) {
+  .form-grid,
+  .idc-layout,
+  .wr-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wr-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .bell-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .flex-page {
+    flex-direction: column;
+    padding: 14px;
+  }
+
+  .flex-list-col {
+    width: 100%;
+  }
+
+  .idc-preview {
+    position: static;
+  }
+}
+
+/* Accounts: ID chip */
+.acct-id {
+  padding: 3px 10px;
+  border: 1px solid #d4d9e2;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #4e5d74;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.acct-id:hover {
+  border-color: #00b476;
+  color: #00875a;
+}
+
+/* icons from the SmartPass icon library (white images, tinted with the sp-* filters in the page) */
+.sp-ic {
+  display: block;
+  object-fit: contain;
+}
+
+.nav-item .sp-ic {
+  width: 26px;
+  height: 26px;
+  filter: url(#sp-nav);
+}
+
+.nav-item.active .sp-ic {
+  filter: url(#sp-green);
+}
+
+.t-side-item .sp-ic {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  filter: url(#sp-side);
+}
+
+.t-side-item.active .sp-ic {
+  filter: url(#sp-navy);
+}

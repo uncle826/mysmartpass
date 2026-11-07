@@ -5,6 +5,8 @@ const homePage = document.querySelector("main.content");
 const calendarPage = document.getElementById("calendar-page");
 const navHome = document.getElementById("nav-home");
 const navCalendar = document.getElementById("nav-calendar");
+const flexPage = document.getElementById("flex-page");
+const navFlex = document.getElementById("nav-flex");
 
 const HOUR_PX = 62;
 const TIME_COL_PX = 56;
@@ -229,17 +231,21 @@ function renderCalendar() {
 
 function showMainPage(page) {
   const cal = page === "calendar";
-  homePage.classList.toggle("hidden", cal);
+  const flex = page === "flex";
+  homePage.classList.toggle("hidden", cal || flex);
   calendarPage.classList.toggle("hidden", !cal);
-  navHome.classList.toggle("active", !cal);
+  flexPage.classList.toggle("hidden", !flex);
+  navHome.classList.toggle("active", !cal && !flex);
   navCalendar.classList.toggle("active", cal);
+  navFlex.classList.toggle("active", flex);
   if (cal) renderCalendar();
+  if (flex && typeof loadFlexStudent === "function") loadFlexStudent();
 }
 
 function syncPageFromHash() {
   // an active pass takes over the whole screen, so the home page (which holds it) always wins
-  const wantCalendar = location.hash === "#calendar" && !currentPass;
-  showMainPage(wantCalendar ? "calendar" : "home");
+  const page = currentPass ? "home" : location.hash === "#calendar" ? "calendar" : location.hash === "#flex" ? "flex" : "home";
+  showMainPage(page);
 }
 
 navHome.addEventListener("click", (e) => {
@@ -250,6 +256,11 @@ navHome.addEventListener("click", (e) => {
 navCalendar.addEventListener("click", (e) => {
   e.preventDefault();
   if (location.hash !== "#calendar") history.pushState(null, "", "#calendar");
+  syncPageFromHash();
+});
+navFlex.addEventListener("click", (e) => {
+  e.preventDefault();
+  if (location.hash !== "#flex") history.pushState(null, "", "#flex");
   syncPageFromHash();
 });
 window.addEventListener("hashchange", syncPageFromHash);

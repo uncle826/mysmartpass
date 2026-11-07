@@ -10,11 +10,24 @@
 <script src="pwa.js" defer></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="dashboard.css">
-<link rel="stylesheet" href="teacher.css?v=22">
-<link rel="stylesheet" href="teacher-extra.css?v=22">
-<link rel="stylesheet" href="teacher-redesign.css?v=22">
+<link rel="stylesheet" href="teacher.css?v=25">
+<link rel="stylesheet" href="teacher-extra.css?v=25">
+<link rel="stylesheet" href="teacher-redesign.css?v=25">
+<link rel="stylesheet" href="calendar.css?v=25">
+<link rel="stylesheet" href="features.css?v=25">
+<link rel="stylesheet" href="teacher-features.css?v=25">
 </head>
 <body>
+
+  <!-- tints for the white icon-library images: nav gray, nav active green, sidebar slate, sidebar active navy -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <filter id="sp-nav" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 0 0 0 0.44  0 0 0 0 0.51  0 0 0 0 0.63  0 0 0 1 0"/></filter>
+      <filter id="sp-green" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0.706  0 0 0 0 0.463  0 0 0 1 0"/></filter>
+      <filter id="sp-side" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 0 0 0 0.373  0 0 0 0 0.435  0 0 0 0 0.525  0 0 0 1 0"/></filter>
+      <filter id="sp-navy" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="0 0 0 0 0.122  0 0 0 0 0.098  0 0 0 0 0.369  0 0 0 1 0"/></filter>
+    </defs>
+  </svg>
 
   <header class="topbar">
     <div class="topbar-side tb-left">
@@ -125,9 +138,9 @@
     </div>
   </main>
 
-  <main class="t-soon-page hidden" id="calendar-view"><div class="t-admin-card soon-card" id="calendar-soon"></div></main>
+  <main class="t-page hidden" id="calendar-view"></main>
 
-  <main class="t-soon-page hidden" id="flex-view"><div class="t-admin-card soon-card" id="flex-soon"></div></main>
+  <main class="t-page hidden" id="flex-view"></main>
 
   <main class="t-admin hidden" id="settings-view">
     <aside class="t-admin-side" aria-label="Admin sections">
@@ -195,6 +208,7 @@
 
         <div class="t-admin-card">
           <p class="dash-hello" id="dash-hello"></p>
+          <div class="bell-pill hidden" id="dash-bell"></div>
           <div class="an-tiles" id="dash-tiles"></div>
 
           <div class="an-two">
@@ -234,14 +248,138 @@
         </div>
       </div>
 
-      <!-- "Coming soon" pages for the options that aren't built yet -->
-      <div class="t-panel hidden" data-panel="soon">
+      <!-- Bell Schedule -->
+      <div class="t-panel hidden" data-panel="bell">
         <div class="t-admin-bar">
           <span></span>
-          <h1 id="soon-title"></h1>
+          <h1>Bell Schedule</h1>
+          <button type="button" class="btn btn-primary" id="bell-save">Save schedule</button>
+        </div>
+
+        <div class="t-admin-card">
+          <p class="t-settings-sub">Set up your school year and a regular day. Students and teachers see the current period on their home screens.</p>
+          <div class="bell-now" id="bell-now"></div>
+
+          <h3 class="an-h">School year</h3>
+          <div class="form-grid">
+            <label class="f-field">School year name<input type="text" class="t-search" id="bell-year-name" maxlength="60" placeholder="2026-27 School Year" autocomplete="off"></label>
+            <label class="f-field">Starts<input type="date" class="t-search" id="bell-start"></label>
+            <label class="f-field">Ends<input type="date" class="t-search" id="bell-end"></label>
+          </div>
+
+          <h3 class="an-h">Regular day <button type="button" class="link-btn" id="bell-template">Use a typical day</button></h3>
+          <div id="bell-periods"></div>
+          <button type="button" class="btn btn-outline" id="bell-add-period">+ Add period</button>
+
+          <h3 class="an-h">Holidays <span class="t-count" id="bell-holiday-count">0</span></h3>
+          <div id="bell-holidays"></div>
+          <div class="holiday-add">
+            <input type="text" class="t-search" id="hol-name" maxlength="40" placeholder="Holiday name (e.g. Winter Break)" autocomplete="off">
+            <input type="date" class="t-search" id="hol-date">
+            <button type="button" class="btn btn-outline" id="hol-add">Add</button>
+          </div>
+
+          <p class="f-error hidden" id="bell-error" role="alert"></p>
+        </div>
+      </div>
+
+      <!-- ID Cards -->
+      <div class="t-panel hidden" data-panel="idcards">
+        <div class="t-admin-bar">
+          <span></span>
+          <h1>ID Cards</h1>
+          <button type="button" class="btn btn-primary" id="idc-save">Save</button>
+        </div>
+
+        <div class="t-admin-card">
+          <p class="t-settings-sub">Digital ID cards for every student, free for everyone. Students open theirs from the menu under their picture, and the barcode shows their ID number.</p>
+
+          <div class="idc-layout">
+            <div class="idc-form">
+              <label class="f-toggle"><span>Students can use digital ID cards</span><input type="checkbox" id="idc-enabled" checked></label>
+
+              <label class="f-field">School name on the card<input type="text" class="t-search" id="idc-school" maxlength="60" placeholder="e.g. Westview Middle School" autocomplete="off"></label>
+
+              <div class="f-field">Card color
+                <div class="idc-swatches" id="idc-swatches"></div>
+              </div>
+
+              <label class="f-field">Back of the card <span class="f-hint">(emergency info, hotline numbers…)</span>
+                <textarea class="t-search" id="idc-back" maxlength="300" rows="3" placeholder="If found, please return to the main office."></textarea>
+              </label>
+
+              <div class="f-field">Under the picture
+                <div class="segmented" id="idc-style">
+                  <button type="button" class="seg-btn active" data-style="barcode">Barcode</button>
+                  <button type="button" class="seg-btn" data-style="number">Big ID number</button>
+                </div>
+              </div>
+
+              <p class="f-error hidden" id="idc-error" role="alert"></p>
+            </div>
+
+            <div class="idc-preview">
+              <div class="idc-preview-label">Preview <span>(tap the card to flip it)</span></div>
+              <div id="idc-preview-card"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Wrapped -->
+      <div class="t-panel hidden" data-panel="wrapped">
+        <div class="t-admin-bar">
+          <span></span>
+          <h1>Wrapped</h1>
           <span></span>
         </div>
-        <div class="t-admin-card soon-card" id="soon-body"></div>
+        <div class="wrapped-wrap" id="wrapped-body"></div>
+      </div>
+
+      <!-- Data Concierge -->
+      <div class="t-panel hidden" data-panel="concierge">
+        <div class="t-admin-bar">
+          <span></span>
+          <h1>Data Concierge</h1>
+          <span></span>
+        </div>
+
+        <div class="t-admin-card">
+          <p class="t-settings-sub">Need a report the built-in Analytics can't give you? Tell your concierge what you're looking for and they'll pull it together for review, usually within 3 days.</p>
+          <label class="f-field">What data are you looking for?
+            <textarea class="t-search" id="concierge-message" maxlength="1000" rows="5" placeholder="e.g. Which students use the most passes between 1st and 2nd period, and where do they go?"></textarea>
+          </label>
+          <div class="f-row">
+            <button type="button" class="btn btn-primary" id="concierge-send">Send request</button>
+            <span class="f-count" id="concierge-count">0 / 1000</span>
+          </div>
+          <p class="f-error hidden" id="concierge-error" role="alert"></p>
+
+          <h3 class="an-h">Your requests</h3>
+          <div id="concierge-list"></div>
+        </div>
+      </div>
+
+      <!-- Help center -->
+      <div class="t-panel hidden" data-panel="help">
+        <div class="t-admin-bar">
+          <span></span>
+          <h1>Help center</h1>
+          <span></span>
+        </div>
+
+        <div class="t-admin-card">
+          <input type="text" class="t-search" id="help-search" placeholder="Search the help center" autocomplete="off">
+          <div id="help-list"></div>
+          <p class="t-no-history hidden" id="help-empty">No articles match that. Try fewer words, or send us your question below.</p>
+
+          <h3 class="an-h">Suggest a feature</h3>
+          <p class="t-settings-sub">Got an idea that would make SmartPass better? We read every one.</p>
+          <textarea class="t-search" id="suggest-message" maxlength="600" rows="3" placeholder="I wish SmartPass could…"></textarea>
+          <div class="f-row">
+            <button type="button" class="btn btn-primary" id="suggest-send">Send idea</button>
+          </div>
+        </div>
       </div>
 
       <!-- Rooms + Classes -->
@@ -487,6 +625,20 @@
     </div>
   </div>
 
+  <div class="confirm-overlay hidden" id="idedit-overlay">
+    <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="idedit-title">
+      <h3 id="idedit-title">ID number &amp; grade</h3>
+      <p id="idedit-sub"></p>
+      <label class="f-field">ID number<input type="text" class="t-search" id="idedit-id" maxlength="20" autocomplete="off"></label>
+      <label class="f-field">Grade level <span class="f-hint">(optional)</span><input type="text" class="t-search" id="idedit-grade" maxlength="12" autocomplete="off"></label>
+      <p class="f-error hidden" id="idedit-error" role="alert"></p>
+      <div class="confirm-actions">
+        <button type="button" class="confirm-btn confirm-cancel" id="idedit-cancel">Cancel</button>
+        <button type="button" class="confirm-btn confirm-primary" id="idedit-save">Save</button>
+      </div>
+    </div>
+  </div>
+
   <div class="confirm-overlay hidden" id="pin-overlay">
     <div class="confirm-box pin-box" role="dialog" aria-modal="true" aria-labelledby="pin-title">
       <h3 id="pin-title">Enter code</h3>
@@ -536,9 +688,15 @@
     </div>
   </div>
 
-<script src="api.js?v=22"></script>
-<script src="rooms.js?v=22"></script>
-<script src="teacher-dashboard.js?v=22"></script>
-<script src="teacher-admin.js?v=22"></script>
+<script src="api.js?v=25"></script>
+<script src="rooms.js?v=25"></script>
+<script src="teacher-dashboard.js?v=25"></script>
+<script src="bell.js?v=25"></script>
+<script src="idcard.js?v=25"></script>
+<script src="teacher-admin.js?v=25"></script>
+<script src="teacher-calendar.js?v=25"></script>
+<script src="teacher-flex.js?v=25"></script>
+<script src="teacher-more.js?v=25"></script>
+<script src="sp-icons.js?v=25"></script>
 </body>
 </html>

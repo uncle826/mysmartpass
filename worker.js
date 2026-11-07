@@ -23,6 +23,8 @@ const MIGRATIONS = [
   "ALTER TABLE passes ADD COLUMN bounce_speed INTEGER NOT NULL DEFAULT 42",
   "ALTER TABLE students ADD COLUMN password TEXT",
   "ALTER TABLE classes ADD COLUMN max_minutes INTEGER",
+  "ALTER TABLE students ADD COLUMN student_id TEXT",
+  "ALTER TABLE students ADD COLUMN grade TEXT",
 ];
 
 // "Learn" followed by exactly five digits (the word itself can be typed in any case)
@@ -138,6 +140,118 @@ function cleanLogo(raw) {
   return { ok: false };
 }
 
+/* ---------------- validation for schedules, ID cards and Flex ---------------- */
+
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const DATE_RE = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+
+// trimmed, single-spaced text with no control characters; null when it's longer than max
+function cleanText(raw, max) {
+  const text = String(raw ?? "")
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text.length <= max ? text : null;
+}
+
+const minutesOf = (hhmm) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3));
+
+// the bell schedule: a school year, the periods of a regular day, and holidays
+function cleanSchedule(body) {
+  const yearName = cleanText(body.yearName, 60);
+  if (yearName === null) return { ok: false, error: "That school year name is too long." };
+
+  const startDate = String(body.startDate || "");
+  const endDate = String(body.endDate || "");
+  if ((startDate && !DATE_RE.test(startDate)) || (endDate && !DATE_RE.test(endDate))) return { ok: false, error: "Those dates aren't valid." };
+  if (startDate && endDate && startDate > endDate) return { ok: false, error: "The school year can't end before it starts." };
+
+  if (!Array.isArray(body.periods) || body.periods.length > 20) return { ok: false, error: "A day can have up to 20 periods." };
+  const periods = [];
+  for (const p of body.periods) {
+    const name = cleanText(p && p.name, 30);
+    const start = String((p && p.start) || "");
+    const end = String((p && p.end) || "");
+    if (!name) return { ok: false, error: "Every period needs a name." };
+    if (!TIME_RE.test(start) || !TIME_RE.test(end)) return { ok: false, error: `Check the times for ${name}.` };
+    if (minutesOf(start) >= minutesOf(end)) return { ok: false, error: `${name} has to end after it starts.` };
+    periods.push({ name, start, end });
+  }
+  periods.sort((a, b) => minutesOf(a.start) - minutesOf(b.start));
+  for (let i = 1; i < periods.length; i++) {
+    if (minutesOf(periods[i].start) < minutesOf(periods[i - 1].end)) {
+      return { ok: false, error: `${periods[i - 1].name} and ${periods[i].name} overlap.` };
+    }
+  }
+
+  if (!Array.isArray(body.holidays) || body.holidays.length > 80) return { ok: false, error: "You can add up to 80 holidays." };
+  const holidays = [];
+  for (const h of body.holidays) {
+    const name = cleanText(h && h.name, 40);
+    const date = String((h && h.date) || "");
+    if (!name || !DATE_RE.test(date)) return { ok: false, error: "Every holiday needs a name and a date." };
+    holidays.push({ name, date });
+  }
+  holidays.sort((a, b) => a.date.localeCompare(b.date));
+
+  return { ok: true, value: { yearName, startDate, endDate, periods, holidays } };
+}
+
+function cleanIdCardSettings(body) {
+  const school = cleanText(body.school, 60);
+  const backText = cleanText(body.backText, 300);
+  const color = String(body.color || "");
+  const style = body.barcode === "number" ? "number" : "barcode";
+  if (school === null || backText === null) return { ok: false, error: "That text is too long." };
+  if (!HEX_RE.test(color)) return { ok: false, error: "Pick a card color." };
+  return { ok: true, value: { enabled: body.enabled !== false, color: color.toLowerCase(), school, backText, barcode: style } };
+}
+
+// a Flex activity: what, where, when, how many can join
+function cleanFlexActivity(body) {
+  const name = cleanText(body.name, 60);
+  const description = cleanText(body.description, 200);
+  const location = cleanText(body.location, 40);
+  const day = String(body.day || "");
+  const start = String(body.start || "");
+  const end = String(body.end || "");
+  const capacity = Math.round(Number(body.capacity || 0));
+  const color = String(body.color || "#6a58f2");
+  if (!name) return { ok: false, error: "Give the activity a name." };
+  if (description === null || location === null) return { ok: false, error: "That text is too long." };
+  if (!DATE_RE.test(day)) return { ok: false, error: "Pick a date." };
+  if (!TIME_RE.test(start) || !TIME_RE.test(end) || minutesOf(start) >= minutesOf(end)) return { ok: false, error: "The end time has to be after the start time." };
+  if (!Number.isInteger(capacity) || capacity < 0 || capacity > 500) return { ok: false, error: "The most students has to be 0 to 500 (0 means no limit)." };
+  if (!HEX_RE.test(color)) return { ok: false, error: "Pick a color." };
+  return { ok: true, value: { name, description, location, day, start, end, capacity, color: color.toLowerCase() } };
+}
+
+async function getMetaJson(env, key, fallback) {
+  const row = await env.DB.prepare("SELECT v FROM app_meta WHERE k = ?").bind(key).first();
+  if (!row) return fallback;
+  try {
+    return JSON.parse(row.v);
+  } catch {
+    return fallback;
+  }
+}
+
+// every student gets a 7-digit ID number the first time it's needed (used on their digital ID card)
+async function ensureStudentId(env, key) {
+  const row = await env.DB.prepare("SELECT student_id FROM students WHERE key = ?").bind(key).first();
+  if (row && row.student_id) return row.student_id;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const id = String(1000000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 9000000));
+    const taken = await env.DB.prepare("SELECT key FROM students WHERE student_id = ?").bind(id).first();
+    if (!taken) {
+      await env.DB.prepare("UPDATE students SET student_id = ? WHERE key = ?").bind(id, key).run();
+      return id;
+    }
+  }
+  return null;
+}
+
 // the built-in place categories a teacher can edit (matches rooms.js)
 const ROOM_CATEGORY_KEYS = new Set([
   "mainOffice", "restrooms", "waterFountain", "mediaCenter", "admins",
@@ -217,6 +331,15 @@ function ensureSchema(env) {
           "CREATE TABLE IF NOT EXISTS room_overrides (category_key TEXT NOT NULL, orig_name TEXT NOT NULL, name TEXT NOT NULL, room TEXT, logo TEXT, max_minutes INTEGER, PRIMARY KEY (category_key, orig_name))"
         ),
         db.prepare("CREATE TABLE IF NOT EXISTS student_sessions (token_hash TEXT PRIMARY KEY, student_key TEXT NOT NULL, expires_at INTEGER NOT NULL)"),
+        // Flex activities students can sign up for, and who signed up (locked = a teacher put them there)
+        db.prepare(
+          "CREATE TABLE IF NOT EXISTS flex_activities (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT, location TEXT, day TEXT NOT NULL, start TEXT NOT NULL, end TEXT NOT NULL, capacity INTEGER NOT NULL DEFAULT 0, color TEXT NOT NULL, created_by TEXT, created_at INTEGER NOT NULL)"
+        ),
+        db.prepare(
+          "CREATE TABLE IF NOT EXISTS flex_signups (activity_id INTEGER NOT NULL, student_key TEXT NOT NULL, attended INTEGER, locked INTEGER NOT NULL DEFAULT 0, signed_at INTEGER NOT NULL, PRIMARY KEY (activity_id, student_key))"
+        ),
+        db.prepare("CREATE TABLE IF NOT EXISTS concierge_requests (id INTEGER PRIMARY KEY AUTOINCREMENT, teacher TEXT NOT NULL, message TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'received', created_at INTEGER NOT NULL)"),
+        db.prepare("CREATE TABLE IF NOT EXISTS feature_suggestions (id INTEGER PRIMARY KEY AUTOINCREMENT, teacher TEXT NOT NULL, message TEXT NOT NULL, created_at INTEGER NOT NULL)"),
       ])
       .then(async () => {
         for (const sql of MIGRATIONS) {
@@ -419,6 +542,31 @@ async function studentPassBlock(env, key, { immediate }) {
   return null;
 }
 
+// upcoming Flex activities with how many have signed up, and whether this student is in each one
+async function flexListForStudent(env, key) {
+  // "yesterday" in UTC, so a student in a timezone behind UTC still sees today's activities
+  const since = new Date(Date.now() - DAY_MS).toISOString().slice(0, 10);
+  const acts = await env.DB.prepare("SELECT * FROM flex_activities WHERE day >= ? ORDER BY day ASC, start ASC LIMIT 200").bind(since).all();
+  const counts = await env.DB.prepare("SELECT activity_id, COUNT(*) AS n FROM flex_signups GROUP BY activity_id").all();
+  const mine = await env.DB.prepare("SELECT activity_id, locked FROM flex_signups WHERE student_key = ?").bind(key).all();
+  const countBy = new Map(counts.results.map((r) => [r.activity_id, r.n]));
+  const mineBy = new Map(mine.results.map((r) => [r.activity_id, !!r.locked]));
+  return acts.results.map((a) => ({
+    id: a.id,
+    name: a.name,
+    description: a.description || "",
+    location: a.location || "",
+    day: a.day,
+    start: a.start,
+    end: a.end,
+    capacity: a.capacity,
+    color: a.color,
+    count: countBy.get(a.id) || 0,
+    mine: mineBy.has(a.id),
+    locked: !!mineBy.get(a.id),
+  }));
+}
+
 async function passesToday(env, key, tzOffset) {
   const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM passes WHERE student_key = ? AND start_time >= ?")
     .bind(key, dayStart(Date.now(), tzOffset))
@@ -436,10 +584,11 @@ async function limitMessage(env, key, student) {
 
 async function studentState(env, key) {
   const student = await env.DB
-    .prepare("SELECT key, name, avatar_color, photo, request_only, daily_limit, tz_offset FROM students WHERE key = ?")
+    .prepare("SELECT key, name, avatar_color, photo, request_only, daily_limit, tz_offset, student_id, grade FROM students WHERE key = ?")
     .bind(key)
     .first();
   if (!student) return null;
+  const studentId = student.student_id || (await ensureStudentId(env, key));
 
   await activateDueScheduled(env, key, student);
   const scheduledRows = await env.DB
@@ -475,6 +624,8 @@ async function studentState(env, key) {
 
   return {
     key: student.key,
+    studentId,
+    grade: student.grade || null,
     emergency: rules.emergency,
     cooldownUntil: readyAt && readyAt > now ? readyAt : null,
     hallwayFull,
@@ -841,6 +992,59 @@ async function handleApi(request, env, url) {
     return json({ ok: true });
   }
 
+  /* ----- bell schedule + ID card look (public: students need them too) ----- */
+
+  if (pathname === "/api/schedule" && method === "GET") {
+    const schedule = await getMetaJson(env, "bell_schedule", null);
+    return json({ schedule });
+  }
+
+  if (pathname === "/api/idcard-settings" && method === "GET") {
+    const fallback = { enabled: true, color: "#00b476", school: "", backText: "", barcode: "barcode" };
+    return json({ settings: await getMetaJson(env, "idcard_settings", fallback) });
+  }
+
+  /* ----- Flex: students browse and sign up for activities ----- */
+
+  if (pathname === "/api/student/flex" && method === "GET") {
+    const key = keyOf(cleanName(url.searchParams.get("name")) || "");
+    return json({ activities: await flexListForStudent(env, key) });
+  }
+
+  if ((pathname === "/api/student/flex/signup" || pathname === "/api/student/flex/leave") && method === "POST") {
+    const body = await readBody(request);
+    const name = cleanName(body.name);
+    const key = name && keyOf(name);
+    const id = Math.round(Number(body.id));
+    if (!key || !Number.isFinite(id)) return fail("Invalid request.");
+    const activity = await env.DB.prepare("SELECT * FROM flex_activities WHERE id = ?").bind(id).first();
+    if (!activity) return fail("That activity isn't available anymore.", 404);
+
+    if (pathname.endsWith("/leave")) {
+      const row = await env.DB.prepare("SELECT locked FROM flex_signups WHERE activity_id = ? AND student_key = ?").bind(id, key).first();
+      if (row && row.locked) return fail("Your teacher put you in this activity, so only they can take you out.", 403);
+      await env.DB.prepare("DELETE FROM flex_signups WHERE activity_id = ? AND student_key = ? AND locked = 0").bind(id, key).run();
+      return json({ activities: await flexListForStudent(env, key) });
+    }
+
+    const already = await env.DB.prepare("SELECT 1 AS x FROM flex_signups WHERE activity_id = ? AND student_key = ?").bind(id, key).first();
+    if (already) return json({ activities: await flexListForStudent(env, key) });
+    if (activity.capacity > 0) {
+      const count = await env.DB.prepare("SELECT COUNT(*) AS n FROM flex_signups WHERE activity_id = ?").bind(id).first();
+      if (count && count.n >= activity.capacity) return fail("That activity is full.", 409);
+    }
+    const clash = await env.DB
+      .prepare(
+        "SELECT a.name FROM flex_activities a JOIN flex_signups s ON s.activity_id = a.id WHERE s.student_key = ? AND a.day = ? AND a.id != ? AND a.start < ? AND a.end > ? LIMIT 1"
+      )
+      .bind(key, activity.day, id, activity.end, activity.start)
+      .first();
+    if (clash) return fail(`You're already signed up for ${clash.name} at that time.`, 409);
+
+    await env.DB.prepare("INSERT INTO flex_signups (activity_id, student_key, signed_at) VALUES (?, ?, ?)").bind(id, key, Date.now()).run();
+    return json({ activities: await flexListForStudent(env, key) });
+  }
+
   if (pathname === "/api/classes" && method === "GET") {
     const rows = await env.DB.prepare("SELECT id, name, room, logo, max_minutes FROM classes ORDER BY name COLLATE NOCASE").all();
     const edits = await env.DB.prepare("SELECT category_key, orig_name, name, room, logo, max_minutes FROM room_overrides").all();
@@ -998,7 +1202,7 @@ async function handleApi(request, env, url) {
     if (pathname === "/api/teacher/students" && method === "GET") {
       const now = Date.now();
       const students = await env.DB
-        .prepare("SELECT key, name, avatar_color, photo, request_only, daily_limit, tz_offset, hidden FROM students ORDER BY name COLLATE NOCASE")
+        .prepare("SELECT key, name, avatar_color, photo, request_only, daily_limit, tz_offset, hidden, student_id, grade FROM students ORDER BY name COLLATE NOCASE")
         .all();
       const active = await env.DB.prepare("SELECT * FROM passes WHERE finished_at IS NULL").all();
       const finished = await env.DB
@@ -1008,6 +1212,12 @@ async function handleApi(request, env, url) {
 
       const activeByKey = new Map(active.results.map((r) => [r.student_key, activeFromRow(r)]));
       const requestByKey = new Map(pending.results.map((r) => [r.student_key, requestFromRow(r)]));
+      const scheduledAll = await env.DB.prepare("SELECT * FROM scheduled_passes WHERE status = 'scheduled' ORDER BY scheduled_for ASC").all();
+      const scheduledByKey = new Map();
+      for (const row of scheduledAll.results) {
+        if (!scheduledByKey.has(row.student_key)) scheduledByKey.set(row.student_key, []);
+        scheduledByKey.get(row.student_key).push(scheduledFromRow(row));
+      }
       const logByKey = new Map();
       const startsByKey = new Map();
       for (const row of [...finished.results, ...active.results]) {
@@ -1036,6 +1246,9 @@ async function handleApi(request, env, url) {
             request: requestByKey.get(s.key) || null,
             active: activeByKey.get(s.key) || null,
             log: logByKey.get(s.key) || [],
+            scheduled: scheduledByKey.get(s.key) || [],
+            studentId: s.student_id || null,
+            grade: s.grade || null,
           };
         }),
       });
@@ -1055,6 +1268,156 @@ async function handleApi(request, env, url) {
       await setMeta(env, "cooldown_minutes", cooldown);
       await setMeta(env, "hallway_max", hallway);
       return json(await loadRules(env));
+    }
+
+    /* ----- bell schedule, ID cards ----- */
+
+    if (pathname === "/api/teacher/schedule" && method === "POST") {
+      const body = await readBody(request);
+      const cleaned = cleanSchedule(body);
+      if (!cleaned.ok) return fail(cleaned.error);
+      await setMeta(env, "bell_schedule", JSON.stringify(cleaned.value));
+      return json({ schedule: cleaned.value });
+    }
+
+    if (pathname === "/api/teacher/idcard-settings" && method === "POST") {
+      const body = await readBody(request);
+      const cleaned = cleanIdCardSettings(body);
+      if (!cleaned.ok) return fail(cleaned.error);
+      await setMeta(env, "idcard_settings", JSON.stringify(cleaned.value));
+      return json({ settings: cleaned.value });
+    }
+
+    // a student's ID number and grade level (they can be changed from Accounts)
+    if (pathname === "/api/teacher/student/id" && method === "POST") {
+      const body = await readBody(request);
+      const key = String(body.key || "");
+      const studentId = cleanText(body.studentId, 20);
+      const grade = cleanText(body.grade, 12);
+      if (!key || key.length > 80 || !studentId || grade === null) return fail("Enter an ID number (up to 20 characters).");
+      const taken = await env.DB.prepare("SELECT key FROM students WHERE student_id = ? AND key != ?").bind(studentId, key).first();
+      if (taken) return fail("Another student already has that ID number.", 409);
+      const res = await env.DB.prepare("UPDATE students SET student_id = ?, grade = ? WHERE key = ?").bind(studentId, grade || null, key).run();
+      if (!res.meta.changes) return fail("Student not found.", 404);
+      return json({ ok: true });
+    }
+
+    /* ----- Flex activities ----- */
+
+    if (pathname === "/api/teacher/flex" && method === "GET") {
+      const since = new Date(Date.now() - 30 * DAY_MS).toISOString().slice(0, 10);
+      const acts = await env.DB.prepare("SELECT * FROM flex_activities WHERE day >= ? ORDER BY day ASC, start ASC LIMIT 300").bind(since).all();
+      const signups = await env.DB
+        .prepare("SELECT f.activity_id, f.student_key, f.attended, f.locked, s.name FROM flex_signups f JOIN students s ON s.key = f.student_key ORDER BY s.name COLLATE NOCASE")
+        .all();
+      const byActivity = new Map();
+      for (const r of signups.results) {
+        if (!byActivity.has(r.activity_id)) byActivity.set(r.activity_id, []);
+        byActivity.get(r.activity_id).push({ key: r.student_key, name: r.name, attended: r.attended === null ? null : !!r.attended, locked: !!r.locked });
+      }
+      return json({
+        activities: acts.results.map((a) => ({
+          id: a.id,
+          name: a.name,
+          description: a.description || "",
+          location: a.location || "",
+          day: a.day,
+          start: a.start,
+          end: a.end,
+          capacity: a.capacity,
+          color: a.color,
+          createdBy: a.created_by,
+          signups: byActivity.get(a.id) || [],
+        })),
+      });
+    }
+
+    if (pathname === "/api/teacher/flex" && method === "POST") {
+      const body = await readBody(request);
+      const cleaned = cleanFlexActivity(body);
+      if (!cleaned.ok) return fail(cleaned.error);
+      const v = cleaned.value;
+      const id = Math.round(Number(body.id));
+      if (Number.isFinite(id) && body.id) {
+        await env.DB.prepare("UPDATE flex_activities SET name = ?, description = ?, location = ?, day = ?, start = ?, end = ?, capacity = ?, color = ? WHERE id = ?")
+          .bind(v.name, v.description, v.location, v.day, v.start, v.end, v.capacity, v.color, id)
+          .run();
+        return json({ ok: true, id });
+      }
+      const res = await env.DB.prepare(
+        "INSERT INTO flex_activities (name, description, location, day, start, end, capacity, color, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      )
+        .bind(v.name, v.description, v.location, v.day, v.start, v.end, v.capacity, v.color, teacher.display, Date.now())
+        .run();
+      return json({ ok: true, id: res.meta.last_row_id });
+    }
+
+    if (pathname === "/api/teacher/flex/delete" && method === "POST") {
+      const body = await readBody(request);
+      const id = Math.round(Number(body.id));
+      if (!Number.isFinite(id)) return fail("Invalid request.");
+      await env.DB.prepare("DELETE FROM flex_signups WHERE activity_id = ?").bind(id).run();
+      await env.DB.prepare("DELETE FROM flex_activities WHERE id = ?").bind(id).run();
+      return json({ ok: true });
+    }
+
+    if (pathname === "/api/teacher/flex/attendance" && method === "POST") {
+      const body = await readBody(request);
+      const id = Math.round(Number(body.id));
+      const key = String(body.key || "");
+      if (!Number.isFinite(id) || !key) return fail("Invalid request.");
+      const value = body.attended === true ? 1 : body.attended === false ? 0 : null;
+      await env.DB.prepare("UPDATE flex_signups SET attended = ? WHERE activity_id = ? AND student_key = ?").bind(value, id, key).run();
+      return json({ ok: true });
+    }
+
+    // a teacher can put a student into an activity (the student can't leave it) or take them out
+    if ((pathname === "/api/teacher/flex/assign" || pathname === "/api/teacher/flex/remove") && method === "POST") {
+      const body = await readBody(request);
+      const id = Math.round(Number(body.id));
+      const key = String(body.key || "");
+      if (!Number.isFinite(id) || !key) return fail("Invalid request.");
+      const activity = await env.DB.prepare("SELECT id FROM flex_activities WHERE id = ?").bind(id).first();
+      const student = await env.DB.prepare("SELECT key FROM students WHERE key = ?").bind(key).first();
+      if (!activity || !student) return fail("Not found.", 404);
+      if (pathname.endsWith("/remove")) {
+        await env.DB.prepare("DELETE FROM flex_signups WHERE activity_id = ? AND student_key = ?").bind(id, key).run();
+      } else {
+        await env.DB.prepare(
+          "INSERT INTO flex_signups (activity_id, student_key, locked, signed_at) VALUES (?, ?, 1, ?) ON CONFLICT (activity_id, student_key) DO UPDATE SET locked = 1"
+        )
+          .bind(id, key, Date.now())
+          .run();
+      }
+      return json({ ok: true });
+    }
+
+    /* ----- Data Concierge requests + feature suggestions ----- */
+
+    if (pathname === "/api/teacher/concierge" && method === "GET") {
+      const rows = await env.DB
+        .prepare("SELECT id, message, status, created_at FROM concierge_requests WHERE teacher = ? ORDER BY id DESC LIMIT 20")
+        .bind(teacher.username)
+        .all();
+      return json({ requests: rows.results.map((r) => ({ id: r.id, message: r.message, status: r.status, createdAt: r.created_at })) });
+    }
+
+    if (pathname === "/api/teacher/concierge" && method === "POST") {
+      const body = await readBody(request);
+      const message = cleanText(body.message, 1000);
+      if (!message) return fail("Tell us what data you're looking for (up to 1,000 characters).");
+      if (!(await allowAttempt(env, `concierge:${teacher.username}`, 10, 60 * 60000))) return fail("That's a lot of requests. Please wait a bit.", 429);
+      await env.DB.prepare("INSERT INTO concierge_requests (teacher, message, created_at) VALUES (?, ?, ?)").bind(teacher.username, message, Date.now()).run();
+      return json({ ok: true });
+    }
+
+    if (pathname === "/api/teacher/suggest" && method === "POST") {
+      const body = await readBody(request);
+      const message = cleanText(body.message, 600);
+      if (!message) return fail("Write your idea first (up to 600 characters).");
+      if (!(await allowAttempt(env, `suggest:${teacher.username}`, 10, 60 * 60000))) return fail("Thanks! That's plenty of ideas for now.", 429);
+      await env.DB.prepare("INSERT INTO feature_suggestions (teacher, message, created_at) VALUES (?, ?, ?)").bind(teacher.username, message, Date.now()).run();
+      return json({ ok: true });
     }
 
     // emergency mode: pauses new student passes everywhere until a teacher turns it off
