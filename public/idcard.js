@@ -73,3 +73,46 @@ function idCardMarkup(student, settings) {
       </div>
     </div>`;
 }
+
+/* ---------- printing ---------- */
+
+// the front of an ID card for paper: name and barcode (and the grade and school), credit-card sized
+function idPrintMarkup(student, settings) {
+  const color = /^#[0-9a-f]{6}$/i.test(settings.color || "") ? settings.color : "#00b476";
+  const grade = student.grade ? `<span class="pc-grade">Grade ${idEscape(student.grade)}</span>` : "";
+  const code =
+    settings.barcode === "number"
+      ? `<div class="pc-bignum">${idEscape(student.studentId || "")}</div>`
+      : `${barcodeSvg(student.studentId || "0", 52)}<div class="pc-num">${idEscape(student.studentId || "")}</div>`;
+  return `
+    <div class="pc" style="--pc:${color}">
+      <div class="pc-top"><span class="pc-school">${idEscape(settings.school || "Student ID")}</span><span class="pc-kind">STUDENT ID</span></div>
+      <div class="pc-body">
+        <div class="pc-name">${idEscape(student.name || "")}</div>
+        ${grade}
+      </div>
+      <div class="pc-code">${code}</div>
+    </div>`;
+}
+
+// Puts the cards on a hidden sheet, opens the browser's print dialog, and cleans up afterwards.
+// Pass { print: false } to only build the sheet (used by tests).
+function printIdCards(students, settings, options = {}) {
+  const old = document.getElementById("print-sheet");
+  if (old) old.remove();
+  const sheet = document.createElement("div");
+  sheet.id = "print-sheet";
+  sheet.innerHTML = students.map((s) => idPrintMarkup(s, settings)).join("");
+  document.body.appendChild(sheet);
+  if (options.print === false) return sheet;
+
+  document.body.classList.add("printing");
+  const cleanup = () => {
+    sheet.remove();
+    document.body.classList.remove("printing");
+    window.removeEventListener("afterprint", cleanup);
+  };
+  window.addEventListener("afterprint", cleanup);
+  setTimeout(() => window.print(), 60);
+  return sheet;
+}

@@ -429,3 +429,65 @@ setInterval(paintDashBell, 20000);
 setInterval(loadDashBell, 5 * 60000);
 // after the bell schedule is saved, show the new one right away
 document.getElementById("bell-save").addEventListener("click", () => setTimeout(loadDashBell, 900));
+
+/* ================= Print ID cards + the kiosk link ================= */
+
+const idpDeselected = new Set(); // keys of students unticked for printing (everyone is ticked by default)
+
+function renderPrintList() {
+  const list = document.getElementById("idp-list");
+  const eligible = students.filter((s) => s.studentId);
+  list.innerHTML = eligible.length
+    ? eligible
+        .map(
+          (s) => `
+        <label class="idp-row">
+          <input type="checkbox" data-key="${idEscape(s.key)}" ${idpDeselected.has(s.key) ? "" : "checked"}>
+          ${avatarHtml(s)}
+          <span class="idp-name">${idEscape(s.name)}</span>
+          <span class="idp-id">${idEscape(s.studentId)}${s.grade ? ` · Gr ${idEscape(s.grade)}` : ""}</span>
+        </label>`
+        )
+        .join("")
+    : `<p class="an-empty">No students yet. Cards appear here once students have signed in.</p>`;
+  list.querySelectorAll("input[data-key]").forEach((box) =>
+    box.addEventListener("change", () => {
+      box.checked ? idpDeselected.delete(box.dataset.key) : idpDeselected.add(box.dataset.key);
+      updatePrintCount();
+    })
+  );
+  updatePrintCount();
+}
+
+function selectedForPrint() {
+  return students.filter((s) => s.studentId && !idpDeselected.has(s.key));
+}
+
+function updatePrintCount() {
+  const n = selectedForPrint().length;
+  document.getElementById("idp-count").textContent = `${n} card${n === 1 ? "" : "s"} · ${Math.ceil(n / 8) || 0} page${Math.ceil(n / 8) === 1 ? "" : "s"}`;
+  document.getElementById("idp-print").disabled = n === 0;
+  document.getElementById("idp-all").checked = students.filter((s) => s.studentId).every((s) => !idpDeselected.has(s.key));
+}
+
+document.getElementById("idp-all").addEventListener("change", (e) => {
+  students.forEach((s) => (e.target.checked ? idpDeselected.delete(s.key) : idpDeselected.add(s.key)));
+  renderPrintList();
+});
+
+document.getElementById("idp-print").addEventListener("click", () => {
+  const picked = selectedForPrint();
+  if (picked.length === 0) return showToast("Pick at least one student.", "warn");
+  printIdCards(picked, idcSettings);
+});
+
+document.getElementById("kiosk-url").textContent = `${location.origin}/smartpass-kiosk`;
+
+adminTabHandlers.idcards = (() => {
+  const previous = adminTabHandlers.idcards;
+  return async () => {
+    await previous();
+    renderPrintList();
+  };
+})();
+studentsListeners.push(() => panelOpen("idcards") && renderPrintList());

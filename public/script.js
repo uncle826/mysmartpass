@@ -7,9 +7,10 @@ const codeForm = document.getElementById("code-form");
 const signupForm = document.getElementById("signup-form");
 const resetForm = document.getElementById("reset-form");
 const passwordForm = document.getElementById("password-form");
+const scanView = document.getElementById("scan-view");
 const role = document.body.dataset.role || "student";
 
-const allViews = [loginForm, codeForm, signupForm, resetForm, passwordForm, loadingView, schoolView].filter(Boolean);
+const allViews = [loginForm, codeForm, signupForm, resetForm, passwordForm, scanView, loadingView, schoolView].filter(Boolean);
 
 // students sign in with their name, then a "Learn" password: the word Learn plus exactly 5 numbers
 const STUDENT_PASSWORD_RE = /^learn\d{5}$/i;
@@ -98,6 +99,91 @@ if (passwordForm) {
     localStorage.setItem("smartpass_student_token", res.data.token);
     finishSignIn(res.data.name);
   });
+}
+
+/* Students: sign in with the barcode on a digital ID card (camera), or by typing the number under it */
+
+if (scanView) {
+  const scanVideo = document.getElementById("scan-video");
+  const scanStatus = document.getElementById("scan-status");
+  const scanOk = document.getElementById("scan-ok");
+  let scanner = null;
+  let scanning = false;
+
+  const setScanStatus = (text, isError) => {
+    scanStatus.textContent = text;
+    scanStatus.classList.toggle("err", !!isError);
+  };
+
+  const stopScan = () => {
+    scanning = false;
+    if (scanner) scanner.stop();
+    scanner = null;
+  };
+
+  async function startScan() {
+    stopScan();
+    scanning = true;
+    setScanStatus("Starting the camera…");
+    try {
+      const s = await startBarcodeScanner(scanVideo, handleScanned);
+      if (!scanning) return s.stop(); // they went back while the camera was starting
+      scanner = s;
+      setScanStatus("Hold your ID card’s barcode inside the box.");
+    } catch (err) {
+      scanning = false;
+      setScanStatus(err.message, true);
+    }
+  }
+
+  async function signInWithId(code) {
+    setScanStatus("Checking your ID…");
+    const res = await apiFetch("/api/student/login-id", { body: { studentId: code, tz: tzOffset() } });
+    if (!res.ok) {
+      setScanStatus(res.data.error || "Couldn’t sign in with that ID.", true);
+      return false;
+    }
+    stopScan();
+    scanOk.classList.remove("hidden");
+    localStorage.setItem("smartpass_student_token", res.data.token);
+    setScanStatus(`Welcome, ${res.data.name}!`);
+    setTimeout(() => {
+      finishSignIn(res.data.name);
+      // a device that already knows the school goes straight in, so scanning is one step
+      const saved = localStorage.getItem("smartpass_school");
+      const btn = saved && document.querySelector(`.school-btn[data-school="${saved}"]`);
+      if (btn) setTimeout(() => btn.click(), 400);
+    }, 600);
+    return true;
+  }
+
+  async function handleScanned(code) {
+    const good = await signInWithId(code);
+    if (!good && !scanView.classList.contains("hidden")) setTimeout(startScan, 1800); // not recognized: look again
+  }
+
+  document.getElementById("id-signin-btn").addEventListener("click", () => {
+    scanOk.classList.add("hidden");
+    showView(scanView);
+    startScan();
+  });
+
+  document.getElementById("scan-back").addEventListener("click", (e) => {
+    e.preventDefault();
+    stopScan();
+    showView(loginForm);
+  });
+
+  document.getElementById("scan-manual").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const digits = document.getElementById("scan-number").value.replace(/D/g, "");
+    if (digits.length < 3) return setScanStatus("Type the number printed under the barcode.", true);
+    stopScan();
+    if (!(await signInWithId(digits))) setTimeout(() => !scanView.classList.contains("hidden") && startScan(), 1800);
+  });
+
+  // the camera shouldn’t stay on if they switch away
+  document.addEventListener("visibilitychange", () => document.hidden && scanning && stopScan());
 }
 
 /* Teacher "Create account" / "Forgot password?": access code first, then either form */

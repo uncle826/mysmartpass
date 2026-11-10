@@ -133,6 +133,10 @@ function closeIdCard() {
 
 document.getElementById("id-card-btn").addEventListener("click", openIdCard);
 document.getElementById("idcard-close").addEventListener("click", closeIdCard);
+document.getElementById("idcard-print").addEventListener("click", async () => {
+  const settings = await loadIdSettings();
+  if (studentProfile) printIdCards([studentProfile], settings);
+});
 idOverlay.addEventListener("click", (e) => {
   if (e.target === idOverlay) closeIdCard();
 });

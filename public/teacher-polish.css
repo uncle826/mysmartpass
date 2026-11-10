@@ -1,0 +1,444 @@
+/* Teacher dashboard: premium polish. Loaded last so it refines everything above it.
+   Soft layered shadows, hairline borders, consistent radii, smooth hover/focus states,
+   and a top bar that no longer wraps or collides at smaller widths. */
+
+:root {
+  --tp-radius: 14px;
+  --tp-border: rgba(31, 25, 94, 0.07);
+  --tp-shadow: 0 1px 2px rgba(16, 20, 24, 0.05), 0 8px 24px -10px rgba(16, 20, 24, 0.12);
+  --tp-shadow-hover: 0 2px 4px rgba(16, 20, 24, 0.06), 0 14px 30px -12px rgba(16, 20, 24, 0.18);
+  --tp-green: #00b476;
+  --tp-ink: #1f195e;
+  --tp-ring: 0 0 0 3px rgba(0, 180, 118, 0.22);
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---------- top bar ---------- */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  gap: 16px;
+  box-shadow: 0 1px 0 rgba(31, 25, 94, 0.06), 0 8px 24px -14px rgba(16, 20, 24, 0.18);
+}
+
+.topbar-side {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.tb-left {
+  gap: 14px;
+}
+
+.tb-search {
+  flex: 0 1 235px;
+  min-width: 44px;
+  width: auto;
+  border: 1px solid transparent;
+}
+
+.tb-search:focus-within {
+  border-color: rgba(0, 180, 118, 0.4);
+}
+
+.main-nav {
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
+.nav-item {
+  min-width: 78px;
+  padding: 0 12px;
+  white-space: nowrap;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.nav-item span:not(.nav-badge) {
+  white-space: nowrap;
+}
+
+.nav-item:not(.active):hover {
+  background: rgba(31, 25, 94, 0.04);
+  color: #4e5d74;
+}
+
+.nav-item.active {
+  background: linear-gradient(180deg, rgba(0, 180, 118, 0) 40%, rgba(0, 180, 118, 0.07));
+}
+
+.nav-item:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px rgba(0, 180, 118, 0.5);
+}
+
+.topbar-side.right {
+  flex-shrink: 0;
+  flex-basis: auto;
+}
+
+@media (max-width: 1180px) {
+  .topbar {
+    padding: 0 14px;
+    gap: 10px;
+  }
+
+  .main-nav {
+    gap: 0;
+  }
+
+  .nav-item {
+    min-width: 66px;
+    padding: 0 8px;
+    font-size: 13px;
+  }
+
+  .tb-search {
+    flex-basis: 170px;
+  }
+}
+
+@media (max-width: 960px) {
+  .tb-search {
+    flex: 0 0 38px;
+    width: 38px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .tb-search input {
+    display: none;
+  }
+
+  .nav-item {
+    min-width: 56px;
+    padding: 0 6px;
+    font-size: 12.5px;
+  }
+}
+
+@media (max-width: 720px) {
+  .nav-item span:not(.nav-badge) {
+    display: none;
+  }
+
+  .nav-item {
+    min-width: 46px;
+  }
+}
+
+/* ---------- surfaces ---------- */
+
+.t-students,
+.t-detail,
+.t-admin-card,
+.flex-list-col,
+.flex-detail,
+.wrapped-wrap > .t-admin-card {
+  border: 1px solid var(--tp-border);
+  border-radius: var(--tp-radius);
+  box-shadow: var(--tp-shadow);
+}
+
+.t-admin-card {
+  padding: 26px 30px 32px;
+}
+
+.t-admin-bar h1,
+.t-hall-head h1 {
+  letter-spacing: -0.2px;
+}
+
+.t-admin-side {
+  border-right: 1px solid var(--tp-border);
+  background: #fbfcfd;
+}
+
+.t-side-item {
+  border-radius: 10px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.t-side-item:not(.active):hover {
+  background: rgba(31, 25, 94, 0.05);
+}
+
+.t-side-item:focus-visible {
+  outline: none;
+  box-shadow: var(--tp-ring);
+}
+
+/* ---------- buttons ---------- */
+
+.btn {
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease, border-color 0.15s ease;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  box-shadow: 0 1px 2px rgba(0, 120, 80, 0.25), 0 6px 14px -6px rgba(0, 180, 118, 0.55);
+}
+
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 1px 2px rgba(0, 120, 80, 0.3), 0 10px 20px -8px rgba(0, 180, 118, 0.6);
+}
+
+.btn:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: none;
+  box-shadow: var(--tp-ring);
+}
+
+.btn-outline {
+  border-color: rgba(31, 25, 94, 0.14);
+}
+
+.btn-outline:hover:not(:disabled) {
+  border-color: rgba(31, 25, 94, 0.28);
+}
+
+/* ---------- fields ---------- */
+
+input[type="text"],
+input[type="search"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
+input[type="password"],
+textarea,
+select {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+input[type="text"]:focus,
+input[type="search"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+input[type="time"]:focus,
+input[type="password"]:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: rgba(0, 180, 118, 0.55);
+  box-shadow: var(--tp-ring);
+}
+
+/* ---------- scrollbars ---------- */
+
+.t-page,
+.t-admin-main,
+.t-student-list,
+.t-detail {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(31, 25, 94, 0.22) transparent;
+}
+
+.t-page::-webkit-scrollbar,
+.t-admin-main::-webkit-scrollbar,
+.t-student-list::-webkit-scrollbar,
+.t-detail::-webkit-scrollbar {
+  width: 10px;
+}
+
+.t-page::-webkit-scrollbar-thumb,
+.t-admin-main::-webkit-scrollbar-thumb,
+.t-student-list::-webkit-scrollbar-thumb,
+.t-detail::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 8px;
+  background: rgba(31, 25, 94, 0.2) padding-box;
+}
+
+.t-page::-webkit-scrollbar-thumb:hover,
+.t-admin-main::-webkit-scrollbar-thumb:hover,
+.t-student-list::-webkit-scrollbar-thumb:hover,
+.t-detail::-webkit-scrollbar-thumb:hover {
+  background: rgba(31, 25, 94, 0.34) padding-box;
+}
+
+/* ---------- ID cards panel ---------- */
+
+.idc-swatches {
+  gap: 8px;
+}
+
+.idc-swatch {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.idc-swatch:hover {
+  transform: scale(1.1);
+}
+
+/* the live strip sits inside the card as a hairline, never over the barcode */
+.idc-live {
+  height: 4px;
+  flex-shrink: 0;
+}
+
+.idc-body {
+  padding: 12px 16px 6px;
+}
+
+.idc-barcode {
+  height: 42px;
+}
+
+.idc-num {
+  margin: 2px 0 6px;
+}
+
+.idp-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--tp-border);
+  border-radius: 12px;
+  background: #f7f9fb;
+}
+
+.idp-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--tp-ink);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.idp-count {
+  flex: 1;
+  color: #7083a0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.idp-toolbar .btn {
+  margin-left: auto;
+}
+
+.idp-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 8px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.idp-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--tp-border);
+  border-radius: 12px;
+  background: #ffffff;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.idp-row:hover {
+  border-color: rgba(0, 180, 118, 0.4);
+  background: #f6fcf9;
+}
+
+.idp-row input {
+  flex-shrink: 0;
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: var(--tp-green);
+}
+
+.idp-row .t-avatar {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+}
+
+.idp-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--tp-ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.idp-id {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: #eef0f4;
+  color: #4e5d74;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.kiosk-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.kiosk-url {
+  padding: 8px 12px;
+  border: 1px solid var(--tp-border);
+  border-radius: 10px;
+  background: #f7f9fb;
+  color: #4e5d74;
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 13px;
+  word-break: break-all;
+}
+
+/* ---------- Flex (teacher) ---------- */
+
+.flex-page {
+  padding-top: 28px;
+}
+
+@media (max-width: 860px) {
+  .flex-page {
+    flex-direction: column;
+  }
+
+  .flex-list-col {
+    width: 100%;
+  }
+
+  .idp-toolbar .btn {
+    margin-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+  }
+}

@@ -196,3 +196,24 @@
     align-self: flex-start;
   }
 }
+
+.idcard-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.idcard-print {
+  padding: 11px 24px;
+  border: 1.5px solid rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  background: transparent;
+  color: #ffffff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.idcard-print:hover {
+  background: rgba(255, 255, 255, 0.15);
+}

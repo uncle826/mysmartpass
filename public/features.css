@@ -200,3 +200,121 @@
   font-weight: 500;
   opacity: 0.85;
 }
+
+/* ---------- printable ID cards (front only: name + barcode) ---------- */
+
+#print-sheet {
+  display: none;
+}
+
+.pc {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 85.6mm;
+  height: 54mm;
+  overflow: hidden;
+  border: 0.35mm solid #1f2937;
+  border-radius: 3.2mm;
+  background: #ffffff;
+  color: #111827;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.pc-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 3mm;
+  padding: 2.2mm 4mm;
+  background: var(--pc);
+  color: #ffffff;
+}
+
+.pc-school {
+  overflow: hidden;
+  font-size: 3.6mm;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pc-kind {
+  flex-shrink: 0;
+  font-size: 2.4mm;
+  font-weight: 700;
+  letter-spacing: 0.3mm;
+}
+
+.pc-body {
+  padding: 2.6mm 4mm 0;
+}
+
+.pc-name {
+  overflow: hidden;
+  font-size: 6mm;
+  font-weight: 800;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pc-grade {
+  color: #4b5563;
+  font-size: 3.2mm;
+  font-weight: 600;
+}
+
+.pc-code {
+  margin-top: auto;
+  padding: 0 7mm 2.6mm;
+  text-align: center;
+}
+
+.pc-code .idc-barcode {
+  display: block;
+  width: 100%;
+  height: 12.5mm;
+}
+
+.pc-num {
+  margin-top: 0.8mm;
+  font-size: 2.8mm;
+  font-weight: 600;
+  letter-spacing: 0.9mm;
+}
+
+.pc-bignum {
+  padding-bottom: 2mm;
+  font-size: 8mm;
+  font-weight: 800;
+  letter-spacing: 1.4mm;
+}
+
+@media print {
+  @page {
+    size: letter;
+    margin: 10mm;
+  }
+
+  /* only the sheet of cards is printed */
+  body.printing > *:not(#print-sheet) {
+    display: none !important;
+  }
+
+  body.printing {
+    background: #ffffff !important;
+    opacity: 1 !important;
+  }
+
+  body.printing #print-sheet {
+    display: grid;
+    grid-template-columns: repeat(2, 85.6mm);
+    justify-content: center;
+    gap: 6mm;
+  }
+}

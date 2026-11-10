@@ -773,6 +773,26 @@ async function requireTeacher(request, env) {
   return env.DB.prepare("SELECT username, display, photo FROM teachers WHERE username = ?").bind(session.username).first();
 }
 
+// a kiosk's session is stored as "kiosk:<teacher username>", which the teacher routes never accept
+async function requireKiosk(request, env) {
+  const header = request.headers.get("authorization") || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  if (!token) return null;
+  const session = await env.DB.prepare("SELECT username, expires_at FROM sessions WHERE token_hash = ?").bind(await sha256Hex(token)).first();
+  if (!session || session.expires_at < Date.now() || !session.username.startsWith("kiosk:")) return null;
+  return env.DB.prepare("SELECT username, display FROM teachers WHERE username = ?").bind(session.username.slice(6)).first();
+}
+
+// find a student by the number on their ID card (digits only)
+async function studentByCardId(env, raw) {
+  const id = String(raw ?? "").replace(/\D/g, "");
+  if (id.length < 3 || id.length > 12) return null;
+  return env.DB
+    .prepare("SELECT key, name, photo, avatar_color, request_only, daily_limit, tz_offset, grade FROM students WHERE student_id = ?")
+    .bind(id)
+    .first();
+}
+
 async function codeIsValid(env, code) {
   const expected = env.ACCESS_CODE;
   if (!expected) return false;
@@ -826,6 +846,26 @@ async function handleApi(request, env, url) {
 
     const state = await studentState(env, key);
     return json({ ...state, token: await newStudentSession(env, key) });
+  }
+
+  // sign in by scanning (or typing) the number on a digital ID card: the card is the credential, so no password
+  if (pathname === "/api/student/login-id" && method === "POST") {
+    const body = await readBody(request);
+    const ip = clientIp(request);
+    const bucket = `idlogin:${ip}`;
+    if (!(await allowAttempt(env, bucket, 20, 15 * 60000))) return fail("Too many tries. Please wait a few minutes and try again.", 429);
+
+    const settings = await getMetaJson(env, "idcard_settings", { enabled: true });
+    if (settings.enabled === false) return fail("Signing in with an ID card is turned off.", 403);
+
+    const student = await studentByCardId(env, body.studentId);
+    if (!student) return fail("That ID card isn't recognized. Try again, or sign in with your password.", 401);
+
+    await clearAttempts(env, bucket);
+    const tz = cleanTz(body.tz);
+    await env.DB.prepare("UPDATE students SET last_seen = ?, tz_offset = COALESCE(?, tz_offset) WHERE key = ?").bind(Date.now(), tz, student.key).run();
+    const state = await studentState(env, student.key);
+    return json({ ...state, token: await newStudentSession(env, student.key) });
   }
 
   // everything else a student does needs the session token they got when they signed in
@@ -1120,7 +1160,7 @@ async function handleApi(request, env, url) {
     await env.DB.prepare("UPDATE teachers SET salt = ?, hash = ? WHERE username = ?")
       .bind(salt, await hashPassword(password, salt), username)
       .run();
-    await env.DB.prepare("DELETE FROM sessions WHERE username = ?").bind(username).run();
+    await env.DB.prepare("DELETE FROM sessions WHERE username = ? OR username = ?").bind(username, `kiosk:${username}`).run();
     await clearAttempts(env, `code:${ip}`);
 
     return json({ ok: true });
@@ -1146,6 +1186,74 @@ async function handleApi(request, env, url) {
 
     await clearAttempts(env, bucket);
     return json({ token: await newSession(env, teacher.username), name: teacher.display });
+  }
+
+  /* ----- kiosk: a shared classroom device where students scan their ID card to start and end passes ----- */
+
+  // a kiosk signs in with a teacher's username and password but only gets a kiosk-only session: it can scan IDs
+  // and start or end passes, and nothing else (the teacher routes don't accept it)
+  if (pathname === "/api/kiosk/login" && method === "POST") {
+    const body = await readBody(request);
+    const bucket = `login:${clientIp(request)}`;
+    if (!(await allowAttempt(env, bucket, 10, 15 * 60000))) return fail("Too many attempts. Please wait a few minutes and try again.", 429);
+    const username = String(body.username || "").replace(/\s+/g, " ").trim().toLowerCase();
+    const teacher = username
+      ? await env.DB.prepare("SELECT username, display, salt, hash FROM teachers WHERE username = ?").bind(username).first()
+      : null;
+    const attempt = await hashPassword(String(body.password || ""), teacher ? teacher.salt : "00".repeat(16));
+    if (!teacher || !safeEqual(attempt, teacher.hash)) return fail("Incorrect username or password.", 401);
+    await clearAttempts(env, bucket);
+
+    const token = randomHex(32);
+    await env.DB.prepare("INSERT INTO sessions (token_hash, username, expires_at) VALUES (?, ?, ?)")
+      .bind(await sha256Hex(token), `kiosk:${teacher.username}`, Date.now() + SESSION_MS)
+      .run();
+    return json({ token, name: teacher.display });
+  }
+
+  if (pathname.startsWith("/api/kiosk/") && method === "POST") {
+    const kiosk = await requireKiosk(request, env);
+    if (!kiosk) return fail("Please set this kiosk up again.", 401);
+    if (!(await allowAttempt(env, `kiosk:${kiosk.username}`, 300, 10 * 60000))) return fail("Slow down a little and try again.", 429);
+
+    const body = await readBody(request);
+    const student = await studentByCardId(env, body.studentId);
+    if (!student) return fail("That ID isn't recognized.", 404);
+
+    const activeRow = await env.DB.prepare("SELECT * FROM passes WHERE student_key = ? AND finished_at IS NULL").bind(student.key).first();
+    const who = { name: student.name, photo: student.photo || null, avatarColor: student.avatar_color, grade: student.grade || null };
+
+    // why this student can't start a pass right now (null when they can)
+    const blockedFor = async () => {
+      if (student.request_only) return "Your teacher approves your passes. Send a request from your own device.";
+      return (await limitMessage(env, student.key, student)) || (await studentPassBlock(env, student.key, { immediate: true }));
+    };
+
+    if (pathname === "/api/kiosk/lookup") {
+      return json({ student: who, active: activeRow ? activeFromRow(activeRow) : null, blocked: activeRow ? null : await blockedFor(), serverNow: Date.now() });
+    }
+
+    if (pathname === "/api/kiosk/end") {
+      await endPass(env, student.key);
+      return json({ ok: true, student: who });
+    }
+
+    if (pathname === "/api/kiosk/start") {
+      if (activeRow) return fail("You're already on a pass.", 409);
+      const dest = cleanDest(body.dest);
+      let from = null;
+      if (body.from) {
+        from = cleanDest(body.from);
+        if (!from) return fail("Invalid pass.");
+      }
+      if (!dest) return fail("Pick where you're going.");
+      const blocked = await blockedFor();
+      if (blocked) return fail(blocked, 403);
+      const created = await createPass(env, student.key, dest, from, await studentMinutes(env, dest, body.minutes), null);
+      if (!created) return fail("You're already on a pass.", 409);
+      const row = await env.DB.prepare("SELECT * FROM passes WHERE student_key = ? AND finished_at IS NULL").bind(student.key).first();
+      return json({ ok: true, student: who, active: row ? activeFromRow(row) : null, serverNow: Date.now() });
+    }
   }
 
   /* ----- everything below needs a signed-in teacher ----- */
@@ -1204,6 +1312,10 @@ async function handleApi(request, env, url) {
       const students = await env.DB
         .prepare("SELECT key, name, avatar_color, photo, request_only, daily_limit, tz_offset, hidden, student_id, grade FROM students ORDER BY name COLLATE NOCASE")
         .all();
+      // every student needs an ID number to have a card that scans, so hand one to anyone who doesn't have one yet
+      for (const s of students.results) {
+        if (!s.student_id) s.student_id = await ensureStudentId(env, s.key);
+      }
       const active = await env.DB.prepare("SELECT * FROM passes WHERE finished_at IS NULL").all();
       const finished = await env.DB
         .prepare("SELECT * FROM passes WHERE finished_at IS NOT NULL ORDER BY id ASC")
@@ -1292,9 +1404,10 @@ async function handleApi(request, env, url) {
     if (pathname === "/api/teacher/student/id" && method === "POST") {
       const body = await readBody(request);
       const key = String(body.key || "");
-      const studentId = cleanText(body.studentId, 20);
+      const studentId = String(body.studentId || "").trim();
       const grade = cleanText(body.grade, 12);
-      if (!key || key.length > 80 || !studentId || grade === null) return fail("Enter an ID number (up to 20 characters).");
+      // ID numbers are digits only, because the barcode on the ID card can only hold digits
+      if (!key || key.length > 80 || !/^\d{3,12}$/.test(studentId) || grade === null) return fail("An ID number is 3 to 12 digits.");
       const taken = await env.DB.prepare("SELECT key FROM students WHERE student_id = ? AND key != ?").bind(studentId, key).first();
       if (taken) return fail("Another student already has that ID number.", 409);
       const res = await env.DB.prepare("UPDATE students SET student_id = ?, grade = ? WHERE key = ?").bind(studentId, grade || null, key).run();
@@ -1628,6 +1741,8 @@ async function handleApi(request, env, url) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    // a short, easy-to-type address for the kiosk page
+    if (url.pathname === "/kiosk" || url.pathname === "/kiosk/") return Response.redirect(new URL("/smartpass-kiosk", url).toString(), 302);
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
 
     try {

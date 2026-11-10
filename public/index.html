@@ -3,12 +3,152 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SmartPass</title>
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
-<meta http-equiv="refresh" content="0; url=/student-signin">
-<script>location.replace("/student-signin");</script>
+<title>Lake Boys Productions</title>
+<meta name="description" content="Lake Boys Productions: videos, projects and fun things we build. Watch on YouTube and try our SmartPass project.">
+<meta name="theme-color" content="#0a2463">
+<meta property="og:title" content="Lake Boys Productions">
+<meta property="og:description" content="Videos, projects and fun things we build. Watch on YouTube and try our SmartPass project.">
+<meta property="og:type" content="website">
+<link rel="icon" type="image/svg+xml" href="lakeboys-favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="home.css">
 </head>
 <body>
-  <p><a href="/student-signin">Student sign in</a> &middot; <a href="/teacher-signin">Teacher sign in</a></p>
+
+  <header class="top">
+    <div class="wrap top-inner">
+      <a href="#top" class="brand" aria-label="Lake Boys Productions home">
+        <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="lb1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3aa8ff"/><stop offset="1" stop-color="#0e4bc0"/></linearGradient></defs><clipPath id="lbc1"><rect width="64" height="64" rx="15"/></clipPath><rect width="64" height="64" rx="15" fill="url(#lb1)"/><g clip-path="url(#lbc1)"><path d="M24 17.5v17a1 1 0 0 0 1.5.9l14.2-8.5a1 1 0 0 0 0-1.8L25.5 16.6a1 1 0 0 0-1.5.9z" fill="#fff"/><path d="M0 45c5 0 5-4 10-4s5 4 10 4 5-4 10-4 5 4 10 4 5-4 10-4 5 4 10 4V64H0z" fill="#fff" opacity=".92"/><path d="M0 52c5 0 5-3.5 10-3.5s5 3.5 10 3.5 5-3.5 10-3.5 5 3.5 10 3.5 5-3.5 10-3.5 5 3.5 10 3.5V64H0z" fill="#bfe3ff" opacity=".9"/></g></svg>
+        Lake Boys Productions
+      </a>
+      <nav class="nav" aria-label="Main">
+        <a href="#find-us">Find us</a>
+        <a href="#smartpass">SmartPass</a>
+        <a href="#watch">YouTube</a>
+        <a class="nav-cta" href="https://www.youtube.com/@TheLakeBoysProductions" target="_blank" rel="noopener">Watch now</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- hero -->
+    <div class="hero">
+      <div class="wrap hero-inner">
+        <div>
+          <span class="eyebrow">Welcome aboard 🌊</span>
+          <h1>Lake Boys <span>Productions</span></h1>
+          <p class="lead">Videos, projects and fun things we build. Come watch what we're up to, and try out our SmartPass project.</p>
+          <div class="btn-row">
+            <a class="btn btn-white" href="https://www.youtube.com/@TheLakeBoysProductions" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#e62117" d="M21.6 7.2a2.5 2.5 0 0 0-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4A2.5 2.5 0 0 0 2.4 7.2C2 8.8 2 12 2 12s0 3.2.4 4.8a2.5 2.5 0 0 0 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.4a2.5 2.5 0 0 0 1.8-1.8c.4-1.6.4-4.8.4-4.8s0-3.2-.4-4.8z"/><path fill="#fff" d="M10 9.5v5l4.3-2.5z"/></svg>
+              Watch on YouTube
+            </a>
+            <a class="btn btn-ghost" href="#smartpass">Try SmartPass</a>
+          </div>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <svg viewBox="0 0 64 64"><defs><linearGradient id="lb2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6cc0ff"/><stop offset="1" stop-color="#0e4bc0"/></linearGradient></defs><clipPath id="lbc2"><rect width="64" height="64" rx="15"/></clipPath><rect width="64" height="64" rx="15" fill="url(#lb2)"/><g clip-path="url(#lbc2)"><path d="M24 17.5v17a1 1 0 0 0 1.5.9l14.2-8.5a1 1 0 0 0 0-1.8L25.5 16.6a1 1 0 0 0-1.5.9z" fill="#fff"/><path d="M0 45c5 0 5-4 10-4s5 4 10 4 5-4 10-4 5 4 10 4 5-4 10-4 5 4 10 4V64H0z" fill="#fff" opacity=".92"/><path d="M0 52c5 0 5-3.5 10-3.5s5 3.5 10 3.5 5-3.5 10-3.5 5 3.5 10 3.5 5-3.5 10-3.5 5 3.5 10 3.5V64H0z" fill="#bfe3ff" opacity=".9"/></g></svg>
+        </div>
+      </div>
+
+      <div class="waves" aria-hidden="true">
+        <svg class="wave-a" viewBox="0 0 2400 120" preserveAspectRatio="none"><path fill="#ffffff" d="M0 62Q150 12 300 62T600 62T900 62T1200 62T1500 62T1800 62T2100 62T2400 62V120H0Z"/></svg>
+        <svg class="wave-b" viewBox="0 0 2400 120" preserveAspectRatio="none"><path fill="#ffffff" d="M0 78Q150 38 300 78T600 78T900 78T1200 78T1500 78T1800 78T2100 78T2400 78V120H0Z"/></svg>
+        <svg class="wave-c" viewBox="0 0 2400 120" preserveAspectRatio="none"><path fill="#eaf4ff" d="M0 96Q150 66 300 96T600 96T900 96T1200 96T1500 96T1800 96T2100 96T2400 96V120H0Z"/></svg>
+      </div>
+    </div>
+
+    <!-- find us -->
+    <section class="alt" id="find-us">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Find us</h2>
+          <p>Everything in one place: our channel, and the projects we've built.</p>
+        </div>
+
+        <div class="cards">
+          <article class="card">
+            <div class="icon yt"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21.6 7.2a2.5 2.5 0 0 0-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4A2.5 2.5 0 0 0 2.4 7.2C2 8.8 2 12 2 12s0 3.2.4 4.8a2.5 2.5 0 0 0 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.4a2.5 2.5 0 0 0 1.8-1.8c.4-1.6.4-4.8.4-4.8s0-3.2-.4-4.8zM10 15V9l5.2 3z"/></svg></div>
+            <h3>Our YouTube channel</h3>
+            <p>New videos from Lake Boys Productions. Hit subscribe so you never miss one.</p>
+            <a class="btn btn-blue" href="https://www.youtube.com/@TheLakeBoysProductions" target="_blank" rel="noopener">Visit the channel</a>
+          </article>
+
+          <article class="card">
+            <div class="icon sp"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5l7 6.5-7 6.5M12 5.5l7 6.5-7 6.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <h3>SmartPass</h3>
+            <p>Our digital hall pass project. Students make passes, teachers keep track.</p>
+            <a class="btn btn-blue" href="/student-signin">Student sign in</a>
+            <a class="btn btn-outline-blue" href="/teacher-signin">Teacher sign in</a>
+          </article>
+
+          <article class="card">
+            <div class="icon real"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
+            <h3>The real SmartPass</h3>
+            <p>Our project is inspired by Raptor SmartPass. Check out the real thing.</p>
+            <a class="btn btn-outline-blue" href="https://www.smartpass.app" target="_blank" rel="noopener">Visit smartpass.app</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- SmartPass -->
+    <section id="smartpass">
+      <div class="wrap band">
+        <div>
+          <h2>Meet our SmartPass</h2>
+          <p>A hall pass system we built from scratch: students start a pass in a couple of taps, and teachers see everything as it happens.</p>
+          <ul class="ticks">
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Digital hall passes with a countdown timer</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>A teacher dashboard with a live hall monitor</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Pass limits, requests and emergency mode</li>
+            <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Analytics to see how passes get used</li>
+          </ul>
+          <div class="btn-row">
+            <a class="btn btn-blue" href="/student-signin">Student sign in</a>
+            <a class="btn btn-outline-blue" href="/teacher-signin">Teacher sign in</a>
+          </div>
+        </div>
+
+        <div class="mock" aria-hidden="true">
+          <div class="mock-card">
+            <b>Restroom</b>
+            <small>Round-trip · from Room 214</small>
+            <div class="mock-ring">4:32</div>
+            <div class="mock-btn">End Pass</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- YouTube call to action -->
+    <section class="cta" id="watch">
+      <div class="wrap">
+        <h2>Watch Lake Boys Productions</h2>
+        <p>Videos, projects and more, all on our YouTube channel. Subscribe and hit the bell to catch every new upload.</p>
+        <div class="btn-row">
+          <a class="btn btn-white" href="https://www.youtube.com/@TheLakeBoysProductions" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#e62117" d="M21.6 7.2a2.5 2.5 0 0 0-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4A2.5 2.5 0 0 0 2.4 7.2C2 8.8 2 12 2 12s0 3.2.4 4.8a2.5 2.5 0 0 0 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.4a2.5 2.5 0 0 0 1.8-1.8c.4-1.6.4-4.8.4-4.8s0-3.2-.4-4.8z"/><path fill="#fff" d="M10 9.5v5l4.3-2.5z"/></svg>
+            Go to YouTube
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap foot">
+      <span>&copy; <span id="year">2026</span> Lake Boys Productions</span>
+      <nav aria-label="Footer">
+        <a href="https://www.youtube.com/@TheLakeBoysProductions" target="_blank" rel="noopener">YouTube</a>
+        <a href="/student-signin">SmartPass</a>
+        <a href="https://www.smartpass.app" target="_blank" rel="noopener">smartpass.app</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script>document.getElementById("year").textContent = new Date().getFullYear();</script>
 </body>
 </html>

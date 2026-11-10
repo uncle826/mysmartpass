@@ -391,3 +391,153 @@ body.fade-out {
 #password-form .back-link {
   margin-top: 12px;
 }
+
+/* ---------- sign in with an ID card ---------- */
+
+.or-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0;
+  color: #9aa6b8;
+  font-size: 13px;
+}
+
+.or-row::before,
+.or-row::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #e1e5ec;
+}
+
+.id-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  border: 1.5px solid #c8d3e0;
+  border-radius: 24px;
+  background: #ffffff;
+  color: #1d4e77;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.id-btn:hover {
+  border-color: #1d4e77;
+  background: #f3f7fb;
+}
+
+.id-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.scan-title {
+  margin: 0 0 12px;
+  color: #1f3550;
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.scan-frame {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  border-radius: 14px;
+  background: #0f1b2d;
+}
+
+.scan-frame video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.scan-guide {
+  position: absolute;
+  inset: 22% 8%;
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  border-radius: 10px;
+  box-shadow: 0 0 0 999px rgba(8, 18, 34, 0.45);
+}
+
+.scan-guide i {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: 50%;
+  height: 2px;
+  background: #ff4d5e;
+  box-shadow: 0 0 10px #ff4d5e;
+  animation: scanLine 1.8s ease-in-out infinite;
+}
+
+@keyframes scanLine {
+  0%, 100% { transform: translateY(-34px); opacity: 0.35; }
+  50% { transform: translateY(34px); opacity: 1; }
+}
+
+.scan-ok {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 180, 118, 0.88);
+  color: #ffffff;
+}
+
+.scan-ok svg {
+  width: 84px;
+  height: 84px;
+}
+
+.scan-status {
+  min-height: 22px;
+  margin: 12px 0 14px;
+  color: #53688c;
+  font-size: 14.5px;
+  text-align: center;
+}
+
+.scan-status.err {
+  color: #cf463b;
+  font-weight: 600;
+}
+
+.scan-or {
+  display: block;
+  margin-bottom: 8px;
+  color: #6b7484;
+  font-size: 13px;
+  text-align: center;
+}
+
+.scan-row {
+  display: flex;
+  gap: 10px;
+}
+
+.scan-row .text-input {
+  flex: 1;
+  margin: 0;
+}
+
+.scan-row .next-btn {
+  width: auto;
+  padding: 0 22px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scan-guide i {
+    animation: none;
+  }
+}
