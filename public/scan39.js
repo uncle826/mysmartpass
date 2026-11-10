@@ -126,7 +126,9 @@ async function startBarcodeScanner(video, onCode) {
     });
   } catch (err) {
     const denied = err && (err.name === "NotAllowedError" || err.name === "SecurityError");
-    throw new Error(denied ? "Camera access was blocked. Allow the camera for this site, or type your ID number." : "Couldn't open a camera on this device.");
+    const failure = new Error(denied ? "Camera access was blocked. Allow the camera for this site, or type your ID number." : "Couldn't open a camera on this device.");
+    failure.blocked = !!denied;
+    throw failure;
   }
   video.srcObject = stream;
   video.setAttribute("playsinline", "true");

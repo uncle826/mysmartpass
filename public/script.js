@@ -133,8 +133,89 @@ if (scanView) {
     } catch (err) {
       scanning = false;
       setScanStatus(err.message, true);
+      if (err.blocked) showCameraHelp();
     }
   }
+
+  /* camera blocked: a popup with the steps, plus a tip pinned to the top (where the address bar is) */
+
+  const camModal = document.getElementById("cam-modal");
+  const camBanner = document.getElementById("cam-banner");
+  let camWatch = null;
+
+  // the steps depend on the browser, so only show the ones that fit
+  function cameraSteps() {
+    const ua = navigator.userAgent;
+    const ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    if (ios) {
+      return {
+        short: "Tap the AA icon in the address bar, choose Website Settings, and set Camera to Allow.",
+        steps: [
+          "Tap the <b>AA</b> icon at the left of the address bar (or open Settings → Safari → Camera).",
+          "Tap <b>Website Settings</b>, then set <b>Camera</b> to <b>Allow</b>.",
+          "Come back here and tap the green button.",
+        ],
+      };
+    }
+    if (/Firefox/.test(ua)) {
+      return {
+        short: "Click the camera icon with a line through it in the address bar, remove the block, then reload.",
+        steps: [
+          "Click the <b>camera icon</b> (crossed out) in the address bar at the top.",
+          "Next to <b>Use the Camera</b>, click the <b>×</b> to remove the block.",
+          "Click the green button below, and choose <b>Allow</b> when asked.",
+        ],
+      };
+    }
+    const where = /Edg\//.test(ua) ? "Edge" : "Chrome";
+    return {
+      short: `Click the camera or lock icon in the address bar, set Camera to Allow, then reload (${where}).`,
+      steps: [
+        "Click the <b>camera icon</b> or the <b>lock icon</b> at the left of the address bar at the top.",
+        "Switch <b>Camera</b> to <b>Allow</b> (or choose <b>Reset permission</b>).",
+        "Click the green button below. If the page asks to reload, say yes.",
+      ],
+    };
+  }
+
+  function hideCameraHelp() {
+    camModal.classList.add("hidden");
+    camBanner.classList.add("hidden");
+  }
+
+  function showCameraHelp() {
+    const help = cameraSteps();
+    document.getElementById("cam-steps").innerHTML = help.steps.map((s) => `<li>${s}</li>`).join("");
+    document.getElementById("cam-banner-how").textContent = help.short;
+    camModal.classList.remove("hidden");
+    camBanner.classList.remove("hidden");
+
+    // as soon as they flip the setting, start the camera by itself
+    if (!camWatch && navigator.permissions && navigator.permissions.query) {
+      navigator.permissions
+        .query({ name: "camera" })
+        .then((status) => {
+          camWatch = status;
+          status.onchange = () => {
+            if (status.state === "granted" && !scanView.classList.contains("hidden")) {
+              hideCameraHelp();
+              startScan();
+            }
+          };
+        })
+        .catch(() => {});
+    }
+  }
+
+  document.getElementById("cam-retry").addEventListener("click", () => {
+    hideCameraHelp();
+    startScan();
+  });
+  document.getElementById("cam-type").addEventListener("click", () => {
+    camModal.classList.add("hidden"); // keep the top tip, hide the popup
+    document.getElementById("scan-number").focus();
+  });
+  document.getElementById("cam-banner-x").addEventListener("click", () => camBanner.classList.add("hidden"));
 
   async function signInWithId(code) {
     setScanStatus("Checking your ID…");
@@ -171,12 +252,13 @@ if (scanView) {
   document.getElementById("scan-back").addEventListener("click", (e) => {
     e.preventDefault();
     stopScan();
+    hideCameraHelp();
     showView(loginForm);
   });
 
   document.getElementById("scan-manual").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const digits = document.getElementById("scan-number").value.replace(/D/g, "");
+    const digits = document.getElementById("scan-number").value.replace(/\D/g, "");
     if (digits.length < 3) return setScanStatus("Type the number printed under the barcode.", true);
     stopScan();
     if (!(await signInWithId(digits))) setTimeout(() => !scanView.classList.contains("hidden") && startScan(), 1800);

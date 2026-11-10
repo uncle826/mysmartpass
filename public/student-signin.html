@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=27">
+<link rel="stylesheet" href="style.css?v=29">
 </head>
 <body data-role="student">
   <div class="login-card">
@@ -88,8 +88,28 @@
     </div>
   </div>
 
-<script src="api.js?v=27"></script>
-<script src="scan39.js?v=27"></script>
-<script src="script.js?v=27"></script>
+<!-- shown when the browser has blocked the camera: how to turn it back on -->
+<div id="cam-banner" class="cam-banner hidden" role="alert">
+  <svg viewBox="0 0 24 24" class="cam-banner-arrow" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <div class="cam-banner-text"><b>Camera is blocked.</b> <span id="cam-banner-how"></span></div>
+  <button type="button" class="cam-banner-x" id="cam-banner-x" aria-label="Hide this tip">&times;</button>
+</div>
+
+<div id="cam-modal" class="cam-modal hidden" role="dialog" aria-modal="true" aria-labelledby="cam-title">
+  <div class="cam-card">
+    <div class="cam-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24"><path d="M4 8.5A2.5 2.5 0 0 1 6.500 6h7A2.500 2.500 0 0 1 16 8.500v7a2.500 2.500 0 0 1-2.500 2.500h-7A2.500 2.500 0 0 1 4 15.500v-7zM16 10.500l4-2.500v8l-4-2.500" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 3l18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </div>
+    <h2 id="cam-title">Allow camera access</h2>
+    <p class="cam-lead">SmartPass needs your camera to read your ID card. It's blocked right now, so turn it back on:</p>
+    <ol class="cam-steps" id="cam-steps"></ol>
+    <button type="button" class="next-btn" id="cam-retry">I turned it on, try again</button>
+    <button type="button" class="cam-link" id="cam-type">Type my ID number instead</button>
+  </div>
+</div>
+
+<script src="api.js?v=28"></script>
+<script src="scan39.js?v=28"></script>
+<script src="script.js?v=28"></script>
 </body>
 </html>
