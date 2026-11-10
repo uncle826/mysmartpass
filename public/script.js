@@ -121,19 +121,43 @@ if (scanView) {
     scanner = null;
   };
 
-  async function startScan() {
+  // the browser's own answer: "granted", "prompt" (it will ask), "denied" (blocked), or null when it can't say
+  async function cameraState() {
+    try {
+      return (await navigator.permissions.query({ name: "camera" })).state;
+    } catch {
+      return null;
+    }
+  }
+
+  // returns true when the camera is on, "blocked" when the browser refused, false for any other problem
+  async function startScan(fromHelp) {
     stopScan();
     scanning = true;
     setScanStatus("Starting the camera…");
+    // opening the camera makes the browser show its own "Allow camera access?" popup: point at it
+    if ((await cameraState()) === "prompt") {
+      showBanner("Allow the camera.", "Your browser is asking to use the camera. Click Allow in the popup near the address bar.");
+    }
     try {
       const s = await startBarcodeScanner(scanVideo, handleScanned);
-      if (!scanning) return s.stop(); // they went back while the camera was starting
+      if (!scanning) {
+        s.stop(); // they went back while the camera was starting
+        return false;
+      }
       scanner = s;
+      hideCameraHelp();
       setScanStatus("Hold your ID card’s barcode inside the box.");
+      return true;
     } catch (err) {
       scanning = false;
       setScanStatus(err.message, true);
-      if (err.blocked) showCameraHelp();
+      if (err.blocked) {
+        if (!fromHelp) showCameraHelp();
+        return "blocked";
+      }
+      camBanner.classList.add("hidden");
+      return false;
     }
   }
 
@@ -181,41 +205,83 @@ if (scanView) {
   function hideCameraHelp() {
     camModal.classList.add("hidden");
     camBanner.classList.add("hidden");
+    document.getElementById("cam-err").classList.add("hidden");
+  }
+
+  function showBanner(title, text) {
+    document.getElementById("cam-banner-title").textContent = title;
+    document.getElementById("cam-banner-how").textContent = text;
+    camBanner.classList.remove("hidden");
+  }
+
+  // Chrome often keeps refusing until the page is reloaded, even after the setting says Allow.
+  // So: try the camera; if it still says blocked but the setting is now Allow, reload straight back into scanning.
+  async function retryCamera() {
+    const btn = document.getElementById("cam-retry");
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Checking…";
+    document.getElementById("cam-err").classList.add("hidden");
+    const result = await startScan(true);
+    btn.disabled = false;
+    btn.textContent = label;
+    if (result === true) return;
+    if (result === "blocked") {
+      if ((await cameraState()) === "granted") {
+        try {
+          sessionStorage.setItem("smartpass_resume_scan", "1");
+        } catch {
+          /* fine: they just tap the button again after the reload */
+        }
+        return location.reload();
+      }
+      const err = document.getElementById("cam-err");
+      err.textContent = "It's still blocked. Use the camera or lock icon in the address bar to set Camera to Allow, then try again.";
+      err.classList.remove("hidden");
+      camModal.classList.remove("hidden");
+      showBanner("Camera is blocked.", cameraSteps().short);
+    } else {
+      hideCameraHelp();
+    }
   }
 
   function showCameraHelp() {
     const help = cameraSteps();
     document.getElementById("cam-steps").innerHTML = help.steps.map((s) => `<li>${s}</li>`).join("");
-    document.getElementById("cam-banner-how").textContent = help.short;
+    document.getElementById("cam-err").classList.add("hidden");
+    showBanner("Camera is blocked.", help.short);
     camModal.classList.remove("hidden");
-    camBanner.classList.remove("hidden");
 
-    // as soon as they flip the setting, start the camera by itself
+    // as soon as they flip the setting, try the camera by themselves
     if (!camWatch && navigator.permissions && navigator.permissions.query) {
       navigator.permissions
         .query({ name: "camera" })
         .then((status) => {
           camWatch = status;
           status.onchange = () => {
-            if (status.state === "granted" && !scanView.classList.contains("hidden")) {
-              hideCameraHelp();
-              startScan();
-            }
+            if (status.state !== "denied" && !scanView.classList.contains("hidden") && !camModal.classList.contains("hidden")) retryCamera();
           };
         })
         .catch(() => {});
     }
   }
 
-  document.getElementById("cam-retry").addEventListener("click", () => {
-    hideCameraHelp();
-    startScan();
-  });
+  document.getElementById("cam-retry").addEventListener("click", retryCamera);
   document.getElementById("cam-type").addEventListener("click", () => {
     camModal.classList.add("hidden"); // keep the top tip, hide the popup
     document.getElementById("scan-number").focus();
   });
   document.getElementById("cam-banner-x").addEventListener("click", () => camBanner.classList.add("hidden"));
+
+  // came back from the reload above: go straight back to the scanner
+  try {
+    if (sessionStorage.getItem("smartpass_resume_scan")) {
+      sessionStorage.removeItem("smartpass_resume_scan");
+      setTimeout(() => document.getElementById("id-signin-btn").click(), 300);
+    }
+  } catch {
+    /* storage unavailable */
+  }
 
   async function signInWithId(code) {
     setScanStatus("Checking your ID…");

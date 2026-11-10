@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=29">
+<link rel="stylesheet" href="style.css?v=30">
 </head>
 <body data-role="student">
   <div class="login-card">
@@ -91,7 +91,7 @@
 <!-- shown when the browser has blocked the camera: how to turn it back on -->
 <div id="cam-banner" class="cam-banner hidden" role="alert">
   <svg viewBox="0 0 24 24" class="cam-banner-arrow" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  <div class="cam-banner-text"><b>Camera is blocked.</b> <span id="cam-banner-how"></span></div>
+  <div class="cam-banner-text"><b id="cam-banner-title">Camera is blocked.</b> <span id="cam-banner-how"></span></div>
   <button type="button" class="cam-banner-x" id="cam-banner-x" aria-label="Hide this tip">&times;</button>
 </div>
 
@@ -103,13 +103,14 @@
     <h2 id="cam-title">Allow camera access</h2>
     <p class="cam-lead">SmartPass needs your camera to read your ID card. It's blocked right now, so turn it back on:</p>
     <ol class="cam-steps" id="cam-steps"></ol>
+    <p class="cam-err hidden" id="cam-err" role="alert"></p>
     <button type="button" class="next-btn" id="cam-retry">I turned it on, try again</button>
     <button type="button" class="cam-link" id="cam-type">Type my ID number instead</button>
   </div>
 </div>
 
-<script src="api.js?v=28"></script>
-<script src="scan39.js?v=28"></script>
-<script src="script.js?v=28"></script>
+<script src="api.js?v=30"></script>
+<script src="scan39.js?v=30"></script>
+<script src="script.js?v=30"></script>
 </body>
 </html>

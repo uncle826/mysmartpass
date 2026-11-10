@@ -749,3 +749,19 @@ body.fade-out {
 .cam-card .next-btn:hover {
   background: #009a65;
 }
+
+.cam-err {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fdf1f0;
+  color: #cf463b;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: left;
+}
+
+.cam-err.hidden {
+  display: none;
+}
