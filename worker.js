@@ -1214,9 +1214,51 @@ async function handleApi(request, env, url) {
   if (pathname.startsWith("/api/kiosk/") && method === "POST") {
     const kiosk = await requireKiosk(request, env);
     if (!kiosk) return fail("Please set this kiosk up again.", 401);
-    if (!(await allowAttempt(env, `kiosk:${kiosk.username}`, 300, 10 * 60000))) return fail("Slow down a little and try again.", 429);
-
     const body = await readBody(request);
+
+    // leaving kiosk mode takes a 4-digit teacher PIN (the KIOSK_PIN variable, 0000 unless changed)
+    if (pathname === "/api/kiosk/exit") {
+      const bucket = `kioskpin:${kiosk.username}`;
+      if (!(await allowAttempt(env, bucket, 6, 10 * 60000))) return fail("Too many tries. Wait a few minutes and try again.", 429);
+      if (!safeEqual(String(body.pin || ""), String(env.KIOSK_PIN || "0000"))) return fail("That PIN isn't right.", 403);
+      await clearAttempts(env, bucket);
+      const token = (request.headers.get("authorization") || "").slice(7).trim();
+      await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?").bind(await sha256Hex(token)).run();
+      return json({ ok: true });
+    }
+
+    if (!(await allowAttempt(env, `kiosk:${kiosk.username}`, 600, 10 * 60000))) return fail("Slow down a little and try again.", 429);
+
+    // who is out right now, so a student can tap their own name to end their pass (no scan needed)
+    if (pathname === "/api/kiosk/out") {
+      const rows = await env.DB
+        .prepare(
+          "SELECT p.student_key, p.dest_name, p.dest_room, p.dest_category, p.start_time, p.end_time, s.name, s.photo, s.avatar_color FROM passes p JOIN students s ON s.key = p.student_key WHERE p.finished_at IS NULL ORDER BY p.start_time ASC LIMIT 40"
+        )
+        .all();
+      return json({
+        out: (rows.results || []).map((r) => ({
+          key: r.student_key,
+          name: r.name,
+          photo: r.photo || null,
+          avatarColor: r.avatar_color,
+          room: { name: r.dest_name, room: r.dest_room || "", categoryKey: r.dest_category },
+          startTime: r.start_time,
+          endTime: r.end_time,
+        })),
+        serverNow: Date.now(),
+      });
+    }
+
+    if (pathname === "/api/kiosk/end" && body.studentKey) {
+      const key = String(body.studentKey);
+      if (!KEY_RE.test(key)) return fail("Invalid request.");
+      const row = await env.DB.prepare("SELECT s.name, s.photo, s.avatar_color FROM passes p JOIN students s ON s.key = p.student_key WHERE p.student_key = ? AND p.finished_at IS NULL").bind(key).first();
+      if (!row) return fail("That pass has already ended.", 409);
+      await endPass(env, key);
+      return json({ ok: true, student: { name: row.name, photo: row.photo || null, avatarColor: row.avatar_color } });
+    }
+
     const student = await studentByCardId(env, body.studentId);
     if (!student) return fail("That ID isn't recognized.", 404);
 
