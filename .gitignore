@@ -3,3 +3,4 @@ node_modules/
 .dev.vars
 .claude/
 *.log
+# local-only: Claude auto-push settings and log live in .claude/
