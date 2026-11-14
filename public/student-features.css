@@ -217,3 +217,35 @@
 .idcard-print:hover {
   background: rgba(255, 255, 255, 0.15);
 }
+
+/* top-bar icons from the SmartPass icon library (white images, tinted by the sp-* filters in the page) */
+
+.sp-ic {
+  display: block;
+  object-fit: contain;
+}
+
+.nav-item .sp-ic {
+  width: 26px;
+  height: 26px;
+  filter: url(#sp-nav);
+}
+
+.nav-item.active .sp-ic {
+  filter: url(#sp-green);
+}
+
+/* narrower windows: tighter tabs so they never run into the Schedule Pass button */
+@media (max-width: 1000px) {
+  .main-nav {
+    gap: 10px;
+  }
+
+  .nav-item {
+    padding: 0 6px;
+  }
+
+  .topbar {
+    padding: 0 14px;
+  }
+}

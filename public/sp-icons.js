@@ -6,8 +6,12 @@
   const ICONS = [
     ['.main-nav .nav-item[data-view="students"]', "school-house"],
     ['.main-nav .nav-item[data-view="hall"]', "crowd"],
-    ['.main-nav .nav-item[data-view="calendar"]', "calculator"],
+    ['.main-nav .nav-item[data-view="calendar"]', "calendar"],
     ['.main-nav .nav-item[data-view="flex"]', "workflow"],
+    // the student dashboard's top bar uses the same icons as the teacher's
+    ["#nav-home", "school-house"],
+    ["#nav-calendar", "calendar"],
+    ["#nav-flex", "workflow"],
     ['.main-nav .nav-item[data-view="settings"]', "design"],
     ['.t-side-item[data-settings-tab="dashboard"]', "compass"],
     ['.t-side-item[data-settings-tab="analytics"]', "bar-chart"],
