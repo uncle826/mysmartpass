@@ -1,0 +1,383 @@
+/* SmartPass first-time tour: swirl intro, welcome, logo, and the spotlight steps. */
+
+/* ---------- intro ---------- */
+
+.tour-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #00b476;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  transition: opacity 0.45s ease;
+}
+
+.tour-intro.leaving {
+  opacity: 0;
+}
+
+.tour-swirl {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.tour-welcome,
+.tour-logo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 20px;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tour-welcome {
+  position: absolute;
+  transform: scale(0.92);
+  transition: opacity 0.5s ease, transform 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.tour-intro.show-welcome .tour-welcome {
+  opacity: 1;
+  transform: none;
+}
+
+.tour-welcome-small {
+  color: #0f6b4a;
+  font-size: clamp(20px, 3.4vw, 32px);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.tour-welcome-big {
+  display: flex;
+  color: #00b476;
+  font-family: "Baloo 2", Inter, sans-serif;
+  font-size: clamp(48px, 10vw, 112px);
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.tour-welcome-big span {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(26px) scale(0.8);
+}
+
+.tour-intro.show-welcome .tour-welcome-big span {
+  animation: tourLetter 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.4) forwards;
+  animation-delay: var(--d, 0ms);
+}
+
+.tour-logo {
+  position: absolute;
+  transform: scale(0.85);
+  transition: opacity 0.5s ease, transform 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+.tour-intro.show-logo .tour-logo {
+  opacity: 1;
+  transform: none;
+}
+
+.tour-logo-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tour-logo-title {
+  color: #1ed17a;
+  font-family: "Baloo 2", Inter, sans-serif;
+  font-size: clamp(54px, 11vw, 120px);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.tour-logo-mark {
+  width: clamp(48px, 9.5vw, 104px);
+  height: auto;
+}
+
+.tour-intro.show-logo .tour-logo-mark {
+  animation: tourChevron 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) 0.25s both;
+}
+
+.tour-logo-sub {
+  margin-top: 6px;
+  color: #8794a8;
+  font-size: clamp(11px, 1.8vw, 18px);
+  letter-spacing: 1px;
+}
+
+.tour-logo-sub b {
+  color: #f5a31a;
+}
+
+.tour-intro-skip {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  padding: 9px 18px;
+  border: 1.5px solid rgba(255, 255, 255, 0.85);
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.18);
+  color: #ffffff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tour-intro-skip:hover {
+  background: rgba(0, 0, 0, 0.32);
+}
+
+/* once the swirl has bloomed to white, the skip button switches to dark text */
+.tour-intro.show-welcome .tour-intro-skip,
+.tour-intro.show-logo .tour-intro-skip {
+  border-color: #c8d3e0;
+  background: #f3f5f8;
+  color: #4e5d74;
+}
+
+.tour-intro.show-welcome .tour-intro-skip:hover,
+.tour-intro.show-logo .tour-intro-skip:hover {
+  background: #e6ebf2;
+}
+
+/* ---------- spotlight steps ---------- */
+
+.tour-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  animation: tourFade 0.35s ease;
+  transition: opacity 0.35s ease;
+}
+
+.tour-layer.leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tour-block {
+  position: absolute;
+  inset: 0;
+}
+
+/* the lit hole around the button: its giant shadow dims everything else */
+.tour-spot {
+  position: fixed;
+  box-shadow: 0 0 0 9999px rgba(12, 22, 44, 0.68), 0 0 0 3px #00d58d, 0 0 24px 4px rgba(0, 213, 141, 0.55);
+  pointer-events: none;
+  transition: left 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.5s cubic-bezier(0.2, 0.8, 0.2, 1),
+    width 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), border-radius 0.5s ease;
+  animation: tourPulse 1.8s ease-in-out infinite;
+}
+
+.tour-hit {
+  position: fixed;
+  display: none;
+  cursor: pointer;
+}
+
+.tour-arrow {
+  position: fixed;
+  display: none;
+  width: 48px;
+  height: 64px;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
+  transition: left 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.tour-arrow svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  animation: tourBounceUp 0.9s ease-in-out infinite;
+}
+
+.tour-arrow.down svg {
+  transform: rotate(180deg);
+  animation-name: tourBounceDown;
+}
+
+.tour-card {
+  position: fixed;
+  box-sizing: border-box;
+  padding: 18px 20px 16px;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 18px 50px rgba(8, 16, 40, 0.4);
+  transition: left 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.tour-card.swap {
+  animation: tourSwap 0.4s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.tour-card.nudge {
+  animation: tourNudge 0.35s ease;
+}
+
+.tour-dots {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.tour-dots i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #dfe4ec;
+  transition: background 0.25s ease, width 0.25s ease;
+}
+
+.tour-dots i.past {
+  background: #8fe0bf;
+}
+
+.tour-dots i.on {
+  width: 22px;
+  border-radius: 4px;
+  background: #00b476;
+}
+
+.tour-title {
+  margin: 0 0 6px;
+  color: #1f195e;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.tour-text {
+  margin: 0;
+  color: #4e5d74;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.tour-hint {
+  margin: 8px 0 0;
+  color: #00946a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tour-hint:empty {
+  display: none;
+}
+
+.tour-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.tour-skip {
+  padding: 8px 4px;
+  border: none;
+  background: none;
+  color: #7083a0;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tour-skip:hover {
+  color: #1f195e;
+  text-decoration: underline;
+}
+
+.tour-skip.hidden {
+  visibility: hidden;
+}
+
+.tour-next {
+  min-width: 96px;
+  margin-left: auto;
+  padding: 11px 22px;
+  border: none;
+  border-radius: 22px;
+  background: #00b476;
+  color: #ffffff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 16px -6px rgba(0, 180, 118, 0.7);
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.tour-next:hover {
+  background: #009a65;
+}
+
+.tour-next:active {
+  transform: scale(0.96);
+}
+
+/* ---------- motion ---------- */
+
+@keyframes tourLetter {
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes tourChevron {
+  from { opacity: 0; transform: translateX(-26px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes tourFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes tourPulse {
+  0%, 100% { box-shadow: 0 0 0 9999px rgba(12, 22, 44, 0.68), 0 0 0 3px #00d58d, 0 0 18px 2px rgba(0, 213, 141, 0.45); }
+  50% { box-shadow: 0 0 0 9999px rgba(12, 22, 44, 0.68), 0 0 0 6px #00d58d, 0 0 30px 8px rgba(0, 213, 141, 0.7); }
+}
+
+@keyframes tourBounceUp {
+  0%, 100% { transform: translateY(6px); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes tourBounceDown {
+  0%, 100% { transform: rotate(180deg) translateY(6px); }
+  50% { transform: rotate(180deg) translateY(-4px); }
+}
+
+@keyframes tourSwap {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes tourNudge {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-7px); }
+  75% { transform: translateX(7px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-spot,
+  .tour-arrow svg,
+  .tour-card,
+  .tour-layer {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -16,9 +16,10 @@
 <link rel="stylesheet" href="calendar.css?v=27">
 <link rel="stylesheet" href="features.css?v=27">
 <link rel="stylesheet" href="teacher-features.css?v=27">
+<link rel="stylesheet" href="tour.css?v=34">
 <link rel="stylesheet" href="teacher-polish.css?v=27">
 </head>
-<body>
+<body data-tour="teacher">
 
   <!-- tints for the white icon-library images: nav gray, nav active green, sidebar slate, sidebar active navy -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
@@ -91,6 +92,11 @@
           <button class="avatar-menu-item" id="change-photo-btn">
             <svg viewBox="0 0 24 24"><path d="M4 8h3l1.6-2.4h6.8L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.4" fill="none" stroke="currentColor" stroke-width="2"/></svg>
             Change photo
+          </button>
+
+          <button class="avatar-menu-item" id="tour-btn">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.6 2.2c-.8.5-1.2 1-1.2 1.9M12 16.6v.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Take the tour
           </button>
 
           <button class="avatar-menu-item avatar-signout" id="sign-out-btn">
@@ -718,5 +724,6 @@
 <script src="teacher-flex.js?v=27"></script>
 <script src="teacher-more.js?v=27"></script>
 <script src="sp-icons.js?v=27"></script>
+<script src="tour.js?v=34"></script>
 </body>
 </html>
