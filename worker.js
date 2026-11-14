@@ -25,6 +25,8 @@ const MIGRATIONS = [
   "ALTER TABLE classes ADD COLUMN max_minutes INTEGER",
   "ALTER TABLE students ADD COLUMN student_id TEXT",
   "ALTER TABLE students ADD COLUMN grade TEXT",
+  "ALTER TABLE classes ADD COLUMN settings TEXT",
+  "ALTER TABLE room_overrides ADD COLUMN settings TEXT",
 ];
 
 // "Learn" followed by exactly five digits (the word itself can be typed in any case)
@@ -34,6 +36,8 @@ const MIN_BOUNCE_SPEED = 10;
 const MAX_BOUNCE_SPEED = 60000;
 
 const LOGO_PRESET_RE = /^preset:[A-Za-z]{2,30}$/;
+// a picture from SmartPass's icon library, by name (see the icon picker on the Rooms screen)
+const LOGO_ICON_RE = /^icon:[a-z0-9-]{2,40}$/;
 
 const encoder = new TextEncoder();
 
@@ -135,7 +139,7 @@ function cleanMessage(raw) {
 function cleanLogo(raw) {
   if (raw === null || raw === undefined || raw === "") return { ok: true, value: null };
   if (typeof raw !== "string") return { ok: false };
-  if (LOGO_PRESET_RE.test(raw)) return { ok: true, value: raw };
+  if (LOGO_PRESET_RE.test(raw) || LOGO_ICON_RE.test(raw)) return { ok: true, value: raw };
   if (raw.length <= MAX_PHOTO_CHARS && PHOTO_RE.test(raw)) return { ok: true, value: raw };
   return { ok: false };
 }
@@ -271,6 +275,42 @@ function cleanClassField(raw, required) {
   const text = String(raw || "").trim();
   if (!text) return required ? null : "";
   return DEST_RE.test(text) ? text : null;
+}
+
+
+// the extra per-room options from the Rooms screen (color, open/closed, max passes, visibility, approvals...) are kept as
+// one small JSON object; anything unexpected is dropped. Returns a JSON string, or null when nothing is set.
+function cleanRoomSettings(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const out = {};
+  ["closed", "hidden", "maxPassesOn", "origin", "counts", "nowOn", "futureOn", "restrictEnding"].forEach((k) => {
+    if (raw[k] === true) out[k] = true;
+  });
+  if (typeof raw.color === "string" && /^#[0-9a-f]{6}$/i.test(raw.color)) out.color = raw.color.toLowerCase();
+  const n = Math.round(Number(raw.maxPasses));
+  if (Number.isFinite(n) && n >= 1 && n <= 99) out.maxPasses = n;
+  const pick = (k, allowed) => {
+    if (allowed.includes(raw[k])) out[k] = raw[k];
+  };
+  pick("travel", ["round", "oneway", "both"]);
+  pick("nowFrom", ["any", "anyroom", "allroom", "certain"]);
+  pick("nowSend", ["room", "origin", "both"]);
+  pick("futureFrom", ["any", "anyroom", "allroom", "certain"]);
+  if (Array.isArray(raw.teachers)) {
+    const list = raw.teachers.map((t) => String(t || "").replace(/\s+/g, " ").trim().slice(0, 40)).filter(Boolean).slice(0, 12);
+    if (list.length) out.teachers = list;
+  }
+  const text = JSON.stringify(out);
+  return text === "{}" ? null : text;
+}
+
+function parseRoomSettings(text) {
+  try {
+    const v = text ? JSON.parse(text) : null;
+    return v && typeof v === "object" ? v : null;
+  } catch {
+    return null;
+  }
 }
 
 function cleanTz(raw) {
@@ -689,6 +729,28 @@ function clampMinutes(value) {
   return Number.isFinite(n) ? Math.min(60, Math.max(1, n)) : 5;
 }
 
+
+// a place a teacher has closed, or one that is at its "max passes", can't be chosen by students
+async function roomBlockMessage(env, dest) {
+  const edited = await env.DB
+    .prepare("SELECT settings FROM room_overrides WHERE category_key = ? AND name = ? COLLATE NOCASE")
+    .bind(dest.categoryKey, dest.name)
+    .first();
+  let text = edited ? edited.settings : null;
+  if (!edited && dest.categoryKey === "classrooms") {
+    const row = await env.DB.prepare("SELECT settings FROM classes WHERE name = ? COLLATE NOCASE").bind(dest.name).first();
+    text = row ? row.settings : null;
+  }
+  const st = parseRoomSettings(text);
+  if (!st) return null;
+  if (st.closed) return dest.name + " is closed right now.";
+  if (st.maxPassesOn && st.maxPasses) {
+    const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM passes WHERE dest_name = ? COLLATE NOCASE AND finished_at IS NULL").bind(dest.name).first();
+    if (row && row.n >= st.maxPasses) return dest.name + " is full right now (" + st.maxPasses + " student" + (st.maxPasses === 1 ? "" : "s") + " max). Try again in a minute.";
+  }
+  return null;
+}
+
 // a student's requested minutes, also capped by the maximum time set on the class they're going to
 async function studentMinutes(env, dest, raw) {
   const minutes = clampMinutes(raw);
@@ -899,7 +961,7 @@ async function handleApi(request, env, url) {
     const student = await env.DB.prepare("SELECT request_only, daily_limit, tz_offset FROM students WHERE key = ?").bind(key).first();
     if (!student) return fail("Student not found.", 404);
     if (student.request_only) return fail("Your teacher needs to approve your passes. Send a request instead.", 403);
-    const blocked = (await limitMessage(env, key, student)) || (await studentPassBlock(env, key, { immediate: true }));
+    const blocked = (await limitMessage(env, key, student)) || (await studentPassBlock(env, key, { immediate: true })) || (await roomBlockMessage(env, dest));
     if (blocked) return fail(blocked, 403);
 
     const created = await createPass(env, key, dest, from, await studentMinutes(env, dest, body.minutes), null);
@@ -1086,10 +1148,10 @@ async function handleApi(request, env, url) {
   }
 
   if (pathname === "/api/classes" && method === "GET") {
-    const rows = await env.DB.prepare("SELECT id, name, room, logo, max_minutes FROM classes ORDER BY name COLLATE NOCASE").all();
-    const edits = await env.DB.prepare("SELECT category_key, orig_name, name, room, logo, max_minutes FROM room_overrides").all();
+    const rows = await env.DB.prepare("SELECT id, name, room, logo, max_minutes, settings FROM classes ORDER BY name COLLATE NOCASE").all();
+    const edits = await env.DB.prepare("SELECT category_key, orig_name, name, room, logo, max_minutes, settings FROM room_overrides").all();
     return json({
-      classes: rows.results.map((r) => ({ id: r.id, name: r.name, room: r.room, logo: r.logo, maxMinutes: r.max_minutes || null })),
+      classes: rows.results.map((r) => ({ id: r.id, name: r.name, room: r.room, logo: r.logo, maxMinutes: r.max_minutes || null, settings: parseRoomSettings(r.settings) })),
       overrides: edits.results.map((r) => ({
         categoryKey: r.category_key,
         origName: r.orig_name,
@@ -1097,6 +1159,7 @@ async function handleApi(request, env, url) {
         room: r.room || "",
         logo: r.logo,
         maxMinutes: r.max_minutes || null,
+        settings: parseRoomSettings(r.settings),
       })),
     });
   }
@@ -1289,7 +1352,7 @@ async function handleApi(request, env, url) {
         if (!from) return fail("Invalid pass.");
       }
       if (!dest) return fail("Pick where you're going.");
-      const blocked = await blockedFor();
+      const blocked = (await blockedFor()) || (await roomBlockMessage(env, dest));
       if (blocked) return fail(blocked, 403);
       const created = await createPass(env, student.key, dest, from, await studentMinutes(env, dest, body.minutes), null);
       if (!created) return fail("You're already on a pass.", 409);
@@ -1635,8 +1698,8 @@ async function handleApi(request, env, url) {
       if (!max.ok) return fail("The maximum time has to be between 1 and 60 minutes.");
       let id;
       try {
-        const res = await env.DB.prepare("INSERT INTO classes (name, room, logo, max_minutes, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?)")
-          .bind(name, room, logo.value, max.value, teacher.display, Date.now())
+        const res = await env.DB.prepare("INSERT INTO classes (name, room, logo, max_minutes, created_by, created_at, settings) VALUES (?, ?, ?, ?, ?, ?, ?)")
+          .bind(name, room, logo.value, max.value, teacher.display, Date.now(), cleanRoomSettings(body.settings))
           .run();
         id = res.meta.last_row_id;
       } catch (err) {
@@ -1656,8 +1719,8 @@ async function handleApi(request, env, url) {
       if (!Number.isInteger(id) || !name || room === null || !logo.ok) return fail("Invalid class.");
       if (!max.ok) return fail("The maximum time has to be between 1 and 60 minutes.");
       try {
-        await env.DB.prepare("UPDATE classes SET name = ?, room = ?, logo = ?, max_minutes = ? WHERE id = ?")
-          .bind(name, room, logo.value, max.value, id)
+        await env.DB.prepare("UPDATE classes SET name = ?, room = ?, logo = ?, max_minutes = ?, settings = ? WHERE id = ?")
+          .bind(name, room, logo.value, max.value, cleanRoomSettings(body.settings), id)
           .run();
       } catch (err) {
         if (String(err && err.message).includes("UNIQUE")) return fail("A class with that name already exists.", 409);
@@ -1678,10 +1741,10 @@ async function handleApi(request, env, url) {
       if (!ROOM_CATEGORY_KEYS.has(categoryKey) || !origName || !name || room === null || !logo.ok) return fail("Invalid place.");
       if (!max.ok) return fail("The maximum time has to be between 1 and 60 minutes.");
       await env.DB.prepare(
-        "INSERT INTO room_overrides (category_key, orig_name, name, room, logo, max_minutes) VALUES (?, ?, ?, ?, ?, ?) " +
-          "ON CONFLICT (category_key, orig_name) DO UPDATE SET name = excluded.name, room = excluded.room, logo = excluded.logo, max_minutes = excluded.max_minutes"
+        "INSERT INTO room_overrides (category_key, orig_name, name, room, logo, max_minutes, settings) VALUES (?, ?, ?, ?, ?, ?, ?) " +
+          "ON CONFLICT (category_key, orig_name) DO UPDATE SET name = excluded.name, room = excluded.room, logo = excluded.logo, max_minutes = excluded.max_minutes, settings = excluded.settings"
       )
-        .bind(categoryKey, origName, name, room, logo.value, max.value)
+        .bind(categoryKey, origName, name, room, logo.value, max.value, cleanRoomSettings(body.settings))
         .run();
       return json({ ok: true });
     }

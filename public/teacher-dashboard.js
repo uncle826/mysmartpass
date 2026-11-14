@@ -1150,6 +1150,7 @@ function setClassLogo(value) {
 }
 
 function entryIconColor(e) {
+  if (e.settings && e.settings.color) return e.settings.color;
   if (e.logo && e.logo.startsWith("preset:")) {
     const cat = CATEGORIES.find((x) => x.key === e.logo.slice(7));
     if (cat) return cat.color;
@@ -1158,6 +1159,7 @@ function entryIconColor(e) {
 }
 
 function entryIconMarkup(e) {
+  if (e.logo && e.logo.startsWith("icon:")) return libraryIconMarkup(e.logo);
   if (e.logo && e.logo.startsWith("preset:")) {
     const cat = CATEGORIES.find((x) => x.key === e.logo.slice(7));
     return cat ? categoryIconMarkup(cat) : "";
@@ -1269,7 +1271,7 @@ const ADMIN_PANEL_FOR = {
   analytics: "analytics",
   accounts: "accounts",
   rules: "rules", // reached from the Pass Limits button on Accounts
-  rooms: "places",
+  rooms: "roomgrid", // the tile grid in teacher-rooms.js
   classes: "places",
   emergency: "emergency",
   bell: "bell",

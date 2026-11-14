@@ -166,9 +166,17 @@ function categoryByKey(key) {
 
 // a room can carry its own logo (a category's icon reused, or a fully custom image) —
 // falls back to the category's default icon when it doesn't
+const ICON_LIBRARY = "https://storage.googleapis.com/sp-img-cdn/icons8-ios/";
+
+// a picture chosen from the icon library is stored as "icon:<name>"
+function libraryIconMarkup(logo) {
+  return `<img src="${ICON_LIBRARY}${logo.slice(5)}/FFFFFF.png" alt="">`;
+}
+
 function roomIconMarkup(name, categoryKey) {
   const room = FLAT_ROOMS.find((r) => r.categoryKey === categoryKey && r.name === name);
   if (room && room.logo) {
+    if (room.logo.startsWith("icon:")) return libraryIconMarkup(room.logo);
     if (room.logo.startsWith("preset:")) {
       const preset = CATEGORIES.find((c) => c.key === room.logo.slice(7));
       if (preset) return categoryIconMarkup(preset);
@@ -188,6 +196,8 @@ const BASE_ROOMS = CATEGORIES.map((c) => ({
   leaf: c.leaf ? { ...c.leaf } : null,
 }));
 
+// students never see rooms a teacher has hidden; the teacher Rooms screen sets this to false so they can still edit them
+let ROOMS_HIDE_HIDDEN = true;
 let ROOM_OVERRIDES = []; // teacher edits to built-in places: {categoryKey, origName, name, room, logo, maxMinutes}
 let CUSTOM_CLASS_LIST = []; // classes a teacher added: {name, room, logo, maxMinutes}
 let FLAT_ROOMS = [];
@@ -204,6 +214,7 @@ function rebuildFlatRooms() {
       overridden: !!r.overridden,
       origName: r.origName || r.name,
       maxMinutes: r.maxMinutes || null,
+      settings: r.settings || null,
     });
     return c.leaf ? [entry(c.leaf)] : c.rooms.map(entry);
   });
@@ -225,6 +236,7 @@ function rebuildRooms() {
         room: edit ? edit.room || "" : r.room,
         logo: edit && edit.logo ? edit.logo : null,
         maxMinutes: edit && edit.maxMinutes ? edit.maxMinutes : null,
+        settings: edit && edit.settings ? edit.settings : null,
       };
     };
     if (base.rooms) c.rooms = base.rooms.map(withEdits);
@@ -235,11 +247,12 @@ function rebuildRooms() {
   const taken = new Set(classrooms.rooms.map((r) => r.name));
   CUSTOM_CLASS_LIST.forEach((cls) => {
     if (!cls || !cls.name || taken.has(cls.name)) return;
-    classrooms.rooms.push({ name: cls.name, room: cls.room || "", logo: cls.logo || null, custom: true, maxMinutes: cls.maxMinutes || null });
+    classrooms.rooms.push({ name: cls.name, room: cls.room || "", logo: cls.logo || null, custom: true, maxMinutes: cls.maxMinutes || null, settings: cls.settings || null });
     taken.add(cls.name);
   });
 
   CATEGORIES.forEach((c) => {
+    if (c.rooms && ROOMS_HIDE_HIDDEN) c.rooms = c.rooms.filter((r) => !(r.settings && r.settings.hidden));
     if (c.rooms) c.rooms.sort(byName);
   });
   rebuildFlatRooms();
