@@ -765,3 +765,27 @@ body.fade-out {
 .cam-err.hidden {
   display: none;
 }
+
+/* ---------- login screens: copyright footer pinned to the bottom ---------- */
+
+body {
+  flex-direction: column;
+}
+
+.login-card {
+  margin: 24px auto;
+}
+
+.login-footer {
+  width: 100%;
+  padding: 16px 16px 20px;
+  color: #8794a8;
+  font-size: 13px;
+  letter-spacing: 0.2px;
+  text-align: center;
+  user-select: none;
+}
+
+.auth-links.one {
+  justify-content: center;
+}

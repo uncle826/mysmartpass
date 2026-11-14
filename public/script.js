@@ -14,7 +14,6 @@ const allViews = [loginForm, codeForm, signupForm, resetForm, passwordForm, scan
 
 // students sign in with their name, then a "Learn" password: the word Learn plus exactly 5 numbers
 const STUDENT_PASSWORD_RE = /^learn\d{5}$/i;
-let pendingStudentName = "";
 
 function showView(view) {
   allViews.forEach((v) => v.classList.add("hidden"));
@@ -59,45 +58,28 @@ loginForm.addEventListener("submit", async function (e) {
     localStorage.setItem("smartpass_teacher_token", res.data.token);
     finishSignIn(res.data.name);
   } else {
-    // students: name first, then the Learn password
-    pendingStudentName = typed;
-    clearError(passwordForm);
-    document.getElementById("learn-password").value = "";
-    showView(passwordForm);
-    document.getElementById("learn-password").focus();
+    // students: name and the Learn password on the same screen
+    const typedPassword = document.getElementById("learn-password").value.trim();
+    if (!STUDENT_PASSWORD_RE.test(typedPassword)) {
+      return showError(loginForm, "Your password is Learn followed by 5 numbers, like Learn12345.");
+    }
+    setBusy(loginForm, true);
+    const res = await apiFetch("/api/student/login", {
+      body: { name: typed, password: typedPassword, tz: tzOffset() },
+    });
+    setBusy(loginForm, false);
+    if (!res.ok) return showError(loginForm, res.data.error || "Couldn't sign in. Please try again.");
+    localStorage.setItem("smartpass_student_token", res.data.token);
+    finishSignIn(res.data.name);
   }
 });
 
-if (passwordForm) {
-  document.getElementById("password-back").addEventListener("click", (e) => {
+// there's no email to send a reset to, so a forgotten password is looked up by the teacher
+const forgotStudent = document.getElementById("forgot-password");
+if (forgotStudent) {
+  forgotStudent.addEventListener("click", (e) => {
     e.preventDefault();
-    showView(loginForm);
-    nameInput.focus();
-  });
-
-  // there's no email to send a reset to, so a forgotten password is looked up by the teacher
-  const forgotNote = document.getElementById("forgot-note");
-  document.getElementById("forgot-password").addEventListener("click", (e) => {
-    e.preventDefault();
-    forgotNote.classList.toggle("hidden");
-  });
-
-  passwordForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    clearError(passwordForm);
-    const typedPassword = document.getElementById("learn-password").value.trim();
-    if (!STUDENT_PASSWORD_RE.test(typedPassword)) {
-      return showError(passwordForm, "Your password is Learn followed by 5 numbers, like Learn12345.");
-    }
-
-    setBusy(passwordForm, true);
-    const res = await apiFetch("/api/student/login", {
-      body: { name: pendingStudentName, password: typedPassword, tz: tzOffset() },
-    });
-    setBusy(passwordForm, false);
-    if (!res.ok) return showError(passwordForm, res.data.error || "Couldn't sign in. Please try again.");
-    localStorage.setItem("smartpass_student_token", res.data.token);
-    finishSignIn(res.data.name);
+    document.getElementById("forgot-note").classList.toggle("hidden");
   });
 }
 

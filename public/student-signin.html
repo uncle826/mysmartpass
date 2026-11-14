@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=30">
+<link rel="stylesheet" href="style.css?v=32">
 </head>
 <body data-role="student">
   <div class="login-card">
@@ -29,15 +29,24 @@
     </div>
 
     <form id="login-form">
-      <label for="name" class="field-label">Enter Name</label>
-      <input type="text" id="name" name="name" placeholder="Name" autocomplete="name" required>
+      <label for="name" class="field-label">Name</label>
+      <input type="text" id="name" name="name" class="text-input" placeholder="Name" autocomplete="name" required>
+
+      <label for="learn-password" class="field-label">Password</label>
+      <input type="password" id="learn-password" name="learn-password" class="text-input" placeholder="Password" maxlength="10" autocomplete="off" autocapitalize="off" spellcheck="false" required>
+      <p class="password-hint">Learn followed by 5 numbers, like Learn12345.<br>First time? Pick one in that style and remember it.</p>
+
       <p class="auth-error hidden" role="alert"></p>
-      <button type="submit" class="next-btn">Next</button>
+      <button type="submit" class="next-btn">Sign In</button>
       <div class="or-row"><span>or</span></div>
       <button type="button" class="id-btn" id="id-signin-btn">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="11" r="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5.8 16c.5-1.4 1.6-2 3.2-2s2.7.6 3.2 2M14.5 10h3.5M14.5 13.5h3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         Sign in with ID card
       </button>
+      <div class="auth-links one">
+        <a href="#" class="auth-link" id="forgot-password">Forgot password?</a>
+      </div>
+      <p class="auth-note hidden" id="forgot-note" role="status">Ask your teacher for your password. They can look it up on their dashboard, then come back and type it in.</p>
       <a href="/teacher-signin" class="switch-link">Are you a teacher? Sign in here</a>
     </form>
 
@@ -59,17 +68,6 @@
       <a href="#" class="switch-link" id="scan-back">Back to sign in</a>
     </div>
 
-    <form id="password-form" class="hidden" autocomplete="off">
-      <label for="learn-password" class="field-label">Enter Password</label>
-      <input type="password" id="learn-password" name="learn-password" class="text-input" placeholder="Password" maxlength="10" autocomplete="off" autocapitalize="off" spellcheck="false" required>
-      <p class="password-hint">Learn followed by 5 numbers, like Learn12345.<br>First time? Pick one in that style and remember it.</p>
-      <p class="auth-error hidden" role="alert"></p>
-      <button type="submit" class="next-btn">Next</button>
-      <a href="#" class="switch-link forgot-link" id="forgot-password">Forgot password?</a>
-      <p class="auth-note hidden" id="forgot-note" role="status">Ask your teacher for your password. They can look it up on their dashboard, then come back and type it in.</p>
-      <a href="#" class="switch-link back-link" id="password-back">Not you? Go back</a>
-    </form>
-
     <div class="loading-view hidden" id="loading-view">
       <div class="spinner"></div>
       <p class="loading-text" id="loading-text">Setting things up&hellip;</p>
@@ -87,6 +85,8 @@
       </button>
     </div>
   </div>
+
+  <footer class="login-footer">&copy; Copyright Uncle Joe's SmartPass 2026</footer>
 
 <!-- shown when the browser has blocked the camera: how to turn it back on -->
 <div id="cam-banner" class="cam-banner hidden" role="alert">
@@ -109,8 +109,8 @@
   </div>
 </div>
 
-<script src="api.js?v=30"></script>
-<script src="scan39.js?v=30"></script>
-<script src="script.js?v=30"></script>
+<script src="api.js?v=31"></script>
+<script src="scan39.js?v=31"></script>
+<script src="script.js?v=31"></script>
 </body>
 </html>
