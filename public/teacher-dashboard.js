@@ -1270,6 +1270,7 @@ const ADMIN_PANEL_FOR = {
   dashboard: "dashboard",
   analytics: "analytics",
   accounts: "accounts",
+  attendance: "attendance", // built by teacher-attendance.js
   accountdates: "accountdates", // built by teacher-dates.js
   rules: "rules", // reached from the Pass Limits button on Accounts
   rooms: "roomgrid", // the tile grid in teacher-rooms.js

@@ -27,6 +27,8 @@ const MIGRATIONS = [
   "ALTER TABLE students ADD COLUMN grade TEXT",
   "ALTER TABLE classes ADD COLUMN settings TEXT",
   "ALTER TABLE room_overrides ADD COLUMN settings TEXT",
+  "ALTER TABLE passes ADD COLUMN kind TEXT",
+  "ALTER TABLE passes ADD COLUMN reason TEXT",
 ];
 
 // "Learn" followed by exactly five digits (the word itself can be typed in any case)
@@ -313,6 +315,20 @@ function parseRoomSettings(text) {
   }
 }
 
+
+// why a student is late to class: a short line of text
+function cleanReason(raw) {
+  const t = String(raw || "").replace(/[\u0000-\u001F\u007F]/g, "").replace(/\s+/g, " ").trim();
+  return t.length >= 2 && t.length <= 140 ? t : null;
+}
+
+// how long a student has to get to class on a "pass to class" (set on the teacher's Attendance page)
+async function classPassMinutes(env) {
+  const row = await env.DB.prepare("SELECT v FROM app_meta WHERE k = 'class_pass_minutes'").first();
+  const n = Math.round(Number(row && row.v));
+  return Number.isFinite(n) && n >= 1 && n <= 15 ? n : 3;
+}
+
 function cleanTz(raw) {
   const n = Number(raw);
   return Number.isInteger(n) && n >= -840 && n <= 840 ? n : null;
@@ -454,6 +470,8 @@ function activeFromRow(row) {
     endTime: row.end_time,
     createdBy: row.created_by || null,
     message: row.message || null,
+    kind: row.kind || null,
+    reason: row.reason || null,
     bounce: !!row.bounce,
     bounceSpeed: row.bounce_speed || 42,
   };
@@ -473,6 +491,8 @@ function logFromRow(row) {
     // where it started and, when a teacher sent the pass, which teacher
     from: row.from_name ? { name: row.from_name, room: row.from_room || "", categoryKey: row.from_category } : null,
     createdBy: row.created_by || null,
+    kind: row.kind || null,
+    reason: row.reason || null,
   };
 }
 
@@ -670,6 +690,7 @@ async function studentState(env, key) {
     studentId,
     grade: student.grade || null,
     emergency: rules.emergency,
+    classPassMinutes: await classPassMinutes(env),
     cooldownUntil: readyAt && readyAt > now ? readyAt : null,
     hallwayFull,
     name: student.name,
@@ -687,12 +708,12 @@ async function studentState(env, key) {
   };
 }
 
-async function createPass(env, key, dest, from, minutes, createdBy, message = null, bounce = false) {
+async function createPass(env, key, dest, from, minutes, createdBy, message = null, bounce = false, kind = null, reason = null) {
   const start = Date.now();
   const end = start + minutes * 60000;
   try {
     await env.DB.prepare(
-      "INSERT INTO passes (student_key, dest_name, dest_room, dest_category, from_name, from_room, from_category, start_time, end_time, created_by, message, bounce) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      "INSERT INTO passes (student_key, dest_name, dest_room, dest_category, from_name, from_room, from_category, start_time, end_time, created_by, message, bounce, kind, reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
       .bind(
         key,
@@ -706,7 +727,9 @@ async function createPass(env, key, dest, from, minutes, createdBy, message = nu
         end,
         createdBy,
         message,
-        bounce ? 1 : 0
+        bounce ? 1 : 0,
+        kind,
+        reason
       )
       .run();
     // making a pass (by the student, a teacher, or an approved request) brings a removed student back into view
@@ -968,6 +991,29 @@ async function handleApi(request, env, url) {
     if (blocked) return fail(blocked, 403);
 
     const created = await createPass(env, key, dest, from, await studentMinutes(env, dest, body.minutes), null);
+    if (!created) return fail("You're already on a pass.", 409);
+    await env.DB.prepare("UPDATE pass_requests SET status = 'cancelled' WHERE student_key = ? AND status = 'pending'").bind(key).run();
+    return json(await studentState(env, key));
+  }
+
+  // "pass to class": a late student picks where they're coming from and which teacher's class they're going to, and says why
+  if (pathname === "/api/student/pass/class" && method === "POST") {
+    const body = await readBody(request);
+    const name = cleanName(body.name);
+    const key = name && keyOf(name);
+    const dest = cleanDest(body.dest);
+    const from = cleanDest(body.from);
+    const reason = cleanReason(body.reason);
+    if (!key || !dest || !from) return fail("Pick where you're coming from and which class you're going to.");
+    if (dest.name.toLowerCase() === from.name.toLowerCase()) return fail("You're already there. Pick a different class to go to.");
+    if (!reason) return fail("Tell us why you're late (a few words is fine).");
+    const student = await env.DB.prepare("SELECT key FROM students WHERE key = ?").bind(key).first();
+    if (!student) return fail("Student not found.", 404);
+    const rules = await loadRules(env);
+    if (rules.emergency) return fail("Emergency mode is on. Passes are paused right now.", 403);
+
+    const minutes = await classPassMinutes(env);
+    const created = await createPass(env, key, dest, from, minutes, null, "Late to class: " + reason, false, "class", reason);
     if (!created) return fail("You're already on a pass.", 409);
     await env.DB.prepare("UPDATE pass_requests SET status = 'cancelled' WHERE student_key = ? AND status = 'pending'").bind(key).run();
     return json(await studentState(env, key));
@@ -1853,6 +1899,45 @@ async function handleApi(request, env, url) {
       const base = Math.max(active.end_time, Date.now());
       await env.DB.prepare("UPDATE passes SET end_time = ? WHERE student_key = ? AND finished_at IS NULL").bind(base + minutes * 60000, key).run();
       return json({ ok: true, endTime: base + minutes * 60000, serverNow: Date.now() });
+    }
+
+
+    // Attendance: every "pass to class" (late arrivals), newest first, with where from, why, and when they got there
+    if (pathname === "/api/teacher/attendance" && method === "GET") {
+      const rows = await env.DB
+        .prepare(
+          "SELECT p.id, p.student_key, p.dest_name, p.dest_room, p.dest_category, p.from_name, p.from_room, p.from_category, p.start_time, p.end_time, p.finished_at, p.overtime, p.reason, s.name, s.photo, s.avatar_color, s.grade, s.student_id FROM passes p JOIN students s ON s.key = p.student_key WHERE p.kind = 'class' ORDER BY p.id DESC LIMIT 1000"
+        )
+        .all();
+      const now = Date.now();
+      return json({
+        serverNow: now,
+        minutes: await classPassMinutes(env),
+        records: rows.results.map((r) => ({
+          id: r.id,
+          key: r.student_key,
+          name: r.name,
+          photo: r.photo || null,
+          avatarColor: r.avatar_color,
+          grade: r.grade || null,
+          studentId: r.student_id || null,
+          to: { name: r.dest_name, room: r.dest_room || "", categoryKey: r.dest_category },
+          from: r.from_name ? { name: r.from_name, room: r.from_room || "", categoryKey: r.from_category } : null,
+          reason: r.reason || "",
+          startTime: r.start_time,
+          plannedEnd: r.end_time,
+          arrivedAt: r.finished_at || null,
+          overtime: r.finished_at ? !!r.overtime : now > r.end_time,
+        })),
+      });
+    }
+
+    if (pathname === "/api/teacher/attendance/settings" && method === "POST") {
+      const body = await readBody(request);
+      const minutes = Math.round(Number(body.minutes));
+      if (!Number.isFinite(minutes) || minutes < 1 || minutes > 15) return fail("The countdown has to be 1 to 15 minutes.");
+      await setMeta(env, "class_pass_minutes", minutes);
+      return json({ ok: true, minutes });
     }
 
     // when everyone signed up for SmartPass (Admin > Account Creation Dates)

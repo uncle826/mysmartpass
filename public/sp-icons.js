@@ -19,6 +19,7 @@
     ['.t-side-item[data-settings-tab="bell"]', "alarm-clock"],
     ['.t-side-item[data-settings-tab="accounts"]', "teamwork"],
     ['.t-side-item[data-settings-tab="accountdates"]', "date-to"],
+    ['.t-side-item[data-settings-tab="attendance"]', "clipboard"],
     ['.t-side-item[data-settings-tab="rooms"]', "classroom"],
     ['.t-side-item[data-settings-tab="classes"]', "picture"],
     ['.t-side-item[data-settings-tab="flex"]', "timetable"],

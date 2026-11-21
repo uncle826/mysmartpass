@@ -868,6 +868,7 @@ function updateActivePassTimer(endTime) {
 }
 
 let currentPass = null;
+let classPassMinutesNow = 3; // how long a "pass to class" lasts (set by the teacher)
 
 const activePassMessage = document.getElementById("active-pass-message");
 const TEACHER_FROM_ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.6" fill="#fff"/><path d="M4.2 20c0-4.4 3.5-6.8 7.8-6.8s7.8 2.4 7.8 6.8" fill="#fff"/></svg>';
@@ -1301,6 +1302,7 @@ function applyServerState(state) {
   document.getElementById("emergency-banner").classList.toggle("hidden", !rules.emergency);
   document.body.classList.toggle("has-emergency", rules.emergency); // pushes the page down so the banner doesn't cover the top bar
 
+  classPassMinutesNow = state.classPassMinutes || 3;
   logCache = state.log || [];
   renderNotifications();
 
@@ -1311,6 +1313,8 @@ function applyServerState(state) {
 
   const a = state.active;
   if (a) {
+    const subtitle = document.querySelector(".pass-card-subtitle");
+    if (subtitle) subtitle.textContent = a.kind === "class" ? "Pass to class" : "Round-trip";
     if (!currentPass || currentPass.startTime !== a.startTime) {
       if (!overlay.classList.contains("hidden")) closeModal();
       startActivePass(a.room, a.endTime, a.from, a.startTime, a.message, a.createdBy);

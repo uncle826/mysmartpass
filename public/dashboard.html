@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="features.css?v=42">
 <link rel="stylesheet" href="tour.css?v=36">
 <link rel="stylesheet" href="student-features.css?v=42">
+<link rel="stylesheet" href="student-classpass.css?v=45">
 </head>
 <body data-tour="student">
 
@@ -218,8 +219,16 @@
 
   <main class="flex-student hidden" id="flex-page">
     <div class="fs-inner">
-      <h1 class="fs-title">Flex</h1>
-      <p class="fs-sub">Pick activities to sign up for. If a teacher adds you to one, you can't leave it.</p>
+      <div class="fs-head">
+        <div>
+          <h1 class="fs-title">Flex</h1>
+          <p class="fs-sub">Pick activities to sign up for. If a teacher adds you to one, you can't leave it.</p>
+        </div>
+        <button type="button" class="btn btn-primary fs-class-btn" id="class-pass-btn">
+          <svg viewBox="0 0 24 24" class="btn-icon" aria-hidden="true"><path d="M5 20V5.5A1.5 1.5 0 0 1 6.5 4h8A1.5 1.5 0 0 1 16 5.5V20M3.5 20h17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="13" cy="12.5" r="1" fill="currentColor"/><path d="M18 9.5l2.5 2.5-2.5 2.5M20.5 12H17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Pass to Class
+        </button>
+      </div>
       <p class="fs-error hidden" id="fs-error" role="alert"></p>
       <div id="fs-list"></div>
     </div>
@@ -400,14 +409,15 @@
     </div>
   </div>
 
-<script src="api.js?v=42"></script>
+<script src="api.js?v=45"></script>
 <script src="rooms.js?v=37"></script>
-<script src="dashboard.js?v=42"></script>
+<script src="dashboard.js?v=45"></script>
 <script src="calendar.js?v=42"></script>
 <script src="bell.js?v=27"></script>
 <script src="idcard.js?v=27"></script>
 <script src="student-extras.js?v=27"></script>
-<script src="sp-icons.js?v=42"></script>
+<script src="student-classpass.js?v=45"></script>
+<script src="sp-icons.js?v=45"></script>
 <script src="tour.js?v=36"></script>
 </body>
 </html>
