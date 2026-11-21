@@ -250,61 +250,18 @@
   }
 }
 
-/* ---------- active pass: a raised End Pass button and deeper shade around the pass ---------- */
-
-.pass-card {
-  box-shadow:
-    0 1.4em 3.4em rgba(8, 12, 30, 0.46),
-    0 0.45em 1em rgba(8, 12, 30, 0.28),
-    0 0 0 1px rgba(0, 0, 0, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    inset 0 -3.2em 4em -2.4em rgba(0, 0, 0, 0.24);
-}
+/* End Pass: same flat look as before, with a soft light around its edges so it is not just a rounded box with a line */
 
 .pass-end-btn {
-  position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  border-bottom-color: rgba(255, 255, 255, 0.28);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.44) 0%, rgba(255, 255, 255, 0.2) 100%);
   box-shadow:
-    0 0.22em 0 rgba(0, 0, 0, 0.28),
-    0 0.55em 1em rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    inset 0 -0.18em 0.35em rgba(0, 0, 0, 0.12);
-  color: #ffffff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  cursor: pointer;
-  transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.15s ease, filter 0.15s ease;
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 0 0.9em rgba(255, 255, 255, 0.2),
+    0 0 0.7em rgba(255, 255, 255, 0.14);
 }
 
 .pass-end-btn:hover {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.54) 0%, rgba(255, 255, 255, 0.28) 100%);
-  transform: translateY(-1px);
-}
-
-.pass-end-btn:active {
-  transform: translateY(0.18em);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.16) 100%);
   box-shadow:
-    0 0.04em 0 rgba(0, 0, 0, 0.28),
-    0 0.15em 0.4em rgba(0, 0, 0, 0.28),
-    inset 0 0.18em 0.45em rgba(0, 0, 0, 0.22);
-}
-
-.pass-end-btn:focus-visible {
-  outline: 3px solid rgba(255, 255, 255, 0.85);
-  outline-offset: 3px;
-}
-
-.pass-end-btn:disabled {
-  filter: saturate(0.6);
-  opacity: 0.7;
-  cursor: default;
-}
-
-.pass-stats {
-  box-shadow:
-    0 0.6em 1.8em rgba(8, 12, 30, 0.3),
-    0 0.15em 0.4em rgba(8, 12, 30, 0.16),
-    0 0 0 1px rgba(31, 25, 94, 0.05);
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    inset 0 0 1em rgba(255, 255, 255, 0.28),
+    0 0 0.9em rgba(255, 255, 255, 0.2);
 }
