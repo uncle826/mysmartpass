@@ -470,6 +470,9 @@ function logFromRow(row) {
     endTime: row.finished_at,
     overtime: !!row.overtime,
     message: row.message || null,
+    // where it started and, when a teacher sent the pass, which teacher
+    from: row.from_name ? { name: row.from_name, room: row.from_room || "", categoryKey: row.from_category } : null,
+    createdBy: row.created_by || null,
   };
 }
 
@@ -1837,6 +1840,41 @@ async function handleApi(request, env, url) {
       if (!KEY_RE.test(key)) return fail("Invalid request.");
       await endPass(env, key);
       return json({ ok: true, serverNow: Date.now() });
+    }
+
+    // give a student more time on the pass they're on (counts from now if they've already run over)
+    if (pathname === "/api/teacher/pass/extend" && method === "POST") {
+      const body = await readBody(request);
+      const key = String(body.key || "");
+      const minutes = Math.round(Number(body.minutes));
+      if (!KEY_RE.test(key) || !Number.isFinite(minutes) || minutes < 1 || minutes > 60) return fail("Pick between 1 and 60 minutes.");
+      const active = await env.DB.prepare("SELECT end_time FROM passes WHERE student_key = ? AND finished_at IS NULL").bind(key).first();
+      if (!active) return fail("That student isn't on a pass right now.", 409);
+      const base = Math.max(active.end_time, Date.now());
+      await env.DB.prepare("UPDATE passes SET end_time = ? WHERE student_key = ? AND finished_at IS NULL").bind(base + minutes * 60000, key).run();
+      return json({ ok: true, endTime: base + minutes * 60000, serverNow: Date.now() });
+    }
+
+    // when everyone signed up for SmartPass (Admin > Account Creation Dates)
+    if (pathname === "/api/teacher/accounts" && method === "GET") {
+      const students = await env.DB
+        .prepare("SELECT key, name, avatar_color, photo, student_id, grade, hidden, created_at FROM students ORDER BY created_at DESC")
+        .all();
+      const teachers = await env.DB.prepare("SELECT username, display, created_at FROM teachers ORDER BY created_at DESC").all();
+      return json({
+        serverNow: Date.now(),
+        students: students.results.map((s) => ({
+          key: s.key,
+          name: s.name,
+          avatarColor: s.avatar_color,
+          photo: s.photo || null,
+          studentId: s.student_id || null,
+          grade: s.grade || null,
+          hidden: !!s.hidden,
+          createdAt: s.created_at,
+        })),
+        teachers: teachers.results.map((t) => ({ name: t.display, createdAt: t.created_at })),
+      });
     }
   }
 

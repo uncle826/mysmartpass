@@ -45,6 +45,8 @@ function calendarEvents() {
     start: p.startTime,
     end: Math.max(p.endTime || p.plannedEnd, p.startTime + 60000),
     overtime: p.overtime,
+    from: p.from,
+    createdBy: p.createdBy,
   }));
   scheduledCache.forEach((s) =>
     events.push({
@@ -54,6 +56,7 @@ function calendarEvents() {
       categoryKey: s.dest.categoryKey,
       start: s.scheduledFor,
       end: s.scheduledFor + s.minutes * 60000,
+      from: s.from,
     })
   );
   if (currentPass) {
@@ -63,6 +66,8 @@ function calendarEvents() {
       categoryKey: currentPass.room.categoryKey,
       start: currentPass.startTime,
       end: Math.max(currentPass.endTime, serverTime()),
+      from: currentPass.from,
+      createdBy: currentPass.createdBy,
     });
   }
   return events;
@@ -137,7 +142,7 @@ function renderDayList(events) {
           <span class="notif-icon" style="background:${category.color}">${roomIconMarkup(e.name, e.categoryKey)}</span>
           <div class="notif-info">
             <span class="notif-name">${escapeHtml(e.name)}</span>
-            <span class="notif-meta">${clockText(e.start)} · ${status}</span>
+            <span class="notif-meta">${clockText(e.start)} · ${status}${passWhoMarkup(e)}</span>
           </div>
           ${cancel}
         </div>`;
@@ -198,7 +203,7 @@ function renderWeekGrid(events) {
           const category = categoryByKey(e.categoryKey);
           const top = ((e.start - dayStart) / 3600000) * HOUR_PX;
           const height = Math.max(22, ((e.end - e.start) / 3600000) * HOUR_PX);
-          return `<div class="cal-event ${e.kind}" style="top:${top}px;height:${height}px;--c:${category.color}" title="${escapeHtml(e.name)} · ${clockText(e.start)}">
+          return `<div class="cal-event ${e.kind}" style="top:${top}px;height:${height}px;--c:${category.color}" title="${escapeHtml(e.name + " · " + clockText(e.start) + passWhoText(e))}">
             <b>${escapeHtml(e.name)}</b><span>${clockText(e.start)}</span>
           </div>`;
         })

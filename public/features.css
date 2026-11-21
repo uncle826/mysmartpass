@@ -318,3 +318,9 @@
     gap: 6mm;
   }
 }
+
+/* the sending teacher in a pass line ("sent by Mr. Smith") */
+.pass-by {
+  color: #1f195e;
+  font-weight: 600;
+}

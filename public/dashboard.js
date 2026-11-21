@@ -1163,7 +1163,7 @@ function renderNotifications(force) {
           <span class="notif-icon" style="background:${category.color}">${roomIconMarkup(p.name, p.categoryKey)}</span>
           <div class="notif-info">
             <span class="notif-name">${escapeHtml(p.name)}</span>
-            <span class="notif-meta">${formatClockTime(p.startTime)} · ${duration}${overtimeTag}</span>
+            <span class="notif-meta">${formatClockTime(p.startTime)} · ${duration}${overtimeTag}${passWhoMarkup(p)}</span>
           </div>
         </div>`;
     })

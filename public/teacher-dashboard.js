@@ -574,7 +574,7 @@ function renderDetail(animate = true) {
             <span class="notif-icon" style="background:${cat.color}">${roomIconMarkup(p.name, p.categoryKey)}</span>
             <div class="notif-info">
               <span class="notif-name">${escapeHtml(p.name)}</span>
-              <span class="notif-meta">${timeOfDay(p.startTime)} · ${formatDuration(p.endTime - p.startTime)}${tag}</span>
+              <span class="notif-meta">${timeOfDay(p.startTime)} · ${formatDuration(p.endTime - p.startTime)}${tag}${passWhoMarkup(p)}</span>
             </div>
             <button type="button" class="t-delete-btn" data-delete-id="${p.id}" title="Delete this entry" aria-label="Delete this pass from history">
               <svg viewBox="0 0 24 24"><path d="M4 7h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 11v6M14 11v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -1270,6 +1270,7 @@ const ADMIN_PANEL_FOR = {
   dashboard: "dashboard",
   analytics: "analytics",
   accounts: "accounts",
+  accountdates: "accountdates", // built by teacher-dates.js
   rules: "rules", // reached from the Pass Limits button on Accounts
   rooms: "roomgrid", // the tile grid in teacher-rooms.js
   classes: "places",

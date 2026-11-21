@@ -120,3 +120,19 @@ function showToast(message, kind = "info", action = null) {
   requestAnimationFrame(() => toast.classList.add("show"));
   dismissTimer = setTimeout(dismiss, action ? 6000 : 4200);
 }
+
+// the "from Room 204 · sent by Mr. Smith" part of the line under a pass in lists and calendars
+function passWhoMarkup(p) {
+  const bits = [];
+  if (p && p.from && p.from.name) bits.push(`from ${escapeHtml(p.from.name)}`);
+  if (p && p.createdBy) bits.push(`sent by <b class="pass-by">${escapeHtml(p.createdBy)}</b>`);
+  return bits.length ? ` &middot; ${bits.join(" &middot; ")}` : "";
+}
+
+// the same thing as plain text, for hover tooltips
+function passWhoText(p) {
+  const bits = [];
+  if (p && p.from && p.from.name) bits.push(`from ${p.from.name}`);
+  if (p && p.createdBy) bits.push(`sent by ${p.createdBy}`);
+  return bits.length ? ` · ${bits.join(" · ")}` : "";
+}

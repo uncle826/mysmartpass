@@ -1,0 +1,751 @@
+/* Hall Monitor tiles + the pass box (SmartPass style), and the Account Creation Dates screen. */
+
+/* ---------- Hall Monitor tiles ---------- */
+
+#hall-grid,
+#hall-requests {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 163px);
+  gap: 14px;
+  justify-content: start;
+}
+
+.hc-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 163px;
+  height: 217px;
+  padding: 0;
+  overflow: hidden;
+  border: none;
+  border-radius: 10px;
+  background: radial-gradient(circle at 73% 71%, var(--c1), var(--c2));
+  box-shadow: 0 3px 8px rgba(16, 20, 40, 0.16), 0 1px 2px rgba(16, 20, 40, 0.12);
+  color: #ffffff;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.hc-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 26px rgba(16, 20, 40, 0.24), 0 2px 4px rgba(16, 20, 40, 0.12);
+}
+
+.hc-card:active {
+  transform: translateY(-1px) scale(0.985);
+}
+
+.hc-card:focus-visible {
+  outline: 3px solid #1f195e;
+  outline-offset: 3px;
+}
+
+.hc-enter {
+  animation: hcIn 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.1) backwards;
+}
+
+.hc-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  min-height: 0;
+  padding: 11px 8px 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: inherit;
+}
+
+.hc-avatar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 100px;
+  height: 100px;
+  border: 3px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22) center / cover no-repeat;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  color: #ffffff;
+  font-size: 44px;
+  font-weight: 700;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.hc-avatar.sm {
+  width: 40px;
+  height: 40px;
+  border-width: 2px;
+  font-size: 18px;
+  box-shadow: none;
+}
+
+.hc-name {
+  max-width: 100%;
+  margin-top: 9px;
+  overflow: hidden;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+  white-space: nowrap;
+}
+
+.hc-dest {
+  max-width: 100%;
+  margin-top: 3px;
+  overflow: hidden;
+  font-size: 14px;
+  opacity: 0.92;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hc-request .hc-avatar {
+  width: 80px;
+  height: 80px;
+  font-size: 36px;
+}
+
+.hc-request .hc-main {
+  padding-top: 10px;
+}
+
+.hc-ask {
+  margin-top: 5px;
+  padding: 1px 9px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.24);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.hc-time {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  height: 46px;
+  background: var(--c2);
+  box-shadow: inset 0 0 0 999px rgba(255, 255, 255, 0.17);
+  font-size: 16px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.hc-card.overtime {
+  box-shadow: 0 0 0 2px #e2443a, 0 8px 20px rgba(226, 68, 58, 0.38);
+}
+
+.hc-card.overtime .hc-time {
+  background: #e2443a;
+  box-shadow: none;
+  font-weight: 700;
+  animation: hcPulse 1.6s ease-in-out infinite;
+}
+
+.hc-request .hc-main {
+  cursor: pointer;
+}
+
+.hc-actions {
+  display: flex;
+  flex-shrink: 0;
+  height: 46px;
+}
+
+.hc-actions button {
+  flex: 1;
+  border: none;
+  font: 700 14px Inter, "Segoe UI", Arial, sans-serif;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.hc-deny {
+  background: rgba(0, 0, 0, 0.24);
+  color: #ffffff;
+}
+
+.hc-approve {
+  background: rgba(255, 255, 255, 0.94);
+  color: #0c6b49;
+}
+
+.hc-actions button:hover {
+  filter: brightness(1.08);
+}
+
+.hc-actions button:disabled {
+  opacity: 0.6;
+}
+
+/* ---------- the pass box ---------- */
+
+.hp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(10, 16, 40, 0.58);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  animation: hpFade 0.2s ease;
+  transition: opacity 0.17s ease;
+}
+
+.hp-overlay.leaving {
+  opacity: 0;
+}
+
+.hp-card {
+  position: relative;
+  box-sizing: border-box;
+  width: min(410px, 100%);
+  max-height: calc(100vh - 40px);
+  padding: 24px 28px 20px;
+  overflow-y: auto;
+  border-radius: 18px;
+  background: radial-gradient(circle at 80% 88%, var(--c2), var(--c1) 88%);
+  box-shadow: 0 34px 90px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.25), inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  animation: hpPop 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.15);
+}
+
+.hp-x {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  font-size: 21px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.hp-x:hover {
+  background: rgba(255, 255, 255, 0.36);
+}
+
+.hp-who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-right: 40px;
+}
+
+.hp-who b {
+  display: block;
+  font-size: 15px;
+}
+
+.hp-who em {
+  display: block;
+  font-size: 12.5px;
+  font-style: normal;
+  opacity: 0.85;
+}
+
+.hp-dest-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.hp-dest-ic {
+  display: flex;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+}
+
+.hp-dest-ic img,
+.hp-dest-ic svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.hp-dest-ic .room-logo-img {
+  border-radius: 50%;
+}
+
+.hp-dest-row h2 {
+  margin: 0;
+  overflow: hidden;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hp-from {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.hp-from i {
+  flex: 1;
+  min-width: 14px;
+  height: 2px;
+  border-radius: 1px;
+  background: rgba(255, 255, 255, 0.42);
+}
+
+.hp-from-word {
+  opacity: 0.9;
+}
+
+.hp-from-chip {
+  padding: 4px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.24);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.hp-msg {
+  margin: 12px 0 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 14px;
+}
+
+.hp-ring {
+  position: relative;
+  width: 210px;
+  height: 210px;
+  margin: 16px auto 20px;
+}
+
+.hp-ring svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.hp-ring circle {
+  fill: none;
+  stroke-width: 12;
+}
+
+.hp-track {
+  stroke: rgba(255, 255, 255, 0.3);
+}
+
+.hp-prog {
+  stroke: #ffffff;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s linear;
+}
+
+.hp-ring-in {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.hp-ring-in img {
+  height: 46px;
+  opacity: 0.7;
+}
+
+.hp-ring-in b {
+  font-size: 32px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.hp-ring-in small {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.hp-card.overtime .hp-prog {
+  stroke: #ffd2cd;
+}
+
+.hp-card.overtime .hp-ring-in b {
+  animation: hcPulseText 1.4s ease-in-out infinite;
+}
+
+.hp-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.hp-actions.hidden,
+.hp-more.hidden {
+  display: none;
+}
+
+.hp-btn {
+  flex: 1;
+  height: 58px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 6px 14px rgba(0, 0, 0, 0.18);
+  color: #ffffff;
+  font: 700 18px Inter, "Segoe UI", Arial, sans-serif;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.hp-btn:hover {
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.hp-btn:active {
+  transform: scale(0.97);
+}
+
+.hp-btn:disabled {
+  opacity: 0.6;
+}
+
+.hp-end {
+  border-color: rgba(255, 255, 255, 0.9);
+  background: #ffffff;
+  color: var(--c1);
+}
+
+.hp-end:hover {
+  background: #f3f6fb;
+}
+
+.hp-more p {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.hp-chips {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.hp-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 66px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 5px 12px rgba(0, 0, 0, 0.16);
+  color: #ffffff;
+  font: 700 22px Inter, "Segoe UI", Arial, sans-serif;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.hp-chip small {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.9;
+}
+
+.hp-chip:hover {
+  background: rgba(255, 255, 255, 0.36);
+}
+
+.hp-chip:active {
+  transform: scale(0.95);
+}
+
+.hp-back {
+  display: block;
+  margin: 12px auto 0;
+  padding: 6px 14px;
+  border: none;
+  background: none;
+  color: rgba(255, 255, 255, 0.9);
+  font: 600 14px Inter, "Segoe UI", Arial, sans-serif;
+  cursor: pointer;
+}
+
+.hp-links {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+
+.hp-links button {
+  padding: 4px 2px;
+  border: none;
+  background: none;
+  color: rgba(255, 255, 255, 0.88);
+  font: 600 13.5px Inter, "Segoe UI", Arial, sans-serif;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.hp-links button:hover {
+  color: #ffffff;
+}
+
+/* ---------- Account Creation Dates ---------- */
+
+.ad-card {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 24px 28px 28px;
+  border: 1px solid rgba(31, 25, 94, 0.07);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(16, 20, 24, 0.05), 0 8px 24px -10px rgba(16, 20, 24, 0.12);
+}
+
+.ad-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.ad-stats > div {
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #f5f6f8;
+}
+
+.ad-stats b {
+  display: block;
+  color: #1f195e;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.ad-stats span {
+  color: #7083a0;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ad-range {
+  margin: 14px 2px 0;
+  color: #7083a0;
+  font-size: 14px;
+}
+
+.ad-range b {
+  color: #1f195e;
+  font-weight: 600;
+}
+
+.ad-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 6px;
+}
+
+.ad-seg {
+  margin-top: 0;
+}
+
+.ad-search {
+  flex: 1;
+  min-width: 160px;
+  height: 38px;
+  padding: 0 14px;
+  border: 1.6px solid transparent;
+  border-radius: 19px;
+  background: #eef0f4;
+  color: #1f195e;
+  font: 400 14px Inter, "Segoe UI", Arial, sans-serif;
+  outline: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.ad-search:focus {
+  border-color: #00b476;
+  background: #ffffff;
+}
+
+.ad-btn {
+  height: 38px;
+  padding: 0 16px;
+  border: 1px solid rgba(31, 25, 94, 0.14);
+  border-radius: 8px;
+  background: #ffffff;
+  color: #4e5d74;
+  font: 600 13.5px Inter, "Segoe UI", Arial, sans-serif;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.ad-btn:hover {
+  border-color: rgba(31, 25, 94, 0.28);
+  background: #f5f6f8;
+}
+
+.ad-day {
+  margin: 22px 0 8px;
+  color: #4e5d74;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.ad-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto 110px;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 6px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #f8f9fb;
+  animation: hcIn 0.35s ease backwards;
+  animation-delay: calc(var(--i, 0) * 25ms);
+}
+
+.ad-row:hover {
+  background: #f1f3f7;
+}
+
+.ad-avatar {
+  width: 40px;
+  height: 40px;
+  font-size: 17px;
+}
+
+.ad-who {
+  min-width: 0;
+}
+
+.ad-who b {
+  display: block;
+  overflow: hidden;
+  color: #1f195e;
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ad-who span {
+  color: #7083a0;
+  font-size: 12.5px;
+}
+
+.ad-when {
+  text-align: right;
+}
+
+.ad-when b {
+  display: block;
+  color: #1f195e;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ad-when span {
+  color: #7083a0;
+  font-size: 12.5px;
+}
+
+.ad-ago {
+  color: #00946a;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.ad-empty {
+  margin: 28px 0;
+  color: #7083a0;
+  font-size: 15px;
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .ad-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ad-row {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+  }
+
+  .ad-ago {
+    display: none;
+  }
+}
+
+/* ---------- motion ---------- */
+
+@keyframes hcIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes hcPulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.18); }
+}
+
+@keyframes hcPulseText {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}
+
+@keyframes hpFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes hpPop {
+  from { opacity: 0; transform: translateY(14px) scale(0.95); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-card,
+  .hp-overlay,
+  .hp-card,
+  .ad-row {
+    animation: none;
+  }
+
+  .hp-prog {
+    transition: none;
+  }
+}

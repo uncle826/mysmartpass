@@ -51,10 +51,10 @@ function tcEvents() {
   const now = serverTime();
   students.forEach((s) => {
     s.log.forEach((p) =>
-      events.push({ kind: "past", who: s.name, name: p.name, categoryKey: p.categoryKey, start: p.startTime, end: Math.max(p.endTime || p.plannedEnd, p.startTime + 60000), overtime: p.overtime })
+      events.push({ kind: "past", who: s.name, name: p.name, categoryKey: p.categoryKey, start: p.startTime, end: Math.max(p.endTime || p.plannedEnd, p.startTime + 60000), overtime: p.overtime, from: p.from, createdBy: p.createdBy })
     );
     (s.scheduled || []).forEach((p) =>
-      events.push({ kind: "scheduled", who: s.name, name: p.dest.name, categoryKey: p.dest.categoryKey, start: p.scheduledFor, end: p.scheduledFor + p.minutes * 60000 })
+      events.push({ kind: "scheduled", who: s.name, name: p.dest.name, categoryKey: p.dest.categoryKey, start: p.scheduledFor, end: p.scheduledFor + p.minutes * 60000, from: p.from })
     );
     if (s.active) {
       events.push({ kind: "active", who: s.name, name: s.active.room.name, categoryKey: s.active.room.categoryKey, start: s.active.startTime, end: Math.max(s.active.endTime, now) });
@@ -143,7 +143,7 @@ function renderTeacherCalendar() {
           return `
           <div class="cal-item">
             <span class="notif-icon" style="background:${cat.color}">${roomIconMarkup(e.name, e.categoryKey)}</span>
-            <div class="notif-info"><span class="notif-name">${escapeHtml(e.who)}</span><span class="notif-meta">${escapeHtml(e.name)} · ${tcClock(e.start)} · ${status}</span></div>
+            <div class="notif-info"><span class="notif-name">${escapeHtml(e.who)}</span><span class="notif-meta">${escapeHtml(e.name)} · ${tcClock(e.start)} · ${status}${passWhoMarkup(e)}</span></div>
           </div>`;
         })
         .join("")
@@ -173,7 +173,7 @@ function renderTeacherCalendar() {
           const cat = categoryByKey(e.categoryKey);
           const top = ((e.start - dayStart) / 3600000) * TC_HOUR_PX;
           const height = Math.max(20, ((e.end - e.start) / 3600000) * TC_HOUR_PX);
-          return `<div class="cal-event ${e.kind}" style="top:${top}px;height:${height}px;--c:${cat.color}" title="${escapeHtml(e.who)} · ${escapeHtml(e.name)} · ${tcClock(e.start)}"><b>${escapeHtml(e.who)}</b><span>${escapeHtml(e.name)}</span></div>`;
+          return `<div class="cal-event ${e.kind}" style="top:${top}px;height:${height}px;--c:${cat.color}" title="${escapeHtml(e.who + " · " + e.name + " · " + tcClock(e.start) + passWhoText(e))}"><b>${escapeHtml(e.who)}</b><span>${escapeHtml(e.name)}</span></div>`;
         })
         .join("");
       const nowLine = tcSame(d, today) ? `<div class="cal-now" style="top:${((nowMs - dayStart) / 3600000) * TC_HOUR_PX}px"><i></i></div>` : "";
