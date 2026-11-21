@@ -158,3 +158,32 @@
     width: 100%;
   }
 }
+
+/* ---------- the tardy pass: TARDY PASS on top, "From: X  Going to: Y" under it ---------- */
+
+.pass-card-subtitle.tardy-sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+  margin-top: 3px;
+  font-size: 0.95em;
+  font-weight: 600;
+  opacity: 0.95;
+}
+
+.pass-card-subtitle.tardy-sub b {
+  font-weight: 800;
+}
+
+.active-pass.tardy .pass-card-title {
+  letter-spacing: 1.5px;
+  font-weight: 800;
+}
+
+.active-pass.tardy .pass-from-row {
+  display: none;
+}
+
+.active-pass.tardy .pass-card-header {
+  margin-bottom: 18px;
+}

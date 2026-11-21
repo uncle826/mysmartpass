@@ -65,7 +65,7 @@ function renderAccountDates() {
   const wrap = document.getElementById("ad-wrap");
   if (!wrap) return;
   if (!ad.data) {
-    wrap.innerHTML = `<div class="ad-card"><p class="ad-empty">${ad.loading ? "Loading..." : "Couldn't load the account dates."}</p></div>`;
+    wrap.innerHTML = `<div class="ad-card"><p class="ad-empty">${ad.loading ? "Loading..." : `Couldn't load the account dates. ${escapeHtml(ad.error || "")}`}</p></div>`;
     return;
   }
 
@@ -82,7 +82,7 @@ function renderAccountDates() {
       const day = adDay(r.createdAt);
       const heading = day !== lastDay ? `<h3 class="ad-day">${day}</h3>` : "";
       lastDay = day;
-      const meta = ad.who === "students" ? [r.studentId ? `ID ${escapeHtml(r.studentId)}` : "", r.grade ? `Grade ${escapeHtml(r.grade)}` : ""].filter(Boolean).join(" · ") : "Teacher account";
+      const meta = [`Signed up ${adDateText(r.createdAt)} at ${adTimeText(r.createdAt)}`, ad.who === "students" ? (r.studentId ? `ID ${escapeHtml(r.studentId)}` : "") : "Teacher account", ad.who === "students" && r.grade ? `Grade ${escapeHtml(r.grade)}` : ""].filter(Boolean).join(" · ");
       const avatar =
         ad.who === "students"
           ? avatarHtml({ name: r.name, avatarColor: r.avatarColor, photo: r.photo }, "ad-avatar")
@@ -144,7 +144,12 @@ async function loadAccountDates() {
   const res = await teacherApi("/api/teacher/accounts");
   ad.loading = false;
   if (res.status === 401) return kickToSignIn();
-  if (res.ok) ad.data = res.data;
+  if (res.ok) {
+    ad.data = res.data;
+    ad.error = "";
+  } else {
+    ad.error = (res.data && res.data.error) || `(error ${res.status})`;
+  }
   renderAccountDates();
 }
 

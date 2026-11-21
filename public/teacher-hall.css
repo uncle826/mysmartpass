@@ -634,8 +634,6 @@
   padding: 10px 14px;
   border-radius: 10px;
   background: #f8f9fb;
-  animation: hcIn 0.35s ease backwards;
-  animation-delay: calc(var(--i, 0) * 25ms);
 }
 
 .ad-row:hover {
@@ -826,8 +824,6 @@
   padding: 12px 14px;
   border-radius: 10px;
   background: #f8f9fb;
-  animation: hcIn 0.35s ease backwards;
-  animation-delay: calc(var(--i, 0) * 25ms);
 }
 
 .at-row:hover {
@@ -922,4 +918,20 @@
     grid-column: 2;
     text-align: left;
   }
+}
+
+/* ---------- Attendance is its own page (top bar) ---------- */
+
+.at-page {
+  max-width: 1020px;
+  margin: 0 auto;
+  padding: 26px 24px 48px;
+}
+
+.at-title {
+  margin: 0 0 18px;
+  color: #1f195e;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  font-size: 28px;
+  font-weight: 700;
 }

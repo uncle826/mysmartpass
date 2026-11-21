@@ -777,6 +777,10 @@ let timerInterval = null;
 const OVERTIME_BG = "linear-gradient(160deg, #7a1f3d, #4a1226)";
 const OVERTIME_CARD = "linear-gradient(160deg, #e0466f, #c22a56)";
 
+// a tardy pass ("pass to class") is always red, whatever room it goes to
+const TARDY_RED = "#e2443a";
+const TARDY_ICON = '<svg viewBox="0 0 24 24"><path d="M19.4 9.4A8.6 8.6 0 1 0 9.2 19.4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><path d="M11 5.8V11H6.4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="17.4" cy="17.4" r="4.9" fill="none" stroke="#fff" stroke-width="2.2"/><path d="M17.4 15.1v2.4" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="17.4" cy="19.5" r="1.05" fill="#fff"/></svg>';
+
 function formatRemaining(endTime) {
   const totalSeconds = Math.max(0, Math.ceil((endTime - serverTime()) / 1000));
   const minutes = Math.floor(totalSeconds / 60);
@@ -837,8 +841,11 @@ function updatePassStats() {
 function enterOvertime() {
   activePass.classList.add("overtime");
   overtimePill.classList.remove("hidden");
-  activePass.style.background = OVERTIME_BG;
-  passCard.style.background = OVERTIME_CARD;
+  // a tardy pass stays its own red; every other pass turns the overtime red
+  if (!(currentPass && currentPass.kind === "class")) {
+    activePass.style.background = OVERTIME_BG;
+    passCard.style.background = OVERTIME_CARD;
+  }
   sendBrowserNotification(
     "You're overtime",
     currentPass ? `Your pass to ${currentPass.room.name} has gone overtime.` : "Your pass has gone overtime."
@@ -873,7 +880,7 @@ let classPassMinutesNow = 3; // how long a "pass to class" lasts (set by the tea
 const activePassMessage = document.getElementById("active-pass-message");
 const TEACHER_FROM_ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.6" fill="#fff"/><path d="M4.2 20c0-4.4 3.5-6.8 7.8-6.8s7.8 2.4 7.8 6.8" fill="#fff"/></svg>';
 
-function startActivePass(room, endTime, fromRoom, startTime, message, createdBy) {
+function startActivePass(room, endTime, fromRoom, startTime, message, createdBy, kind) {
   goingSomewhere.classList.add("hidden");
   activePass.classList.remove("hidden");
   createPassNavBtn.disabled = true;
@@ -883,16 +890,29 @@ function startActivePass(room, endTime, fromRoom, startTime, message, createdBy)
   activePass.classList.remove("overtime");
   overtimePill.classList.add("hidden");
 
-  currentPass = { room, endTime, startTime: startTime || serverTime(), bounce: false };
+  const tardy = kind === "class";
+  activePass.classList.toggle("tardy", tardy);
+  currentPass = { room, endTime, startTime: startTime || serverTime(), bounce: false, kind: kind || null };
 
   activePassMessage.textContent = message || "";
   activePassMessage.classList.toggle("hidden", !message);
 
   const category = categoryByKey(room.categoryKey);
-  activePass.style.background = passPageBg(category.color);
-  passCard.style.background = passCardBg(category.color);
-  activePassDestination.textContent = room.name;
-  activePassDestIcon.innerHTML = roomIconMarkup(room.name, room.categoryKey);
+  const baseColor = tardy ? TARDY_RED : category.color;
+  activePass.style.background = passPageBg(baseColor);
+  passCard.style.background = passCardBg(baseColor);
+  // a tardy pass says TARDY PASS on top, with where it's from and where it's going underneath
+  const subtitle = document.querySelector(".pass-card-subtitle");
+  if (tardy) {
+    activePassDestination.textContent = "TARDY PASS";
+    activePassDestIcon.innerHTML = TARDY_ICON;
+    subtitle.innerHTML = `<span>From: <b>${escapeHtml(fromRoom ? fromRoom.name : "—")}</b></span><span>Going to: <b>${escapeHtml(room.name)}</b></span>`;
+  } else {
+    activePassDestination.textContent = room.name;
+    activePassDestIcon.innerHTML = roomIconMarkup(room.name, room.categoryKey);
+    subtitle.textContent = "Round-trip";
+  }
+  subtitle.classList.toggle("tardy-sub", tardy);
   if (fromRoom) {
     activePassFrom.textContent = fromRoom.name;
     activePassFromIcon.innerHTML = roomIconMarkup(fromRoom.name, fromRoom.categoryKey);
@@ -1313,11 +1333,9 @@ function applyServerState(state) {
 
   const a = state.active;
   if (a) {
-    const subtitle = document.querySelector(".pass-card-subtitle");
-    if (subtitle) subtitle.textContent = a.kind === "class" ? "Pass to class" : "Round-trip";
     if (!currentPass || currentPass.startTime !== a.startTime) {
       if (!overlay.classList.contains("hidden")) closeModal();
-      startActivePass(a.room, a.endTime, a.from, a.startTime, a.message, a.createdBy);
+      startActivePass(a.room, a.endTime, a.from, a.startTime, a.message, a.createdBy, a.kind);
       if (typeof showMainPage === "function") showMainPage("home");
       if (!firstSync && !a.createdBy && previousScheduled.some((s) => !scheduledCache.some((n) => n.id === s.id))) {
         showToast(`Your scheduled pass to ${a.room.name} has started.`, "success");

@@ -6,7 +6,11 @@
 const HALL_PALETTE = ["#139be6", "#da389d", "#f59602", "#f86f4d", "#12c29e", "#6651f1", "#ac0cdf", "#07abc3", "#72cc1b", "#e3447c"];
 const HALL_DEFAULT_GRAY = "#d3d7de"; // the "no color chosen" icon on the student screen
 
+const HALL_TARDY_RED = "#e2443a";
+
 function hallColorOf(s) {
+  // a tardy pass is always red
+  if (s.active && s.active.kind === "class") return HALL_TARDY_RED;
   const c = s.avatarColor;
   if (!s.photo && c && /^#[0-9a-f]{6}$/i.test(c) && c.toLowerCase() !== HALL_DEFAULT_GRAY) return c;
   let h = 0;
@@ -39,7 +43,7 @@ hallCardMarkup = function (s, enter) {
       <span class="hc-main">
         ${hallAvatar(s)}
         <span class="hc-name">${escapeHtml(s.name)}</span>
-        <span class="hc-dest">${escapeHtml(s.active.room.name)}</span>
+        <span class="hc-dest">${s.active.kind === "class" ? "Tardy to " : ""}${escapeHtml(s.active.room.name)}</span>
       </span>
       <span class="hc-time js-h-time" data-key="${s.key}"></span>
     </button>`;
@@ -83,21 +87,26 @@ hallView.addEventListener("click", (e) => {
 /* ---------- the pass box ---------- */
 
 const HP_RING = 2 * Math.PI * 96;
+const HP_TARDY_ICON = '<svg viewBox="0 0 24 24"><path d="M19.4 9.4A8.6 8.6 0 1 0 9.2 19.4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><path d="M11 5.8V11H6.4" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="17.4" cy="17.4" r="4.9" fill="none" stroke="#fff" stroke-width="2.2"/><path d="M17.4 15.1v2.4" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="17.4" cy="19.5" r="1.05" fill="#fff"/></svg>';
 const HP_ADD_CHOICES = [1, 2, 5, 10];
 let hallPop = null; // { host, key }
 
 function hpHtml(s) {
   const a = s.active;
   const cat = categoryByKey(a.room.categoryKey);
+  const tardy = a.kind === "class";
   const bits = [];
-  if (a.from && a.from.name) bits.push(`<span class="hp-from-word">from</span><span class="hp-from-chip">${escapeHtml(a.from.name)}</span>`);
+  if (tardy) {
+    bits.push(`<span class="hp-from-word">From:</span><span class="hp-from-chip">${escapeHtml(a.from ? a.from.name : "—")}</span>`);
+    bits.push(`<span class="hp-from-word">Going to:</span><span class="hp-from-chip">${escapeHtml(a.room.name)}</span>`);
+  } else if (a.from && a.from.name) bits.push(`<span class="hp-from-word">from</span><span class="hp-from-chip">${escapeHtml(a.from.name)}</span>`);
   if (a.createdBy) bits.push(`<span class="hp-from-word">sent by</span><span class="hp-from-chip">${escapeHtml(a.createdBy)}</span>`);
   const fromRow = `<div class="hp-from"><i></i>${bits.length ? bits.join("") : '<span class="hp-from-word">round-trip</span>'}</div>`;
   return `
     <div class="hp-card" style="${hallStyleVars(s)}" role="dialog" aria-modal="true" aria-labelledby="hp-dest">
       <button type="button" class="hp-x" id="hp-x" aria-label="Close">&times;</button>
       <div class="hp-who">${hallAvatar(s, "sm")}<span><b>${escapeHtml(s.name)}</b><em>Left at ${timeOfDay(a.startTime)}</em></span></div>
-      <div class="hp-dest-row"><span class="hp-dest-ic">${roomIconMarkup(a.room.name, a.room.categoryKey)}</span><h2 id="hp-dest">${escapeHtml(a.room.name)}</h2></div>
+      <div class="hp-dest-row"><span class="hp-dest-ic">${tardy ? HP_TARDY_ICON : roomIconMarkup(a.room.name, a.room.categoryKey)}</span><h2 id="hp-dest">${tardy ? "TARDY PASS" : escapeHtml(a.room.name)}</h2></div>
       ${fromRow}
       ${a.message ? `<p class="hp-msg">${escapeHtml(a.message)}</p>` : ""}
       <div class="hp-ring">

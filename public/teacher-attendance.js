@@ -88,7 +88,7 @@ function renderAttendance() {
   const wrap = document.getElementById("at-wrap");
   if (!wrap) return;
   if (!at.data) {
-    wrap.innerHTML = `<div class="ad-card"><p class="ad-empty">${at.loading ? "Loading..." : "Couldn't load attendance."}</p></div>`;
+    wrap.innerHTML = `<h1 class="at-title">Attendance</h1><div class="ad-card"><p class="ad-empty">${at.loading ? "Loading..." : `Couldn't load attendance. ${escapeHtml(at.error || "")}`}</p></div>`;
     return;
   }
 
@@ -125,6 +125,7 @@ function renderAttendance() {
 
   const draft = at.minutesDraft ?? at.data.minutes;
   wrap.innerHTML = `
+    <h1 class="at-title">Attendance</h1>
     <div class="ad-card">
       <div class="ad-stats">
         <div><b>${all.filter((r) => r.startTime >= today).length}</b><span>Late today</span></div>
@@ -196,19 +197,24 @@ async function loadAttendance(quiet) {
   if (res.ok) {
     syncServerClock(res.data.serverNow);
     at.data = res.data;
+    at.error = "";
+  } else {
+    at.error = (res.data && res.data.error) || `(error ${res.status})`;
   }
   // don't redraw while someone is typing in the search box or picking a countdown
   const busy = document.activeElement && ["at-search", "at-minutes"].includes(document.activeElement.id);
   if (!quiet || !busy) renderAttendance();
 }
 
-adminTabHandlers.attendance = () => {
+viewHandlers.attendance = () => {
   loadAttendance(false);
   clearInterval(at.timer);
   // keep it fresh while the page is open: new late passes show up and "on the way" counts down
   at.timer = setInterval(() => {
-    const panel = document.querySelector('.t-panel[data-panel="attendance"]');
-    if (!panel || panel.classList.contains("hidden")) return clearInterval(at.timer);
+    if (currentView !== "attendance") return clearInterval(at.timer);
     loadAttendance(true);
   }, 8000);
 };
+
+// opened straight onto this page (a reload on #attendance): the page was shown before this file loaded, so load it now
+if (currentView === "attendance") viewHandlers.attendance();
