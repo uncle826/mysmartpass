@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="features.css?v=42">
 <link rel="stylesheet" href="tour.css?v=36">
 <link rel="stylesheet" href="student-features.css?v=42">
-<link rel="stylesheet" href="student-classpass.css?v=45">
+<link rel="stylesheet" href="student-classpass.css?v=47">
 </head>
 <body data-tour="student">
 
@@ -219,16 +219,16 @@
 
   <main class="flex-student hidden" id="flex-page">
     <div class="fs-inner">
-      <div class="fs-head">
-        <div>
-          <h1 class="fs-title">Flex</h1>
-          <p class="fs-sub">Pick activities to sign up for. If a teacher adds you to one, you can't leave it.</p>
-        </div>
-        <button type="button" class="btn btn-primary fs-class-btn" id="class-pass-btn">
-          <svg viewBox="0 0 24 24" class="btn-icon" aria-hidden="true"><path d="M5 20V5.5A1.5 1.5 0 0 1 6.5 4h8A1.5 1.5 0 0 1 16 5.5V20M3.5 20h17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="13" cy="12.5" r="1" fill="currentColor"/><path d="M18 9.5l2.5 2.5-2.5 2.5M20.5 12H17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div class="fs-hero">
+        <span class="fs-hero-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4 9.4A8.6 8.6 0 1 0 9.2 19.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M11 5.8V11H6.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="17.4" cy="17.4" r="4.9" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M17.4 15.1v2.4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="17.4" cy="19.5" r="1.05" fill="currentColor"/></svg></span>
+        <p class="fs-hero-text">Running late to class?</p>
+        <button type="button" class="btn btn-primary btn-large fs-class-btn" id="class-pass-btn">
+          <span class="btn-icon-wrap"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4 9.4A8.6 8.6 0 1 0 9.2 19.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M11 5.8V11H6.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="17.4" cy="17.4" r="4.9" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M17.4 15.1v2.4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="17.4" cy="19.5" r="1.05" fill="currentColor"/></svg></span>
           Pass to Class
         </button>
       </div>
+      <h1 class="fs-title">Flex</h1>
+      <p class="fs-sub">Pick activities to sign up for. If a teacher adds you to one, you can't leave it.</p>
       <p class="fs-error hidden" id="fs-error" role="alert"></p>
       <div id="fs-list"></div>
     </div>
@@ -416,8 +416,8 @@
 <script src="bell.js?v=27"></script>
 <script src="idcard.js?v=27"></script>
 <script src="student-extras.js?v=27"></script>
-<script src="student-classpass.js?v=45"></script>
-<script src="sp-icons.js?v=45"></script>
+<script src="student-classpass.js?v=46"></script>
+<script src="sp-icons.js?v=46"></script>
 <script src="tour.js?v=36"></script>
 </body>
 </html>

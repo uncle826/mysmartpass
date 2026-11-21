@@ -322,11 +322,11 @@ function cleanReason(raw) {
   return t.length >= 2 && t.length <= 140 ? t : null;
 }
 
-// how long a student has to get to class on a "pass to class" (set on the teacher's Attendance page)
+// the longest countdown a student can pick on a "pass to class" (set on the teacher's Attendance page)
 async function classPassMinutes(env) {
   const row = await env.DB.prepare("SELECT v FROM app_meta WHERE k = 'class_pass_minutes'").first();
   const n = Math.round(Number(row && row.v));
-  return Number.isFinite(n) && n >= 1 && n <= 15 ? n : 3;
+  return Number.isFinite(n) && n >= 1 && n <= 15 ? n : 5;
 }
 
 function cleanTz(raw) {
@@ -1012,7 +1012,10 @@ async function handleApi(request, env, url) {
     const rules = await loadRules(env);
     if (rules.emergency) return fail("Emergency mode is on. Passes are paused right now.", 403);
 
-    const minutes = await classPassMinutes(env);
+    // the student picks their own countdown, up to the longest one the teacher allows
+    const longest = await classPassMinutes(env);
+    const picked = Math.round(Number(body.minutes));
+    const minutes = Number.isFinite(picked) ? Math.min(longest, Math.max(1, picked)) : Math.min(3, longest);
     const created = await createPass(env, key, dest, from, minutes, null, "Late to class: " + reason, false, "class", reason);
     if (!created) return fail("You're already on a pass.", 409);
     await env.DB.prepare("UPDATE pass_requests SET status = 'cancelled' WHERE student_key = ? AND status = 'pending'").bind(key).run();

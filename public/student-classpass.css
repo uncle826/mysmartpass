@@ -1,412 +1,160 @@
-/* Student "Pass to Class" (late pass) button and dialog. */
+/* Student "Pass to Class" (late pass): the centered button on the Flex page and the few extras its dialog needs.
+   The dialog itself reuses the real pass box's classes (modal, route, room-row, dur-track...), so it looks the same. */
 
-.fs-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px;
-}
+/* ---------- the button, in the middle of the Flex page (same idea as "Going Somewhere?" on Home) ---------- */
 
-.fs-class-btn {
-  flex-shrink: 0;
-  margin-top: 4px;
-  padding: 12px 18px;
-  font-size: 14.5px;
-}
-
-.fs-class-btn svg {
-  width: 19px;
-  height: 19px;
-}
-
-@media (max-width: 560px) {
-  .fs-head {
-    flex-direction: column;
-  }
-}
-
-.cp-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1400;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 18px;
-  background: rgba(16, 20, 40, 0.5);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
-  animation: cpFade 0.18s ease;
-  transition: opacity 0.16s ease;
-}
-
-.cp-overlay.leaving {
-  opacity: 0;
-}
-
-.cp-box {
-  box-sizing: border-box;
-  width: min(440px, 100%);
-  max-height: calc(100vh - 36px);
-  padding: 22px 24px 24px;
-  overflow-y: auto;
-  border-radius: 16px;
-  background: #ffffff;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35), 0 4px 14px rgba(0, 0, 0, 0.12);
-  font-family: Inter, "Segoe UI", Arial, sans-serif;
-  animation: cpPop 0.24s cubic-bezier(0.2, 0.9, 0.3, 1.1);
-}
-
-.cp-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.cp-head-grow {
-  flex: 1;
-}
-
-.cp-head h2 {
-  margin: 0;
-  color: #1f195e;
-  font-size: 22px;
-  font-weight: 700;
-}
-
-.cp-head p {
-  margin: 4px 0 0;
-  color: #7083a0;
-  font-size: 14px;
-  line-height: 1.4;
-}
-
-.cp-head > div:first-child:not(.cp-head-grow) {
-  flex: 1;
-}
-
-.cp-x,
-.cp-back {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: #f1f3f7;
-  color: #4e5d74;
-  font-size: 22px;
-  line-height: 1;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.cp-x:hover,
-.cp-back:hover {
-  background: #e4e8ef;
-}
-
-.cp-back svg {
-  width: 18px;
-  height: 18px;
-}
-
-.cp-route {
+.fs-hero {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-}
-
-.cp-line {
-  align-self: flex-start;
-  width: 2px;
-  height: 14px;
-  margin: -2px 0 -2px 21px;
-  background: #d4d9e2;
-}
-
-.cp-field {
-  display: flex;
   align-items: center;
   gap: 14px;
+  margin: 8px auto 40px;
+  padding: 18px 10px 8px;
+  text-align: center;
+}
+
+.fs-hero-icon {
+  display: flex;
+  width: 74px;
+  height: 74px;
+  color: #aab4c4;
+}
+
+.fs-hero-icon svg {
   width: 100%;
-  padding: 12px 14px;
-  border: 1.5px solid #e2e6ec;
-  border-radius: 12px;
-  background: #ffffff;
-  color: #1f195e;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  height: 100%;
 }
 
-.cp-field:hover {
-  border-color: #b9c3d3;
-  background: #fafbfc;
-}
-
-.cp-field.done {
-  border-color: #00b476;
-  background: #f4fcf9;
-}
-
-.cp-dot {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border: 2px solid #c8d0dc;
-  border-radius: 50%;
-  background: #ffffff;
-  transition: background 0.2s ease, border-color 0.2s ease;
-}
-
-.cp-dot svg {
-  width: 14px;
-  height: 14px;
-}
-
-.cp-field.done .cp-dot {
-  border-color: #00b476;
-  background: #00b476;
-}
-
-.cp-field-text {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.cp-field-text small {
+.fs-hero-text {
+  margin: 0;
   color: #7083a0;
-  font-size: 12px;
+  font-size: 22px;
   font-weight: 600;
 }
 
-.cp-field-text b {
-  overflow: hidden;
+.fs-class-btn {
+  --ic-cut: #00b476;
+  padding: 14px 26px;
   font-size: 16px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.cp-room {
-  flex-shrink: 0;
-  padding: 3px 9px;
   border-radius: 8px;
-  background: #eef0f4;
-  color: #4e5d74;
-  font-size: 12.5px;
-  font-weight: 700;
 }
 
-.cp-chev {
-  display: flex;
-  width: 18px;
-  height: 18px;
-  color: #9aa6b8;
+.fs-class-btn svg {
+  width: 22px;
+  height: 22px;
 }
 
-.cp-reason {
+/* ---------- dialog extras ---------- */
+
+.modal-overlay.centered .modal.cpm-pick {
+  height: min(445px, calc(100vh - 48px));
+}
+
+.modal-overlay.centered .modal.cpm-time {
+  max-height: min(560px, calc(100vh - 48px));
+}
+
+/* like the real box: only "Coming from?" shows until a teacher is picked */
+.route.from-only .cpm-going {
   display: none;
-  margin-top: 18px;
 }
 
-.cp-reason.show {
-  display: block;
-  animation: cpRise 0.28s ease;
+.cpm-none {
+  margin: 24px 0;
+  color: #7083a0;
+  font-size: 14px;
+  text-align: center;
 }
 
-.cp-reason label {
+.cpm-reason {
+  margin-top: 14px;
+}
+
+.cpm-reason label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 7px;
   color: #1f195e;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
 }
 
-.cp-reason textarea {
+.cpm-reason-input {
   box-sizing: border-box;
   width: 100%;
-  padding: 11px 13px;
-  border: 1.6px solid transparent;
-  border-radius: 10px;
-  background: #f5f6f8;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid #e3e6ee;
+  border-radius: 20px;
+  background: #ffffff;
   color: #1f195e;
   font: 400 15px Inter, "Segoe UI", Arial, sans-serif;
-  line-height: 1.4;
   outline: none;
-  resize: none;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.cp-reason textarea:focus {
-  border-color: #00b476;
-  background: #ffffff;
+.cpm-reason-input:focus {
+  border-color: #4b55c9;
+  box-shadow: 0 0 0 3px rgba(99, 112, 235, 0.18);
 }
 
-.cp-chips {
+.cpm-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
-  margin-top: 10px;
+  gap: 6px;
+  margin-top: 8px;
 }
 
-.cp-chip {
-  padding: 6px 12px;
-  border: 1px solid #d4d9e2;
-  border-radius: 16px;
+.cpm-chip {
+  padding: 5px 11px;
+  border: 1px solid #e3e6ee;
+  border-radius: 14px;
   background: #ffffff;
   color: #4e5d74;
-  font: 600 12.5px Inter, "Segoe UI", Arial, sans-serif;
+  font: 600 12px Inter, "Segoe UI", Arial, sans-serif;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.cp-chip:hover {
+.cpm-chip:hover {
   border-color: #00b476;
   background: #f4fcf9;
   color: #00946a;
 }
 
-.cp-note {
-  margin: 16px 0 0;
-  color: #7083a0;
-  font-size: 13.5px;
-  line-height: 1.45;
+.cpm-time .duration-body {
+  margin-top: 6px;
 }
 
-.cp-note b {
-  color: #1f195e;
+.cpm-time .duration-slider-col {
+  padding-top: 8px;
+  padding-bottom: 8px;
 }
 
-.cp-error {
-  margin: 12px 0 0;
-  padding: 9px 12px;
-  border-radius: 8px;
-  background: #fdf1f0;
-  color: #cf463b;
-  font-size: 14px;
-  font-weight: 600;
+.cpm-time .dur-track {
+  height: 138px;
 }
 
-.cp-error.hidden {
-  display: none;
+.cpm-time .duration-start-btn {
+  margin-top: 12px;
+  padding: 18px 16px;
 }
 
-.cp-start {
-  display: block;
-  width: 100%;
-  margin-top: 16px;
-  padding: 15px;
-  border: none;
-  border-radius: 12px;
-  background: #00b476;
-  box-shadow: 0 1px 2px rgba(0, 120, 80, 0.25), 0 8px 16px -8px rgba(0, 180, 118, 0.6);
-  color: #ffffff;
-  font: 700 16px Inter, "Segoe UI", Arial, sans-serif;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
-}
-
-.cp-start:hover:not(:disabled) {
-  background: #009a65;
-}
-
-.cp-start:active:not(:disabled) {
-  transform: scale(0.985);
-}
-
-.cp-start:disabled {
+.cpm-time .duration-start-btn:disabled {
   background: #b9c3d3;
   box-shadow: none;
   cursor: default;
+  filter: none;
 }
 
-.cp-search {
-  box-sizing: border-box;
-  width: 100%;
-  height: 42px;
-  margin-bottom: 12px;
-  padding: 0 14px;
-  border: 1.6px solid transparent;
-  border-radius: 21px;
-  background: #eef0f4;
-  color: #1f195e;
-  font: 400 15px Inter, "Segoe UI", Arial, sans-serif;
-  outline: none;
-}
-
-.cp-search:focus {
-  border-color: #00b476;
-  background: #ffffff;
-}
-
-.cp-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: min(52vh, 420px);
-  overflow-y: auto;
-  padding-right: 2px;
-}
-
-.cp-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 13px 14px;
-  border: none;
-  border-radius: 10px;
-  background: #f5f6f8;
-  color: #1f195e;
-  font: 600 15.5px Inter, "Segoe UI", Arial, sans-serif;
-  text-align: left;
-  cursor: pointer;
-  animation: cpRise 0.3s ease backwards;
-  animation-delay: calc(var(--i, 0) * 20ms);
-  transition: background 0.12s ease;
-}
-
-.cp-row:hover {
-  background: #e8f7f1;
-}
-
-.cp-none {
-  margin: 20px 0;
+.cpm-time .duration-max {
+  margin: -6px 0 0;
   color: #7083a0;
-  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
 }
 
-@keyframes cpFade {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes cpPop {
-  from { opacity: 0; transform: translateY(12px) scale(0.97); }
-  to { opacity: 1; transform: none; }
-}
-
-@keyframes cpRise {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: none; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cp-overlay,
-  .cp-box,
-  .cp-reason.show,
-  .cp-row {
-    animation: none;
+@media (max-width: 520px) {
+  .cpm-overlay .modal {
+    width: 100%;
   }
 }

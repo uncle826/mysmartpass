@@ -134,7 +134,7 @@ function renderAttendance() {
       </div>
 
       <div class="at-setting">
-        <label for="at-minutes">Countdown to get to class</label>
+        <label for="at-minutes">Longest countdown a student can pick</label>
         <select id="at-minutes">${Array.from({ length: 15 }, (_, i) => i + 1).map((m) => `<option value="${m}" ${m === draft ? "selected" : ""}>${m} minute${m === 1 ? "" : "s"}</option>`).join("")}</select>
         <button type="button" class="ad-btn" id="at-save" ${draft === at.data.minutes ? "disabled" : ""}>Save</button>
       </div>
@@ -180,7 +180,7 @@ function renderAttendance() {
     if (!res.ok) return showToast(res.data.error || "Couldn't save that.", "warn");
     at.data.minutes = res.data.minutes;
     at.minutesDraft = null;
-    showToast(`Students now get ${res.data.minutes} minute${res.data.minutes === 1 ? "" : "s"} on a pass to class.`, "success");
+    showToast(`Students can now pick up to ${res.data.minutes} minute${res.data.minutes === 1 ? "" : "s"} on a pass to class.`, "success");
     renderAttendance();
   });
 }
